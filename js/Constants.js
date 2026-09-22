@@ -44,11 +44,11 @@ const IS_MOBILE = (() => {
 
 // --- LOCATION (Location3D.js, Terrain3D.js). World units are px: x to the right, y down
 // the map, height up (skill world3d, §Coordinates). ---
-const LOCATION_WIDTH = 2048;            // px: location width (the area the game camera stays within)
-const LOCATION_HEIGHT = 2048;           // px: location height
-const LOCATION_GROUND = 0;              // ground texture: 0 — grass, 1 — sand, 2 — snow (Location3D.GROUNDS)
+const LOCATION_WIDTH = 4096;            // px: location width (the area the game camera stays within)
+const LOCATION_HEIGHT = 4096;           // px: location height
+const LOCATION_GROUND = 1;              // ground texture: 0 — grass, 1 — sand, 2 — snow (Location3D.GROUNDS)
 const GROUND_TILE_SIZE = 512;           // world px per one repeat of the ground texture
-const TERRAIN_NOISE_AMP = 66;           // px: hill amplitude (0 — flat ground)
+const TERRAIN_NOISE_AMP = 0;            // px: hill amplitude (0 — flat ground) — a studio lot must be flat
 const TERRAIN_NOISE_SCALE = 800;        // px: hill size
 const TERRAIN_NOISE_SEED = 4;           // terrain noise seed
 const TERRAIN_BASE = 0;                 // px: mean ground level
@@ -67,10 +67,54 @@ const AUDIO_FALLOFF_MIN = 150;          // px: full volume while the camera is t
 const AUDIO_FALLOFF_MAX = 1024;         // px: from here on it is silent (fades linearly in between); an object may set its own pair. The camera stands ~800 px from its look-at point at zoom 1
 const AUDIO_PAN = 0.7;                  // 0..1: how far a sound at the side of the screen goes into one ear (0 — mono)
 
-// --- SAMPLE GAME (Game.js): the "Run" button, the energy bar ---
-const GAME_RUN_SEC = 8;                 // s: a full energy bar lasts this long while running
-const GAME_REST_SEC = 4;                // s: an empty energy bar refills in this time while standing
-const GAME_STEP_SEC = 0.35;             // s: between footstep sounds while the character runs
+// --- «ФАБРИКА ГРЁЗ» (Fabrika Grez): the movie studio sim on top of the kit ---
+// Studio lot placement (map px): the lot with the buildings, and the backlot far away,
+// where MovieSequencer builds the sets of the films being shot/watched.
+const STUDIO_LOT_X = 1000;              // px: lot center X
+const STUDIO_LOT_Y = 1100;              // px: lot center Y
+const STUDIO_BACKLOT_X = 3200;          // px: backlot center X (film sets)
+const STUDIO_BACKLOT_Y = 3200;          // px: backlot center Y
+const STUDIO_START_CASH = 1000000;      // $: money the player starts with
+const STUDIO_START_FANS = 5;            // 0..100: starting fan base
+const STUDIO_START_YEAR = 1950;         // the year the studio opens
+const STUDIO_LOT_UPKEEP = 2500;         // $: weekly lot upkeep
+// People: the talent market, training, salaries.
+const PEOPLE_MARKET_SIZE = 10;          // candidates on the talent market
+const PEOPLE_MARKET_REFRESH = 3;        // weeks: how often the market refreshes
+const PEOPLE_SKILL_CAP = 10;            // max skill points (drama/comedy/action/romance)
+const PEOPLE_TRAIN_COST = 4000;         // $: one training course
+const PEOPLE_TRAIN_GAIN = 1;            // skill points per course
+const PEOPLE_TRAIN_WEEKS = 3;           // weeks a course takes (the person is busy)
+const PEOPLE_START_ACTORS = 3;          // actors on the roster at a new game
+const PEOPLE_START_STAFF = 2;           // staff (writer/director) at a new game
+// Scripts and shooting.
+const SCRIPT_WRITE_WEEKS = 2;           // weeks a writer needs per script
+const SCRIPT_QUALITY_BASE = 3.5;        // base script quality 0..10
+const SCRIPT_WRITER_BONUS = 0.45;       // quality points per writer skill point (0..10)
+const SHOOT_SCENES_PER_WEEK = 2;        // scenes shot per week at a normal pace
+const SHOOT_QUALITY_BASE = 2.5;         // base shot-scene quality 0..10
+const SHOOT_DIRECTOR_BONUS = 0.3;       // quality per director skill point
+const SHOOT_ACTOR_BONUS = 0.3;          // quality per lead actor skill point
+const SHOOT_SET_BONUS = 1.2;            // quality when the right set is owned
+const SHOOT_RANDOM_SPREAD = 1.4;        // ±: luck of the take
+const MOVIE_BUDGET_MIN = 100000;        // $: smallest production budget
+const MOVIE_BUDGET_MAX = 3000000;       // $: biggest production budget
+const MOVIE_BUDGET_DEFAULT = 400000;    // $: the slider starts here
+// Release: box office, marketing, awards.
+const RELEASE_RUN_WEEKS = 8;            // weeks a film stays in theaters
+const RELEASE_DROP = 0.42;              // weekly box-office decay fraction
+const RELEASE_OPEN_PER_FAN = 900;       // $: opening weekend per fan point
+const RELEASE_OPEN_PER_QUALITY = 90000; // $: opening weekend per quality point (0..10)
+const RELEASE_OPEN_PER_MARKETING = 0.9; // opening multiplier per marketing $ / budget $
+const RELEASE_STAR_BONUS = 0.08;        // opening multiplier per star ★ of the leads
+const RELEASE_SCREEN_BASE = 150;        // screens at a wide release
+const MARKETING_MAX_FRAC = 1.0;         // marketing cap as a fraction of the movie budget
+// MovieSequencer and the cinematic camera.
+const MOVIE_CAM_LERP = 6;               // 1/s: camera glide speed toward the shot pose
+const MOVIE_TITLE_SEC = 3.5;            // s: the title card holds
+const MOVIE_CREDITS_SPEED = 46;         // px/s: the end credits crawl
+const MOVIE_FOV_CLOSE = 40;             // °: FOV punch on close-ups (wide keeps CAMERA_FOV_DEG)
+const MOVIE_GRAIN = 1;                  // 1 — film grain/vignette overlay in the cinema, 0 — clean
 
 // --- CAMERA (CameraControl.js): target on the map, azimuth, pitch and zoom. Zoom is
 // screen px per world px at the look-at point; distance is derived from it. Flight

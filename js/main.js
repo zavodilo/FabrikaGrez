@@ -51,6 +51,7 @@ function startGame() {
         if (typeof Kit !== 'undefined') Kit._run(Math.min(0.1, dt));
         location.update(dt);
         camera.update(dt);
+        if (typeof CineCam3D !== 'undefined' && CineCam3D.isActive()) CineCam3D.capture();
         Sound3D.update(camera);
         World3D.renderFrame();
         requestAnimationFrame(loop);

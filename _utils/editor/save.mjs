@@ -245,9 +245,10 @@ export async function saveObjects(root, objects) {
 export const UI_HEADER = `// UILayout.js — the game's UI layout: every HUD element, placed and styled in the editor (UI tab).
 // The editor rewrites the whole file (POST /api/save-ui) — keep the format. Drawn by js/UI.js;
 // game code takes an element by id: UI.get('score').setText('10') — and never positions HUD itself.
-//   kind — 'text' | 'panel' | 'bar' | 'button'; anchor — one of 9 screen points ('top-left' …
-//   'bottom-right'): x, y go from it to the same point of the element (inward from an edge,
-//   signed from the center); w, h — px; numbers are px of a screen UI_REF_HEIGHT tall;
+//   kind — 'text' | 'panel' | 'bar' | 'button' | 'screen'; anchor — one of 9 screen points
+//   ('top-left' … 'bottom-right'): x, y go from it to the same point of the element (inward
+//   from an edge, signed from the center); w, h — px; numbers are px of a screen
+//   UI_REF_HEIGHT tall;
 //   colors — '#rrggbb', '' — none; visible: 0 — hidden until the game calls show().
 //   Records go in drawing order: later — on top.
 `;
@@ -269,6 +270,7 @@ export const UI_FIELDS = {
   panel: ['x', 'y', 'w', 'h', 'fill', 'border', 'radius', 'alpha', 'visible'],
   bar: ['x', 'y', 'w', 'h', 'value', 'color', 'fill', 'border', 'radius', 'alpha', 'visible'],
   button: ['x', 'y', 'w', 'h', 'text', 'fontSize', 'color', 'fill', 'border', 'radius', 'alpha', 'visible'],
+  screen: ['x', 'y', 'w', 'h', 'fill', 'border', 'radius', 'alpha', 'visible'],
 };
 
 // A field value -> its literal in the file; invalid — null.

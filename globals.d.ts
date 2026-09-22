@@ -34,7 +34,7 @@ interface Window {
 /** UI_LAYOUT record (UILayout.js, written by the editor's UI tab); fields by kind — UI.DEFAULTS. */
 interface UIRecord {
     id: string;
-    /** 'text' | 'panel' | 'bar' | 'button' */
+    /** 'text' | 'panel' | 'bar' | 'button' | 'screen' */
     kind: string;
     /** One of 9 screen points: 'top-left' … 'bottom-right' */
     anchor: string;
@@ -109,3 +109,161 @@ interface LocationObject {
     soundKey?: string;
 }
 
+// --- «Фабрика Грёз»: shared game types ---------------------------------------------------------
+
+/** Actor appearance (ActorRig3D). */
+interface ActorLook {
+    skin?: string;
+    hair?: string;
+    shirt?: string;
+    pants?: string;
+    shoes?: string;
+    /** Hat color; '' — no hat. */
+    hat?: string;
+    /** 'm' | 'f' */
+    gender?: string;
+    /** 0..3 */
+    hairStyle?: number;
+    /** 0.6..1.4 */
+    scale?: number;
+}
+
+/** One animation frame of a rig: joint euler angles (deg) + root offsets. */
+interface ActorPose {
+    j?: Record<string, number[]>;
+    hipsY?: number;
+    bob?: number;
+    tilt?: number;
+}
+
+/** A spawned procedural actor (plain-data handle; methods are assigned in spawn). */
+interface ActorHandle {
+    id: number;
+    view: View3D;
+    root: pc.Entity;
+    joints: Record<string, pc.Entity>;
+    parts: Record<string, pc.MeshInstance[]>;
+    look: ActorLook;
+    x: number;
+    y: number;
+    h: number;
+    heading: number;
+    /** Current action name (ACTOR_RIG_ACTIONS). */
+    action: string;
+    t: number;
+    speedMul: number;
+    phase: number;
+    gesture: number;
+    moveTarget: { x: number, y: number } | null;
+    moveSpeed: number;
+    arriveAction: string;
+    onArrive: ((handle: ActorHandle) => void) | null;
+    onActionEnd: ((handle: ActorHandle) => void) | null;
+    faceTarget: { x: number, y: number } | null;
+    /** Absolute map yaw (deg) the head/torso turn toward; null — off. */
+    lookYaw: number | null;
+    _done: boolean;
+    /** Game-side scratch (the lot ambience director). */
+    _strollAt?: number | null;
+    act(name: string, opts?: { speedMul?: number, onEnd?: ((handle: ActorHandle) => void) | null }): ActorHandle;
+    walkTo(x: number, y: number, speed?: number, arriveAction?: string, onArrive?: ((handle: ActorHandle) => void) | null): ActorHandle;
+    faceTo(x: number, y: number, instant?: boolean): ActorHandle;
+    setLook(look: ActorLook): ActorHandle;
+}
+
+/** A named staging point of a set (absolute map px). */
+interface SetAnchor {
+    x: number;
+    y: number;
+    heading: number;
+    h: number;
+}
+
+/** A built set/prop/lot handle (SetPieces3D). */
+interface SetHandle {
+    root: pc.Entity;
+    anchors: Record<string, SetAnchor>;
+    view: View3D;
+    groundH: number;
+    id: string;
+    waypoints?: { x: number, y: number }[];
+}
+
+/** A cinematic camera pose in map space (CineCam3D). */
+interface CinePose {
+    x: number;
+    y: number;
+    /** Look-at height, px above the ground. */
+    h: number;
+    /** Azimuth, deg (−90 — north up). */
+    az: number;
+    /** Pitch, deg (90 — straight down; negative — from below). */
+    pitch: number;
+    /** Screen px per world px at the look-at point. */
+    zoom: number;
+    /** Camera roll, deg (dutch angles). */
+    roll: number;
+    /** Vertical field of view, deg. */
+    fov: number;
+}
+
+/** A generated person (PeopleSystem.randomPerson). Loose record — gameplay code adds fields. */
+interface Person {
+    id: string;
+    name: string;
+    first: string;
+    last: string;
+    gender: string;
+    age: number;
+    role: string;
+    skills: Record<string, number>;
+    charm: number;
+    reliability: number;
+    mood: number;
+    loyalty: number;
+    star: number;
+    exp: number;
+    salary: number;
+    look: ActorLook;
+    busyUntilWeek: number;
+    training: { skill: string, weeksLeft: number } | null;
+    relationships: Record<string, number>;
+    films: number;
+    hits: number;
+    awards: number;
+    quirks: string[];
+    [key: string]: any;
+}
+
+/** The whole game state (StudioManager.state). Loose record — systems extend it. */
+interface StudioState {
+    studioName: string;
+    cash: number;
+    fans: number;
+    rep: number;
+    weekIdx: number;
+    year: number;
+    week: number;
+    seed: number;
+    roster: Person[];
+    staff: Person[];
+    market: Person[];
+    marketIn: number;
+    ownedSets: Record<string, { level: number }>;
+    scripts: any[];
+    projects: any[];
+    released: any[];
+    awards: any[];
+    news: { week: number, year: number, weekOfYear: number, text: string, kind: string }[];
+    goals: any[];
+    stats: { films: number, boxOffice: number, bestScore: number, awards: number, weeks: number };
+    [key: string]: any;
+}
+
+// Game systems that arrive in later phases (typeof-guarded at runtime).
+declare const ScriptGenerator: any;
+declare const CastingSystem: any;
+declare const ProductionSystem: any;
+declare const ReleaseSystem: any;
+declare const MetaSystem: any;
+declare const SaveSystem: any;

@@ -717,7 +717,7 @@ const SCENE_SCHEMA = {
             "kind": "number",
             "options": null,
             "label": "Location width (px)",
-            "value": 2048
+            "value": 4096
         },
         {
             "group": "location",
@@ -728,7 +728,7 @@ const SCENE_SCHEMA = {
             "kind": "number",
             "options": null,
             "label": "Location height (px)",
-            "value": 2048
+            "value": 4096
         },
         {
             "group": "location",
@@ -752,7 +752,7 @@ const SCENE_SCHEMA = {
                 }
             ],
             "label": "Ground texture",
-            "value": 0
+            "value": 1
         },
         {
             "group": "location",
@@ -774,7 +774,7 @@ const SCENE_SCHEMA = {
             "kind": "number",
             "options": null,
             "label": "Hill height (px)",
-            "value": 66
+            "value": 0
         },
         {
             "group": "location",
@@ -843,37 +843,81 @@ const SCENE_SCHEMA = {
             "value": 720
         },
         {
-            "group": "models",
-            "name": "GAME_RUN_SEC",
-            "min": 1,
-            "max": 60,
-            "step": 1,
+            "group": "game",
+            "name": "STUDIO_START_CASH",
+            "min": 100000,
+            "max": 10000000,
+            "step": 50000,
             "kind": "number",
             "options": null,
-            "label": "Sample game: run time (s)",
-            "value": 8
+            "label": "Starting cash ($)",
+            "value": 1000000
         },
         {
-            "group": "models",
-            "name": "GAME_REST_SEC",
-            "min": 1,
-            "max": 60,
-            "step": 1,
+            "group": "game",
+            "name": "STUDIO_LOT_UPKEEP",
+            "min": 0,
+            "max": 50000,
+            "step": 500,
             "kind": "number",
             "options": null,
-            "label": "Sample game: rest time (s)",
-            "value": 4
+            "label": "Weekly lot upkeep ($)",
+            "value": 2500
         },
         {
-            "group": "models",
-            "name": "GAME_STEP_SEC",
-            "min": 0.1,
-            "max": 2,
+            "group": "game",
+            "name": "SCRIPT_WRITER_BONUS",
+            "min": 0,
+            "max": 1,
             "step": 0.05,
             "kind": "number",
             "options": null,
-            "label": "Sample game: step interval (s)",
-            "value": 0.35
+            "label": "Writer bonus per skill",
+            "value": 0.45
+        },
+        {
+            "group": "game",
+            "name": "SHOOT_ACTOR_BONUS",
+            "min": 0,
+            "max": 1,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Actor bonus per skill",
+            "value": 0.3
+        },
+        {
+            "group": "game",
+            "name": "RELEASE_OPEN_PER_QUALITY",
+            "min": 0,
+            "max": 500000,
+            "step": 10000,
+            "kind": "number",
+            "options": null,
+            "label": "Opening $ per quality point",
+            "value": 90000
+        },
+        {
+            "group": "game",
+            "name": "RELEASE_DROP",
+            "min": 0.1,
+            "max": 0.9,
+            "step": 0.02,
+            "kind": "number",
+            "options": null,
+            "label": "Weekly box-office decay",
+            "value": 0.42
+        },
+        {
+            "group": "game",
+            "name": "MOVIE_CAM_LERP",
+            "min": 1,
+            "max": 20,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "Cinema camera glide (1/s)",
+            "value": 6
         },
         {
             "group": "audio-mixer",

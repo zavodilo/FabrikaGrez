@@ -23,7 +23,7 @@
 const UI = {
     ANCHORS: ['top-left', 'top-center', 'top-right', 'middle-left', 'middle-center', 'middle-right',
         'bottom-left', 'bottom-center', 'bottom-right'],
-    KINDS: ['text', 'panel', 'bar', 'button'],
+    KINDS: ['text', 'panel', 'bar', 'button', 'screen'],
     FONT: 'system-ui, "Segoe UI", Roboto, sans-serif',
 
     // Fields of a record by kind and their defaults — a new element in the editor starts from them.
@@ -32,6 +32,10 @@ const UI = {
         panel: { anchor: 'top-left', x: 20, y: 20, w: 240, h: 80, fill: '#10202c', border: '', radius: 10, alpha: 0.7, visible: 1 },
         bar: { anchor: 'top-left', x: 20, y: 20, w: 240, h: 18, value: 0.6, color: '#5ad05a', fill: '#10202c', border: '#ffffff', radius: 9, alpha: 1, visible: 1 },
         button: { anchor: 'bottom-center', x: 0, y: 40, w: 180, h: 48, text: 'Button', fontSize: 20, color: '#ffffff', fill: '#2a6fb0', border: '', radius: 10, alpha: 1, visible: 1 },
+        // screen — a full-size management panel (menus, tables, forms): a panel whose inner
+        // HTML the game feeds through setHTML(html); clicks/changes on [data-act] nodes are
+        // delegated to onAction(fn). Content styling — STUDIO_CSS (injected once as <style>).
+        screen: { anchor: 'top-left', x: 0, y: 0, w: 1280, h: 720, fill: '#131a26', border: '', radius: 0, alpha: 1, visible: 1 },
     },
 
     /** @type {HTMLElement | null} */
@@ -55,6 +59,7 @@ const UI = {
         Object.assign(root.style, { position: 'absolute', overflow: 'hidden', pointerEvents: 'none', transformOrigin: '0 0',
             fontFamily: this.FONT, userSelect: 'none', webkitUserSelect: 'none' });
         (canvas.parentElement || document.body).appendChild(root);
+        this.injectCss();
         if (typeof ResizeObserver !== 'undefined') {
             this._observer = new ResizeObserver(() => this.resize());
             this._observer.observe(canvas);
@@ -70,6 +75,18 @@ const UI = {
         this.root = null;
         this.canvas = null;
         this.elements.clear();
+    },
+
+    // One <style> for the inner content of 'screen' elements: the game ships STUDIO_CSS
+    // (a plain string constant in a game script); the kit alone has none — guarded.
+    injectCss() {
+        if (document.getElementById('arc-screen-css')) return;
+        const css = /** @type {any} */ (window).STUDIO_CSS;
+        if (typeof css !== 'string' || !css) return;
+        const st = document.createElement('style');
+        st.id = 'arc-screen-css';
+        st.textContent = css;
+        document.head.appendChild(st);
     },
 
     get(id) {
@@ -181,10 +198,23 @@ class UIElement {
         this._value = prev ? prev._value : null;
         this._shown = prev ? prev._shown : null;
         this._click = prev ? prev._click : null;
+        this._html = prev ? prev._html : null;
+        this._action = prev ? prev._action : null;
         this.el.addEventListener('click', (e) => {
-            if (UI.editing || this.def.kind !== 'button' || !this._click) return;
-            e.stopPropagation();
-            this._click(this);
+            if (UI.editing) return;
+            if (this.def.kind === 'button') {
+                if (this._click) { e.stopPropagation(); this._click(this); }
+                return;
+            }
+            if (this.def.kind === 'screen' && this._action) {
+                const t = e.target instanceof Element ? /** @type {HTMLElement | null} */ (e.target.closest('[data-act]')) : null;
+                if (t) { e.stopPropagation(); this._action(String(t.dataset.act), t, e); }
+            }
+        });
+        this.el.addEventListener('change', (e) => {
+            if (UI.editing || this.def.kind !== 'screen' || !this._action) return;
+            const t = e.target instanceof Element ? /** @type {HTMLElement | null} */ (e.target.closest('[data-act]')) : null;
+            if (t) this._action('change:' + String(t.dataset.act), t, e);
         });
     }
 
@@ -192,6 +222,17 @@ class UIElement {
 
     // Bar fill 0..1.
     setValue(v) { this._value = Math.max(0, Math.min(1, Number(v) || 0)); this.apply(); return this; }
+
+    // Screen content: an HTML string the game renders from its data. Interactive nodes
+    // carry data-act="name"; clicks arrive at onAction(fn) as fn(act, node, event),
+    // control changes — as fn('change:' + act, node, event).
+    setHTML(html) {
+        this._html = String(html == null ? '' : html);
+        if (this.inner && this.def.kind === 'screen') this.inner.innerHTML = this._html;
+        return this;
+    }
+
+    onAction(fn) { this._action = fn || null; return this; }
 
     show(on) { this._shown = on !== false; this.apply(); return this; }
 
@@ -218,7 +259,7 @@ class UIElement {
         s.opacity = String(d.alpha == null ? 1 : Math.max(0, Math.min(1, Number(d.alpha))));
         s.display = this.visible || UI.editing ? 'block' : 'none';
         if (UI.editing && !this.visible) s.opacity = String(Number(s.opacity) * 0.35);
-        s.pointerEvents = UI.editing || d.kind === 'button' ? 'auto' : 'none';
+        s.pointerEvents = UI.editing || d.kind === 'button' || d.kind === 'screen' ? 'auto' : 'none';
         s.cursor = UI.editing ? 'move' : d.kind === 'button' ? 'pointer' : '';
 
         if (sized) {
@@ -228,7 +269,7 @@ class UIElement {
             s.overflow = 'hidden';
         }
         const label = d.kind === 'text' || d.kind === 'button';
-        if (label || d.kind === 'bar') {
+        if (label || d.kind === 'bar' || d.kind === 'screen') {
             if (!this.inner) {
                 this.inner = document.createElement('div');
                 this.el.appendChild(this.inner);
@@ -237,7 +278,11 @@ class UIElement {
             this.inner.remove();
             this.inner = null;
         }
-        if (label) {
+        if (d.kind === 'screen') {
+            const t = this.inner.style;
+            t.cssText = 'position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;';
+            if (this._html != null && this.inner.innerHTML !== this._html) this.inner.innerHTML = this._html;
+        } else if (label) {
             const t = this.inner.style;
             t.cssText = '';
             this.inner.textContent = this._text != null ? this._text : String(d.text == null ? '' : d.text);
