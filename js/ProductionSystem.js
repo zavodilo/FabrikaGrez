@@ -599,8 +599,12 @@ const ProductionSystem = {
     // --- sequels: Phase Ж (мета-игра) ----------------------------------------------------------------------------
     // The cinema screen asks for these behind a typeof-guard; until the franchise phase lands,
     // a released film simply cannot be sequelled, so the button stays hidden rather than lying.
-    canSequel(state, movie) { return false; },
-    startSequel(state, movieId) { return null; },
+    canSequel(state, movie) {
+        return typeof MetaSystem !== 'undefined' ? MetaSystem.canSequel(state, movie) : false;
+    },
+    startSequel(state, movieId) {
+        return typeof MetaSystem !== 'undefined' ? MetaSystem.startSequel(state, movieId) : { ok: false, why: 'Мета-игра недоступна.' };
+    },
 
     // --- the dispatcher ---------------------------------------------------------------------------------------
 

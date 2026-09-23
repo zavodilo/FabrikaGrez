@@ -114,14 +114,16 @@ const ReleaseSystem = {
         const season = this.SEASON[Math.floor(((state.week || 1) - 1) * 12 / 52) % 12] || 1;
         const base = state.fans * c.openPerFan + quality * c.openPerQuality;
         const mFrac = Math.max(0, Math.min(c.marketingMax, marketing / (proj.budget || 1)));
+        const script = (state.scripts || []).find((x) => x.id === proj.scriptId);
+        const franchise = typeof MetaSystem !== 'undefined' ? MetaSystem.franchiseMultiplier(script) : 1;
         const mult = (1 + mFrac * c.openPerMarketing) * (1 + stars.sum * c.starBonus) *
-            (1 + (heat - 5) * c.heatFactor) * season;
+            (1 + (heat - 5) * c.heatFactor) * season * franchise;
         const screens = Math.round(c.screenBase + quality * c.screenPerQuality);
         const cap = screens * c.screenGross;
         const opening = Math.min(base * mult, cap);
         return {
             opening: Math.round(opening), screens: screens, heat: heat, season: season,
-            mFrac: mFrac, stars: stars.sum, cap: cap, capped: base * mult > cap,
+            mFrac: mFrac, stars: stars.sum, cap: cap, capped: base * mult > cap, franchise: franchise,
         };
     },
 

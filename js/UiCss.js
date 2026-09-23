@@ -112,8 +112,9 @@ label.fld { display: block; color: #9aa4b8; font-size: 12.5px; margin: 8px 0 3px
 .dlg b { color: #c8a24a; font-weight: 700; }
 .dlg i { color: #8a94a8; }
 
-.modal { padding: 22px 26px; text-align: center; }
+.modal { padding: 22px 26px; text-align: center; color: #e8e2d4; }
 .modal h2 { font-family: Georgia, serif; color: #e8c87a; margin: 0 0 10px; font-size: 22px; }
+.modal b { color: #f0e8d8; }
 .modal .btns { margin-top: 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
 .menu-wrap { min-height: 100%; display: flex; flex-direction: column; align-items: center;

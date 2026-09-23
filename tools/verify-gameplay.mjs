@@ -137,8 +137,15 @@ try {
     await sleep(600);
     check('демо-фильм остановлен и вернул камеру', await st(() => !MovieSequencer.playing));
 
-    // --- 3. new game -------------------------------------------------------------------------
+    // --- 3. new game: the scenario picker decides what winning means -------------------------
     await click('new');
+    await sleep(400);
+    check('выбор сценария игры перед стартом', await st(() => {
+        const m = UI.get('screenModal');
+        return !!m && m.visible && /Каким сценарием играем/.test(m.inner ? m.inner.textContent : '');
+    }));
+    await shot('00-scenarios');
+    await click('meta:scenario:sandbox');
     await sleep(400);
     const s0 = await st(() => ({ cash: StudioManager.state.cash, year: StudioManager.state.year, started: app.game.started, roster: StudioManager.state.roster.length }));
     check('новая игра: студия создана', s0.started && s0.cash > 0, '$' + s0.cash + ', ' + s0.year + ', актёров ' + s0.roster);
@@ -520,6 +527,39 @@ try {
         const p = StudioManager.state.roster.find((x) => x.id === r0.id);
         return !!p && !p.demand && p.salary > r0.salary && p.contract.weeksLeft === p.contract.term;
     }, renew));
+
+    // --- 11e. Phase Ж: scenarios, chronicle, decades, sequels ---------------------------------------------------
+    check('сценарий игры записан в состояние', await st(() => StudioManager.state.scenario === 'sandbox'));
+    await page.evaluate(() => app.game.showScreen('more'));
+    await sleep(250);
+    await click('meta:stats');
+    await sleep(300);
+    const statsHtml = await st(() => (document.querySelector('.arc-ui') || {}).innerHTML || '');
+    check('хроника студии: цифры, достижения, эпоха', /ХРОНИКА СТУДИИ/.test(statsHtml) && /Достижения/.test(statsHtml) && /-е/.test(statsHtml));
+    await shot('17-chronicle');
+    // The decade boundary is announced.
+    await page.evaluate(() => { StudioManager.state.year = 1959; StudioManager.state.week = 52; });
+    await page.evaluate(() => app.game.nextWeek());
+    await sleep(250);
+    check('рубеж десятилетия объявлен', await st(() => StudioManager.state.news.some((n) => /1960-е/.test(n.text))));
+    // A finished hit breeds a numbered sequel.
+    await st(() => { const m = StudioManager.state.released[0]; if (m) { m.state = 'done'; m.score = Math.max(6.5, m.score); } });
+    await page.evaluate(() => app.game.showScreen('cinema'));
+    await sleep(300);
+    const seqBtn = await st(() => {
+        const m = StudioManager.state.released[0];
+        return m && ProductionSystem.canSequel(StudioManager.state, m) ? m.id : null;
+    });
+    if (seqBtn) {
+        await click('sequel:' + seqBtn);
+        await sleep(400);
+        const seq = await st(() => {
+            const sc = StudioManager.state.scripts[StudioManager.state.scripts.length - 1];
+            return sc ? { title: sc.title, num: sc.franchise ? sc.franchise.number : 0, of: sc.sequelOf, screen: app.game.screen } : null;
+        });
+        check('сиквел написан и пронумерован', !!seq && seq.num === 2 && !!seq.of && seq.screen === 'script',
+            seq ? '«' + seq.title + '» №' + seq.num : 'сиквел не создался');
+    } else bad('хит не получил права на сиквел');
 
     // --- 12. no console errors across the whole journey -------------------------------------------------------------
     await shot('11-back-to-studio');

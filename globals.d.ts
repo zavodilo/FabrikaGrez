@@ -404,5 +404,4 @@ interface ReleasedMovie {
 }
 
 // Game systems that arrive in later phases (typeof-guarded at runtime).
-declare const MetaSystem: any;
 declare const SaveSystem: any;

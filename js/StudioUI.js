@@ -325,7 +325,8 @@ const StudioUI = {
             '<div class="row tight" style="margin-top:8px"><span class="btn" data-act="load:1">Загрузить 1</span><span class="btn" data-act="load:2">Загрузить 2</span><span class="btn" data-act="load:3">Загрузить 3</span></div>' +
             '<p class="hint" style="margin-top:8px">' + (typeof SaveSystem !== 'undefined' && SaveSystem.slotInfo ? SaveSystem.slotsInfo() : 'Автосохранение каждую неделю.') + '</p>' +
             '</div>' +
-            '<div class="col panel"><div class="h3">❔ Справка</div><span class="btn" data-act="help">Как играть</span>' +
+            '<div class="col panel"><div class="h3">📊 Хроника</div><span class="btn" data-act="meta:stats">Статистика и достижения</span>' +
+            '<div class="h3">❔ Справка</div><span class="btn" data-act="help">Как играть</span>' +
             '<div class="h3">🏳 Студия</div><p class="hint">«' + this.esc(s.studioName) + '» · основана в ' + s.year + ' · недель прошло: ' + s.stats.weeks + '</p></div>' +
             '</div>' +
             '<div class="row" style="margin-top:12px"><span class="btn" data-act="close">← Закрыть</span><span class="btn" data-act="menu">В главное меню</span></div></div>';
@@ -354,6 +355,8 @@ const StudioUI = {
                 ? ReleaseSystem.postScreen(game) : this._soon('Постпродакшн');
             case 'reviews': return typeof ReleaseSystem !== 'undefined' && ReleaseSystem.reviewsScreen
                 ? ReleaseSystem.reviewsScreen(game) : this._soon('Премьера');
+            case 'stats': return typeof MetaSystem !== 'undefined' && MetaSystem.statsScreen
+                ? MetaSystem.statsScreen(game) : this._soon('Хроника студии');
             default: return this._soon(name);
         }
     },
@@ -376,7 +379,12 @@ const StudioUI = {
             return;
         }
         if (act === 'new') {
-            S.newGame('Фабрика Грёз');
+            // The scenario decides what winning means here, so the player picks it first.
+            if (typeof MetaSystem !== 'undefined' && MetaSystem.scenarioPicker) {
+                game.modal(MetaSystem.scenarioPicker(game));
+                return;
+            }
+            S.newGame('Фабрика Грёз', 'sandbox');
             game.started = true;
             game._setHud(true);
             game.showScreen('studio');
@@ -459,8 +467,12 @@ const StudioUI = {
         }
         if (parts[0] === 'sequel') {
             if (typeof ProductionSystem !== 'undefined' && ProductionSystem.startSequel) {
-                ProductionSystem.startSequel(s, parts[1]);
-                game.showScreen('newmovie');
+                const res = ProductionSystem.startSequel(s, parts[1]);
+                if (res && res.ok) {
+                    game.uiState.scriptOpen = res.script.id;
+                    game.showScreen('script');
+                    game.toast('🎬 Сиквел №' + res.number + ' написан: «' + res.script.title + '». Узнаваемость продаёт, несвежесть штрафует.');
+                } else game.toast(res ? res.why : 'Сиквел не случился.');
             }
             return;
         }

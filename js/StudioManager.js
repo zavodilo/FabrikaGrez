@@ -37,12 +37,15 @@ const StudioManager = {
 
     // --- new game ---------------------------------------------------------------------------
 
-    newGame(studioName) {
+    newGame(studioName, scenarioId) {
         const c = this.cfg();
         const r = Rng.create('fabrika-' + Date.now());
         /** @type {StudioState} */
         const s = {
             studioName: studioName || 'Фабрика Грёз',
+            scenario: scenarioId || 'sandbox',
+            foundedYear: c.startYear,
+            lastDecade: Math.floor(c.startYear / 10) * 10,
             cash: c.startCash,
             fans: c.startFans,
             rep: 20,

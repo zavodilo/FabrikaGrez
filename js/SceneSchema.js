@@ -921,6 +921,28 @@ const SCENE_SCHEMA = {
         },
         {
             "group": "game",
+            "name": "META_EVENT_CHANCE",
+            "min": 0,
+            "max": 1,
+            "step": 0.02,
+            "kind": "number",
+            "options": null,
+            "label": "Studio event chance per week",
+            "value": 0.18
+        },
+        {
+            "group": "game",
+            "name": "META_SEQUEL_FRESH_PENALTY",
+            "min": 0,
+            "max": 2,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "Sequel freshness penalty",
+            "value": 0.4
+        },
+        {
+            "group": "game",
             "name": "PEOPLE_POACH_CHANCE",
             "min": 0,
             "max": 0.5,

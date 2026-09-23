@@ -188,6 +188,15 @@ const RELEASE_HOLD_BONUS = 0.12;        // weekly decay softened per 10 audience
 const AWARD_REP = 6;                    // studio reputation per «Золотой Кадр»
 const AWARD_FANS = 4;                   // fans per «Золотой Кадр»
 const AWARD_CASH = 25000;               // $ prize of a «Золотой Кадр»
+// Meta-game (MetaSystem): weekly studio events, sequels and franchises, scenarios, achievements.
+const META_EVENT_CHANCE = 0.18;         // weekly chance of a studio-wide event
+const META_SEQUEL_MIN_SCORE = 6;        // critics' score a film needs to breed a sequel
+const META_SEQUEL_MAX = 3;              // highest sequel number in a franchise
+const META_SEQUEL_FRESH_PENALTY = 0.4;  // quality points lost per sequel number above 1
+const META_SEQUEL_RECOGNITION = 0.35;   // opening multiplier per 100 audience points of the original
+const META_SEQUEL_FATIGUE = 0.12;       // opening multiplier lost per sequel number
+const META_GOAL_KADR_YEARS = 10;        // years to take a «Золотой Кадр» in that scenario
+const META_GOAL_EMPIRE_GROSS = 100000000; // $ lifetime gross of the «Империя грёз» scenario
 // MovieSequencer and the cinematic camera.
 const MOVIE_CAM_LERP = 6;               // 1/s: camera glide speed toward the shot pose
 const MOVIE_TITLE_SEC = 3.5;            // s: the title card holds
