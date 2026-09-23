@@ -106,6 +106,41 @@ const MovieData = {
         rooftop: { ru: 'Крыша небоскрёба', indoor: false, cost: 75000, genres: ['action', 'drama', 'horror'] },
     },
 
+    // --- set staging slots -----------------------------------------------------------------
+    // The ScriptGenerator stages actors by ROLE of a point, not by its name: 'a' and 'b' are the
+    // two speaking positions, 'wide' is where the establishing camera looks, 'enter' is the door
+    // a late arrival comes through, c..f are the rest. Every value MUST be an anchor the matching
+    // SetPieces3D set actually declares (tests/fabrika-script.test.mjs checks the file itself).
+    ANCHOR_XY: {
+        western: { duel_a: [-95, 34], duel_b: [95, 34], porch: [-140, -74], saloon_door: [-140, -90], store: [150, -70], street_w: [-250, 34], street_e: [250, 34], tower: [300, -120], south: [-60, 96] },
+        saloon: { bar_in: [-100, -152], bar_out: [-100, -84], piano: [170, 108], table1: [-40, 140], table2: [100, 100], door: [0, 168], center: [0, 20], corner_l: [-210, 150], corner_r: [210, -60] },
+        space: { console: [0, -104], chair: [0, 10], center: [0, 60], pod_l: [-200, 120], pod_r: [200, 120], door: [0, 170], window: [0, -170] },
+        city: { road_w: [-260, 40], road_e: [260, -40], walk_n: [-60, -120], walk_s: [60, 120], alley: [330, 180], shop: [-160, 150], center: [0, 0] },
+        mansion: { sofa: [170, 96], fireplace: [-180, -60], center: [20, 20], table: [60, 100], door: [-60, 190], painting: [-60, -160] },
+        forest: { fire_a: [-70, 26], fire_b: [70, 26], fire_c: [0, -60], log: [0, 130], path_w: [-300, 160], deep_e: [300, -60], center: [0, 40] },
+        beach: { shore: [-40, -120], sand_a: [-160, 40], sand_b: [100, 80], water: [40, -220], palm: [220, 60], umbrella: [-40, 70], center: [0, 40] },
+        lab: { table: [0, 130], table2: [-60, 130], coil: [150, -40], desk: [-190, -20], center: [0, 20], door: [220, 190] },
+        diner: { counter: [-35, -30], counter2: [35, -30], booth_l: [-170, 78], booth_r: [170, 78], juke: [200, -110], door: [-240, 60], center: [0, 40] },
+        office: { boss: [0, -50], guest1: [-60, 60], guest2: [60, 60], door: [-200, 180], window: [60, -150], center: [0, 20] },
+        stage: { mic: [0, 60], piano: [-150, -60], drums: [140, -70], center: [0, -40], curtain_l: [-200, 40], curtain_r: [200, 40], audience: [0, 240], stage_back: [0, -180] },
+        rooftop: { edge_s: [0, 190], edge_n: [0, -190], tank: [-140, -20], center: [0, 0], door: [120, -100], ac: [200, 0], antenna: [-60, -160] },
+    },
+
+    SET_SLOTS: {
+        western: { wide: 'south', a: 'duel_a', b: 'duel_b', c: 'porch', d: 'store', e: 'street_w', f: 'street_e', enter: 'street_e' },
+        saloon: { wide: 'center', a: 'table1', b: 'table2', c: 'bar_out', d: 'piano', e: 'corner_l', f: 'corner_r', enter: 'door' },
+        space: { wide: 'center', a: 'console', b: 'chair', c: 'pod_l', d: 'pod_r', e: 'window', f: 'door', enter: 'door' },
+        city: { wide: 'center', a: 'walk_s', b: 'walk_n', c: 'shop', d: 'alley', e: 'road_w', f: 'road_e', enter: 'road_e' },
+        mansion: { wide: 'center', a: 'sofa', b: 'table', c: 'fireplace', d: 'painting', e: 'door', f: 'door', enter: 'door' },
+        forest: { wide: 'center', a: 'fire_a', b: 'fire_b', c: 'log', d: 'fire_c', e: 'path_w', f: 'deep_e', enter: 'path_w' },
+        beach: { wide: 'center', a: 'sand_a', b: 'sand_b', c: 'umbrella', d: 'palm', e: 'shore', f: 'water', enter: 'shore' },
+        lab: { wide: 'center', a: 'desk', b: 'table', c: 'table2', d: 'coil', e: 'door', f: 'door', enter: 'door' },
+        diner: { wide: 'center', a: 'booth_l', b: 'booth_r', c: 'counter', d: 'juke', e: 'counter2', f: 'door', enter: 'door' },
+        office: { wide: 'center', a: 'boss', b: 'guest1', c: 'guest2', d: 'window', e: 'door', f: 'door', enter: 'door' },
+        stage: { wide: 'center', a: 'mic', b: 'piano', c: 'drums', d: 'stage_back', e: 'curtain_l', f: 'curtain_r', enter: 'curtain_l' },
+        rooftop: { wide: 'center', a: 'edge_s', b: 'edge_n', c: 'tank', d: 'ac', e: 'antenna', f: 'door', enter: 'door' },
+    },
+
     // --- people ---------------------------------------------------------------------------
     NAMES_M: ['Рэй', 'Джон', 'Фрэнк', 'Генри', 'Джеймс', 'Уолт', 'Клинт', 'Сэм', 'Джек', 'Чак',
         'Арчи', 'Боб', 'Дин', 'Эд', 'Гэри', 'Хэнк', 'Ирвин', 'Джо', 'Кирк', 'Лео',

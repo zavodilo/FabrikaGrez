@@ -8,3 +8,4 @@
 /_utils/.backups/
 /build/
 /dist/
+node_modules/

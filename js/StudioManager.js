@@ -56,6 +56,7 @@ const StudioManager = {
             market: [],
             marketIn: 0,
             ownedSets: {},
+            orders: [],
             scripts: [],
             projects: [],
             released: [],
@@ -143,6 +144,9 @@ const StudioManager = {
         if (s.marketIn <= 0) this.refreshMarket(false);
 
         // The systems of the later phases (guarded so any subset boots).
+        if (typeof ScriptGenerator !== 'undefined' && ScriptGenerator.weekly) {
+            for (const t of ScriptGenerator.weekly(s, this)) toasts.push(t);
+        }
         if (typeof ProductionSystem !== 'undefined' && ProductionSystem.weekly) {
             for (const t of ProductionSystem.weekly(s, this)) toasts.push(t);
         }
