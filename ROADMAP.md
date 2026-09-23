@@ -192,6 +192,9 @@
       и визуальным дымом зелёный; `tools/verify-gameplay.mjs` ~60 проверок сквозного цикла
 - [x] README с галереей и балансом в одном абзаце, 11 скриншотов в `docs/screenshots/`,
       сборка `dist/arcengine-1.0.0.zip` (`node tools/arc.mjs build`), версия **1.0.0**
+- [x] Публикация: GitHub Pages https://zavodilo.github.io/FabrikaGrez/ (ветка gh-pages из dist,
+      `.nojekyll`, инлайн-фавиконка без лишнего запроса); `tools/deploy-pages.mjs` пересобирает,
+      публикует и smoke-тестит живой сайт в headless-Chrome (0 ошибок консоли)
 
 ---
 

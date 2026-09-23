@@ -1,5 +1,8 @@
 # 🎬 ФАБРИКА ГРЁЗ
 
+**▶ Играть прямо в браузере: [zavodilo.github.io/FabrikaGrez](https://zavodilo.github.io/FabrikaGrez/)**
+(GitHub Pages, сборка 1.0.0; публикация — `node tools/deploy-pages.mjs`, она же smoke-тестит живой сайт)
+
 **Симулятор киностудии в духе *The Movies*, где главный спецэффект — это ваш собственный фильм.**
 Вы ведёте студию с 1950 года: деньги, люди, декорации, сценарии, съёмки, прокат, награды —
 а потом **садитесь в зале и смотрите картину, которую сняли**: с камерами, склейками,
@@ -20,6 +23,7 @@ node tools/arc.mjs editor     # редактор набора на http://localh
 node tools/arc.mjs check      # типы + тесты + синхронность скиллов + манифест
 node tools/arc.mjs check --all# релизный гейт: + headless-рендер и визуальный дым
 node tools/arc.mjs build      # dist/arcengine-<version>.zip — играбельно без репозитория
+node tools/deploy-pages.mjs   # собрать и опубликовать на GitHub Pages + smoke-тест живого сайта
 ```
 
 Нужен только Node.js (любой современный LTS) для инструментов; **игре он не нужен** —
