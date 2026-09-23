@@ -229,6 +229,11 @@ const MovieSequencer = {
     _enterScene(i, first) {
         const sc = this.tl.scenes[i];
         if (!sc) { this._beginCredits(); return; }
+        // Leave the intro card behind. Without this the state stayed 'intro' forever: the intro
+        // branch re-entered this method on EVERY frame (rebuilding the set each time) and the
+        // only other writer of 'scene' — _nextScene — is reachable solely from the 'scene'
+        // branch, so no film ever got past its title card.
+        this.state = 'scene';
         this.transitioning = false;
         this.si = i;
         this.shot = 0;

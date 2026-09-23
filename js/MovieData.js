@@ -106,6 +106,26 @@ const MovieData = {
         rooftop: { ru: 'Крыша небоскрёба', indoor: false, cost: 75000, genres: ['action', 'drama', 'horror'] },
     },
 
+    // --- set staging slots -----------------------------------------------------------------
+    // The ScriptGenerator stages actors by ROLE of a point, not by its name: 'a' and 'b' are the
+    // two speaking positions, 'wide' is where the establishing camera looks, 'enter' is the door
+    // a late arrival comes through, c..f are the rest. Every value MUST be an anchor the matching
+    // SetPieces3D set actually declares (tests/fabrika-script.test.mjs checks the file itself).
+    SET_SLOTS: {
+        western: { wide: 'south', a: 'duel_a', b: 'duel_b', c: 'porch', d: 'store', e: 'street_w', f: 'street_e', enter: 'street_e' },
+        saloon: { wide: 'center', a: 'table1', b: 'table2', c: 'bar_out', d: 'piano', e: 'corner_l', f: 'corner_r', enter: 'door' },
+        space: { wide: 'center', a: 'console', b: 'chair', c: 'pod_l', d: 'pod_r', e: 'window', f: 'door', enter: 'door' },
+        city: { wide: 'center', a: 'walk_s', b: 'walk_n', c: 'shop', d: 'alley', e: 'road_w', f: 'road_e', enter: 'road_e' },
+        mansion: { wide: 'center', a: 'sofa', b: 'table', c: 'fireplace', d: 'painting', e: 'door', f: 'door', enter: 'door' },
+        forest: { wide: 'center', a: 'fire_a', b: 'fire_b', c: 'log', d: 'fire_c', e: 'path_w', f: 'deep_e', enter: 'path_w' },
+        beach: { wide: 'center', a: 'sand_a', b: 'sand_b', c: 'umbrella', d: 'palm', e: 'shore', f: 'water', enter: 'shore' },
+        lab: { wide: 'center', a: 'desk', b: 'table', c: 'table2', d: 'coil', e: 'door', f: 'door', enter: 'door' },
+        diner: { wide: 'center', a: 'booth_l', b: 'booth_r', c: 'counter', d: 'juke', e: 'counter2', f: 'door', enter: 'door' },
+        office: { wide: 'center', a: 'boss', b: 'guest1', c: 'guest2', d: 'window', e: 'door', f: 'door', enter: 'door' },
+        stage: { wide: 'center', a: 'mic', b: 'piano', c: 'drums', d: 'stage_back', e: 'curtain_l', f: 'curtain_r', enter: 'curtain_l' },
+        rooftop: { wide: 'center', a: 'edge_s', b: 'edge_n', c: 'tank', d: 'ac', e: 'antenna', f: 'door', enter: 'door' },
+    },
+
     // --- people ---------------------------------------------------------------------------
     NAMES_M: ['Рэй', 'Джон', 'Фрэнк', 'Генри', 'Джеймс', 'Уолт', 'Клинт', 'Сэм', 'Джек', 'Чак',
         'Арчи', 'Боб', 'Дин', 'Эд', 'Гэри', 'Хэнк', 'Ирвин', 'Джо', 'Кирк', 'Лео',

@@ -55,6 +55,8 @@ interface UIRecord {
     alpha?: number;
     /** 0 — hidden until the game calls show() */
     visible?: number;
+    /** screen only: 1 — the overlay fills the viewport instead of the stored w/h. */
+    bleed?: number;
 }
 
 /** LOCATION_OBJECTS record (Objects.js, written by the editor). */
@@ -260,9 +262,81 @@ interface StudioState {
     [key: string]: any;
 }
 
+/** A role the script asks the casting office to fill (ScriptGenerator.ROLES entry + share). */
+interface ScriptRole {
+    key: string;
+    ru: string;
+    /** How other characters address them in dialogue ({other}). */
+    voc: string;
+    /** 'lead' | 'sup' */
+    tier: string;
+    /** The PeopleSystem skill that carries the role. */
+    skill: string;
+    /** Relative screen weight before normalisation. */
+    w: number;
+    /** 'm' | 'f' | 'any' — a soft casting preference, never a hard block. */
+    sex: string;
+    age: number[];
+    /** Normalised share of the film's screen time, sums to 1 over the role sheet. */
+    share: number;
+}
+
+/** One scene of a screenplay, before it is compiled into a timeline. */
+interface ScriptScene {
+    idx: number;
+    /** 1 | 2 | 3 */
+    act: number;
+    /** A key of ScriptGenerator.KINDS. */
+    kind: string;
+    /** A key of MovieData.SET_INFO / SetPieces3D.SETS. */
+    set: string;
+    /** 'day' | 'sunset' | 'night' */
+    timeOfDay: string;
+    /** null | 'sunset' | 'night' — the grade the cinema overlay applies. */
+    tint: string | null;
+    label: string;
+    /** Role keys present in the scene. */
+    roles: string[];
+    /** Dialogue moods the scene draws its lines from. */
+    moods: string[];
+    lines: { role: string, mood: string, text: string }[];
+    quality: number;
+    /** Narration card text; '' — none. */
+    narr: string;
+    /** Prop ids of SetPieces3D.PROPS. */
+    props: string[];
+}
+
+/** A finished screenplay (StudioState.scripts entry). */
+interface Script {
+    id: string;
+    title: string;
+    genre: string;
+    year: number;
+    city: string;
+    budget: number;
+    /** The seed every regeneration and the compiled timeline derive from. */
+    seed: number;
+    quality: number;
+    logline: string;
+    writerId: string;
+    writerName: string;
+    writerSkill: number;
+    sequelOf: string;
+    roles: ScriptRole[];
+    extras: number;
+    scenes: ScriptScene[];
+    /** roleKey -> personId (CastingSystem fills it). */
+    cast: Record<string, string> | null;
+    /** The compiled MovieSequencer timeline; null until the cast is confirmed. */
+    timeline: any;
+    draftedWeek: number;
+    /** 'ready' | 'cast' | 'shooting' | 'done' */
+    state: string;
+    [key: string]: any;
+}
+
 // Game systems that arrive in later phases (typeof-guarded at runtime).
-declare const ScriptGenerator: any;
-declare const CastingSystem: any;
 declare const ProductionSystem: any;
 declare const ReleaseSystem: any;
 declare const MetaSystem: any;

@@ -157,6 +157,10 @@ const SetPieces3D = {
     finish(view, baseX, baseY, groundH) {
         const b = this._b;
         this._b = null;
+        if (!b) {
+            throw new Error('SetPieces3D.finish() без begin(): строитель не открыт. ' +
+                'Каждый buildSet/buildProp/buildLot обязан вызвать begin() до fn(S).');
+        }
         const root = new pc.Entity('set');
         view.root.addChild(root);
         const gh = groundH || 0;
@@ -196,10 +200,14 @@ const SetPieces3D = {
         if (handle && handle.root) World3D.removeObject(handle.view, handle.root);
     },
 
-    /** Build a set by id at a base point (its anchors come back in absolute map coords). */
+    /** Build a set by id at a base point (its anchors come back in absolute map coords).
+     *  begin() is mandatory here: buildLot's finish() leaves _b null, so a set built without
+     *  opening the builder crashes on its very first box — which silently killed every film
+     *  playback (the demo only ever reached its intro card before anyone played a real scene). */
     buildSet(view, id, baseX, baseY, groundH) {
         const fn = SetPieces3D.SETS[id];
         if (!fn) return null;
+        SetPieces3D.begin();
         fn(SetPieces3D);
         const h = SetPieces3D.finish(view, baseX, baseY, groundH);
         h.id = id;
@@ -209,6 +217,7 @@ const SetPieces3D = {
     buildProp(view, id, x, y, headingDeg, groundH) {
         const fn = SetPieces3D.PROPS[id];
         if (!fn) return null;
+        SetPieces3D.begin();
         fn(SetPieces3D);
         const h = SetPieces3D.finish(view, x, y, groundH);
         h.id = id;

@@ -180,18 +180,49 @@ const StudioUI = {
         const s = StudioManager.state;
         let prod = '';
         if (s.projects.length && typeof ProductionSystem !== 'undefined') prod = ProductionSystem.filmsScreen(s);
-        else prod = '<p class="hint">Производств нет.</p>';
+        else prod = '<p class="hint">Производств нет. Соберите каст по готовому сценарию — и фильм можно будет посмотреть.</p>';
+
+        // Orders still on the writers' desks.
+        let orders = '';
+        for (const o of s.orders || []) {
+            const wn = (s.staff || []).find((p) => p.id === o.writerId);
+            orders += '<div class="card" style="cursor:default"><div class="row"><b>«' +
+                this.esc(o.title || 'без названия') + '»</b><span class="tag">' +
+                ((MovieData.GENRES[o.genre] || {}).ru || '') + '</span><span class="sp"></span>' +
+                '<span class="tag blue">пишется, ещё ' + o.weeksLeft + ' нед.</span></div>' +
+                '<div class="meta">' + this.money(o.budget) + ' · ' + (wn ? this.esc(wn.name) : 'без автора') + '</div></div>';
+        }
+
+        // Ready scripts, each one card.
         let scripts = '';
         for (const sc of s.scripts) {
-            scripts += '<div class="card" style="cursor:default"><div class="row"><b>«' + this.esc(sc.title) + '»</b>' +
-                '<span class="tag">' + MovieData.GENRES[sc.genre].ru + '</span><span class="sp"></span>' +
+            const casted = !!(sc.cast && typeof CastingSystem !== 'undefined' && CastingSystem.isComplete(s, sc));
+            const G = MovieData.GENRES[sc.genre] || {};
+            scripts += '<div class="card" style="cursor:default"><div class="row" style="align-items:flex-start">' +
+                '<div class="poster ' + sc.genre + '"><div class="p-emoji">' + (G.emoji || '🎬') + '</div>' +
+                '<div class="p-title">' + this.esc(sc.title) + '</div></div>' +
+                '<div style="flex:1;min-width:200px"><div class="row tight"><b>«' + this.esc(sc.title) + '»</b>' +
+                '<span class="tag">' + (G.ru || '') + '</span><span class="tag">' + sc.year + '</span>' +
                 '<span class="tag gold">качество ' + sc.quality.toFixed(1) + '</span>' +
-                '<span class="btn gold small" data-act="prod:start:' + sc.id + '">В производство</span></div>' +
-                '<div class="meta">Сценарист: ' + this.esc(sc.writerName || '—') + ' · сцен: ' + (sc.timeline ? sc.timeline.scenes.length : '?') + '</div></div>';
+                (casted ? '<span class="tag green">каст собран</span>' : '<span class="tag">кастинг не пройден</span>') +
+                (sc.sequelOf ? '<span class="tag blue">сиквел</span>' : '') + '</div>' +
+                '<div class="meta">' + this.esc(sc.logline) + '</div>' +
+                '<div class="meta">Автор: ' + this.esc(sc.writerName || '—') + ' · сцен: ' + sc.scenes.length +
+                ' · бюджет ' + this.money(sc.budget) + (casted && sc.projected != null ? ' · прогноз ' + sc.projected.toFixed(1) + '/10' : '') + '</div>' +
+                '<div class="row tight" style="margin-top:6px">' +
+                '<span class="btn small" data-act="script:open:' + sc.id + '">📖 Читать</span>' +
+                '<span class="btn gold small" data-act="cast:open:' + sc.id + '">🎭 ' + (casted ? 'Каст' : 'К кастингу') + '</span>' +
+                (sc.timeline ? '<span class="btn small" data-act="script:watch:' + sc.id + '">▶ Смотреть</span>'
+                    : '<span class="btn small" data-act="script:preview:' + sc.id + '">🎞 Черновик</span>') +
+                (typeof ProductionSystem !== 'undefined' && casted
+                    ? '<span class="btn small" data-act="prod:start:' + sc.id + '">🎬 В производство</span>' : '') +
+                '<span class="sp"></span><span class="btn small red" data-act="script:drop:' + sc.id + '">В корзину</span>' +
+                '</div></div></div></div>';
         }
-        return '<div class="sc"><h1 class="title">ФИЛЬМЫ<span class="sub">производства и готовые сценарии</span></h1>' +
+        return '<div class="sc"><h1 class="title">ФИЛЬМЫ<span class="sub">заказы сценарного отдела, готовые сценарии и производства</span></h1>' +
             '<div class="h2">🎬 В производстве</div>' + prod +
-            '<div class="h2">📜 Готовые сценарии</div>' + (scripts || '<p class="hint">Сценарии появляются, когда сценарист дописывает заказ (или написаны вами в мастере нового фильма).</p>') +
+            '<div class="h2">🖋 Пишутся</div>' + (orders || '<p class="hint">Сценарный отдел свободен.</p>') +
+            '<div class="h2">📜 Готовые сценарии</div>' + (scripts || '<p class="hint">Сценариев нет. Нажмите «🎥 Новый фильм»: закажите сценарий у сценариста или напишите его сами — бесплатно, но слабее.</p>') +
             '<div class="row" style="margin-top:12px"><span class="btn" data-act="close">← Закрыть</span><span class="sp"></span>' +
             '<span class="btn gold" data-act="newmovie">🎥 Новый фильм</span></div></div>';
     },
@@ -254,6 +285,8 @@ const StudioUI = {
             case 'help': return this.help(game);
             case 'newmovie': return typeof ScriptGenerator !== 'undefined' && ScriptGenerator.newMovieScreen
                 ? ScriptGenerator.newMovieScreen(game) : this._soon('Мастер нового фильма');
+            case 'script': return typeof ScriptGenerator !== 'undefined' && ScriptGenerator.detailScreen
+                ? ScriptGenerator.detailScreen(game, (game.uiState || {}).scriptOpen) : this._soon('Сценарий');
             case 'casting': return typeof CastingSystem !== 'undefined' && CastingSystem.screen
                 ? CastingSystem.screen(game) : this._soon('Кастинг');
             case 'production': return typeof ProductionSystem !== 'undefined' && ProductionSystem.screen
@@ -368,12 +401,22 @@ const StudioUI = {
             rerender();
             return;
         }
-        // The systems of the later phases handle their own verbs.
-        const sys = { script: 'ScriptGenerator', cast: 'CastingSystem', prod: 'ProductionSystem', rel: 'ReleaseSystem', meta: 'MetaSystem' };
-        if (sys[parts[0]]) {
-            const ns = /** @type {any} */ (window)[sys[parts[0]]];
-            if (ns && ns.onAction && ns.onAction(game, act, el, screenEl) !== false) {
-                if (game.screen !== 'none') rerender();
+        // The systems of the later phases handle their own verbs. NOTE: a system is a classic
+        // top-level `const` — a lexical global binding, NOT a property of `window` — so they are
+        // resolved here by direct reference behind typeof-guards (window[…] always missed them).
+        const sys = {
+            script: typeof ScriptGenerator !== 'undefined' ? ScriptGenerator : null,
+            cast: typeof CastingSystem !== 'undefined' ? CastingSystem : null,
+            prod: typeof ProductionSystem !== 'undefined' ? ProductionSystem : null,
+            rel: typeof ReleaseSystem !== 'undefined' ? ReleaseSystem : null,
+            meta: typeof MetaSystem !== 'undefined' ? MetaSystem : null,
+        };
+        // A control change arrives as 'change:<system>:<verb>' — route it to its system too.
+        const key = parts[0] === 'change' && parts.length > 2 ? parts[1] : parts[0];
+        if (sys[key]) {
+            const ns = sys[key];
+            if (ns.onAction && ns.onAction(game, act, el, screenEl) !== false) {
+                if (game.screen !== 'none' && !(ns === ScriptGenerator && act.indexOf('change:') === 0)) rerender();
                 return;
             }
         }
