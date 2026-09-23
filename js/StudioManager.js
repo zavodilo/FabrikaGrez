@@ -67,8 +67,9 @@ const StudioManager = {
             news: [],
             goals: [],
             stats: { films: 0, boxOffice: 0, bestScore: 0, awards: 0, weeks: 0 },
-            settings: { speed: 1 },
+            settings: { speed: 1, hints: true, autoWeek: 0, volume: null },
             tutorialStep: 0,
+            tutStep: 0,
         };
         this.state = s;
         this.rng = Rng.create(s.seed);
@@ -81,6 +82,7 @@ const StudioManager = {
         for (const p of s.roster.concat(s.staff)) { p.loyalty = Math.max(p.loyalty, 55); }
         this.refreshMarket(true);
         this.pushNews('Студия «' + s.studioName + '» открыта! Город ждёт премьер.', 'good');
+        if (typeof Tutorial !== 'undefined') Tutorial.reset(s);
         return s;
     },
 

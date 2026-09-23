@@ -116,14 +116,21 @@ const ReleaseSystem = {
         const mFrac = Math.max(0, Math.min(c.marketingMax, marketing / (proj.budget || 1)));
         const script = (state.scripts || []).find((x) => x.id === proj.scriptId);
         const franchise = typeof MetaSystem !== 'undefined' ? MetaSystem.franchiseMultiplier(script) : 1;
+        // Production value: money on the screen sells tickets. Without it a 300k picture and a
+        // 1.2M picture opened the same, and the economy had no cost/income tension at all.
+        const ideal = (ScriptGenerator && ScriptGenerator.IDEAL_BUDGET ? ScriptGenerator.IDEAL_BUDGET[proj.genre] : 0) || 400000;
+        const pv = Math.max(0.5, Math.min(2, (proj.budget || ideal) / ideal));
+        const prodValue = (typeof RELEASE_PROD_VALUE_BASE !== 'undefined' ? RELEASE_PROD_VALUE_BASE : 0.7) +
+            (typeof RELEASE_PROD_VALUE_SLOPE !== 'undefined' ? RELEASE_PROD_VALUE_SLOPE : 0.3) * pv;
         const mult = (1 + mFrac * c.openPerMarketing) * (1 + stars.sum * c.starBonus) *
-            (1 + (heat - 5) * c.heatFactor) * season * franchise;
+            (1 + (heat - 5) * c.heatFactor) * season * franchise * prodValue;
         const screens = Math.round(c.screenBase + quality * c.screenPerQuality);
         const cap = screens * c.screenGross;
         const opening = Math.min(base * mult, cap);
         return {
             opening: Math.round(opening), screens: screens, heat: heat, season: season,
             mFrac: mFrac, stars: stars.sum, cap: cap, capped: base * mult > cap, franchise: franchise,
+            prodValue: Math.round(prodValue * 100) / 100,
         };
     },
 
@@ -131,6 +138,10 @@ const ReleaseSystem = {
     premiere(state, mgr, proj, opts) {
         const o = opts || {};
         if (!proj || proj.state !== 'post') return { ok: false, why: 'В монтажную отправляют только снятую картину.' };
+        const need = typeof RELEASE_POST_WEEKS !== 'undefined' ? RELEASE_POST_WEEKS : 2;
+        if ((proj.postWeeks || 0) < need) {
+            return { ok: false, why: 'Монтаж ещё идёт: картине нужно постоять в монтажной ' + (need - (proj.postWeeks || 0)) + ' нед.' };
+        }
         const c = this.cfg();
         const script = (state.scripts || []).find((x) => x.id === proj.scriptId);
         if (!script || !script.timeline) return { ok: false, why: 'Материал картины потерян.' };
@@ -185,6 +196,7 @@ const ReleaseSystem = {
         state.released.push(movie);
         proj.state = 'released';
         proj.movieId = movie.id;
+        if (script) script.state = 'released';   // the script leaves the pipeline for good
 
         // The people of the picture get their credit (and their star power starts compounding).
         for (const key of Object.keys(proj.cast)) {

@@ -152,7 +152,7 @@ test('weekly: темп меняет и скорость, и цену, и кач�
     StudioManager.state = rich.s; StudioManager.tickWeek();
     const r1 = rich.pr.scenesShot.length;
     assert.ok(c1 < s1, 'экономный темп снял не меньше стандартного');
-    assert.equal(r1, s1, 'размашистый темп снимает столько же сцен, но дороже');
+    assert.ok(r1 > s1, 'размашистый темп не обгоняет стандартный: ' + r1 + ' vs ' + s1);
     // Quality deltas: over many scenes rich beats cheap on the pace term.
     assert.ok(P.pace('rich').q > P.pace('cheap').q);
 });

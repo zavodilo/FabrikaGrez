@@ -330,6 +330,7 @@ const ProductionSystem = {
     weekly(state, mgr) {
         const out = [];
         for (const proj of (state.projects || [])) {
+            if (proj.state === 'post') proj.postWeeks = (proj.postWeeks || 0) + 1;
             if (proj.state !== 'shooting') continue;
             const script = (state.scripts || []).find((x) => x.id === proj.scriptId);
             if (!script || !script.timeline) { proj.state = 'shelf'; continue; }
@@ -380,9 +381,10 @@ const ProductionSystem = {
             const inc = this._incident(state, proj, r, mgr);
             if (inc) { out.push(inc.toast); mgr.pushNews('«' + proj.title + '»: ' + inc.ru.toLowerCase() + '.', inc.kind); }
 
-            // Wrapped?
+            // Wrapped? The picture moves to the editing room, and the room takes its weeks.
             if (proj.nextScene >= scenes.length) {
                 proj.state = 'post';
+                proj.postWeeks = 0;
                 for (const c of this.castPeople(state, proj)) c.person.busyUntilWeek = 0;
                 const dir = this.directorOf(state, proj);
                 if (dir) dir.busyUntilWeek = 0;

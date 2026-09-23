@@ -2,7 +2,7 @@
 // the other modules read these globals. Edited by the editor (_utils/editor): the server
 // patches only lines of the form `const NAME = <number>;` — keep values as numeric
 // literals (colors — 0xRRGGBB); the editor won't touch a formula.
-const GAME_VERSION = '0.1.0'; // build version: ?v= on scripts (tools/build.mjs) and the archive name
+const GAME_VERSION = '1.0.0'; // build version: ?v= on scripts (tools/build.mjs) and the archive name
 
 // localStorage shim: in a sandbox iframe and when site data is blocked, direct access throws SecurityError.
 // All storage access goes through Store only.
@@ -106,7 +106,7 @@ const PEOPLE_COURSE_CHARM_MULT = 1.5;   // price of the charm course, in trainin
 const PEOPLE_COURSE_MEDIA_MULT = 2;     // price of the media course
 const PEOPLE_COURSE_MEDIA_EXP = 20;     // exp of the media course (a step toward a star)
 // Scripts and shooting.
-const SCRIPT_WRITE_WEEKS = 2;           // weeks a writer needs per script
+const SCRIPT_WRITE_WEEKS = 4;           // weeks a writer needs per script
 const SCRIPT_QUALITY_BASE = 3.5;        // base script quality 0..10
 const SCRIPT_WRITER_BONUS = 0.45;       // quality points per writer skill point (0..10)
 const SCRIPT_QUALITY_SPREAD = 0.9;      // ±: luck of the draft (gaussian, quality points)
@@ -139,7 +139,7 @@ const PROD_PACE_CHEAP_Q = -0.6;         // quality delta: saving on film stock a
 const PROD_PACE_STD_SCENES = 2;         // scenes/week: «стандарт»
 const PROD_PACE_STD_COST = 1.0;         // weekly cost fraction: «стандарт»
 const PROD_PACE_STD_Q = 0;              // quality delta: «стандарт»
-const PROD_PACE_RICH_SCENES = 2;        // scenes/week: «с размахом»
+const PROD_PACE_RICH_SCENES = 3;        // scenes/week: «с размахом»
 const PROD_PACE_RICH_COST = 1.5;        // weekly cost fraction: «с размахом» (can overspend)
 const PROD_PACE_RICH_Q = 0.7;           // quality delta: extra takes, better crew, more light
 const PROD_INCIDENT_CHANCE = 0.22;      // chance of a production incident per shooting week
@@ -164,14 +164,17 @@ const MOVIE_BUDGET_DEFAULT = 400000;    // $: the slider starts here
 // Release: box office, marketing, awards.
 const RELEASE_RUN_WEEKS = 8;            // weeks a film stays in theaters
 const RELEASE_DROP = 0.42;              // weekly box-office decay fraction
-const RELEASE_OPEN_PER_FAN = 900;       // $: opening weekend per fan point
+const RELEASE_OPEN_PER_FAN = 1200;      // $: opening weekend per fan point
 const RELEASE_OPEN_PER_QUALITY = 90000; // $: opening weekend per quality point (0..10)
 const RELEASE_OPEN_PER_MARKETING = 0.9; // opening multiplier per marketing $ / budget $
 const RELEASE_STAR_BONUS = 0.08;        // opening multiplier per star ★ of the leads
 const RELEASE_SCREEN_BASE = 150;        // screens at a wide release
 const MARKETING_MAX_FRAC = 1.0;         // marketing cap as a fraction of the movie budget
 // Post-production and release (ReleaseSystem): the cut, the score, the premiere and the run.
-const RELEASE_STUDIO_SHARE = 0.55;      // fraction of the gross the studio keeps
+const RELEASE_STUDIO_SHARE = 0.6;       // fraction of the gross the studio keeps
+const RELEASE_POST_WEEKS = 2;           // weeks a picture must sit in the editing room before premiere
+const RELEASE_PROD_VALUE_BASE = 0.7;    // opening multiplier at half the genre's ideal budget
+const RELEASE_PROD_VALUE_SLOPE = 0.3;   // + multiplier per step of budget/ideal, capped at 2×
 const RELEASE_EDIT_MATCH = 0.5;         // quality when the cut tempo suits the genre
 const RELEASE_EDIT_MISMATCH = -0.6;     // quality when the cut tempo fights the genre
 const RELEASE_MUSIC_FIT = 0.3;          // quality when the score is the genre's own

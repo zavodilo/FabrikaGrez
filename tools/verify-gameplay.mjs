@@ -450,6 +450,9 @@ try {
         return ed ? ed.edit + '/' + ed.music : '';
     }, pr0.id);
     check('монтаж и музыка выбираются', edSet === 'fast/studio', edSet);
+    // The editing room takes its weeks before a premiere is allowed.
+    await page.evaluate(() => { app.game.nextWeek(); app.game.nextWeek(); });
+    await sleep(250);
     await st(() => { StudioManager.state.cash += 800000; });   // the campaign is a capability check
     const cashPreRel = await st(() => StudioManager.state.cash);
     await click('rel:premiere:' + pr0.id);

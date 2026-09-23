@@ -45,10 +45,12 @@ const CastingSystem = {
             || (state.roster || []).concat(state.staff || []).find((p) => p.id === id) || null;
     },
 
-    /** Is this actor already committed to another script in development? */
+    /** Is this actor already committed to another script in development? A released picture
+     *  frees its cast: commitment ends at the premiere, not with the credits. */
     isCommitted(state, personId, exceptScriptId) {
         for (const sc of state.scripts || []) {
             if (sc.id === exceptScriptId || !sc.cast) continue;
+            if (sc.state === 'released') continue;
             for (const k of Object.keys(sc.cast)) if (sc.cast[k] === personId) return sc;
         }
         return null;
@@ -231,6 +233,10 @@ const CastingSystem = {
                 break;
             }
         }
+        // A PARTIAL auto-cast is a trap: every name in it reads as committed, so three half-cast
+        // scripts fragment the troupe and none can ever finish. Auto-casting is all-or-nothing;
+        // a hand-picked partial cast remains the player's prerogative.
+        for (const role of roles) if (!out[role.key]) return Object.assign({}, script.cast || {});
         return out;
     },
 

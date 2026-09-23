@@ -6,7 +6,7 @@
 const SCENE_SCHEMA = {
     "kit": "ArcEngine",
     "schemaVersion": 1,
-    "gameVersion": "0.1.0",
+    "gameVersion": "1.0.0",
     "engine": "PlayCanvas 2 (libs/playcanvas.min.js, WebGL2)",
     "coordinates": {
         "map": "x right, y down, height up, px; right-handed tradition",
@@ -1060,7 +1060,7 @@ const SCENE_SCHEMA = {
             "kind": "number",
             "options": null,
             "label": "Studio share of the gross",
-            "value": 0.55
+            "value": 0.6
         },
         {
             "group": "game",

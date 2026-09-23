@@ -1,97 +1,105 @@
-# ArcEngine
+# 🎬 ФАБРИКА ГРЁЗ
 
-A zero-dependency kit for 3D browser games on **PlayCanvas 2**, built for AI-assisted
-development: vanilla JS, classic `<script>` tags, no npm, no build step — and a first-class
-agent layer (skills, `AGENTS.md`, semantic API on the roadmap).
+**Симулятор киностудии в духе *The Movies*, где главный спецэффект — это ваш собственный фильм.**
+Вы ведёте студию с 1950 года: деньги, люди, декорации, сценарии, съёмки, прокат, награды —
+а потом **садитесь в зале и смотрите картину, которую сняли**: с камерами, склейками,
+субтитрами, музыкой и титрами. Всё сгенерировано из ваших решений, в 3D, прямо в браузере.
 
-```
-index.html  ->  js/ (kit)  ->  PlayCanvas 2 (libs/, local)  ->  WebGL2
-   ^                         ^
-   editor (_utils/)          agent skills (claude/skills, .agents/skills, AGENTS.md)
-```
+Сделано на [PlayArcEngine](https://github.com/zavodilo/PlayArcEngine) (PlayCanvas 2, toon-рендер):
+ванильный JS, классические `<script>`, **ноль npm-зависимостей и ноль шага сборки** у самой игры.
 
-## What you get
+![Мастер нового фильма](docs/screenshots/04-newmovie-wizard.png)
 
-- **A runnable game base**: hilly terrain, sun with colored toon shadows, light bands,
-  ink edges and silhouette outlines, FBX and GLB models (skeleton + animation clips),
-  a camera with flight/orbit/zoom, a DOM HUD laid out by data.
-- **A web editor** (`_utils/editor/`): free/game cameras, Global Settings (every render and
-  camera constant), Objects (import FBX/GLB, gizmos, part spin, clips), UI layout tab —
-  the editor writes code files (`Constants.js`, `Objects.js`, `UILayout.js`), not binaries.
-- **An agent layer**: kit skills in `claude/skills/` (world3d, ui, editor, build, verify,
-  render-conventions), vendored PlayCanvas engine skills (`claude/vendor/playcanvas/`,
-  MIT), generated native discovery for Claude Code (`.claude/skills/`), Codex/Cursor and
-  Agent-Skills-compatible tools (`.agents/skills/`, `AGENTS.md`), Cursor rule
-  (`.cursor/rules/arcengine.mdc`). `CLAUDE.md` remains the human-and-agent map.
-- **Honest verification**: `node tools/check.mjs` (JSDoc types via tsc, 50+ logic tests,
-  skills-sync check), `Debug3D.lint()` in the running scene, headless render harness in
-  the project workflow.
+---
 
-## Quick start
+## Как запустить
 
-One cross-platform CLI (any OS, zero npm):
-
-```
-node tools/arc.mjs run        # game at http://localhost:8080 (or next free port)
-node tools/arc.mjs editor     # editor at http://localhost:8090/_utils/editor/
-node tools/arc.mjs check      # fast profile: types + tests + skills sync + manifest
-node tools/arc.mjs check --all   # release gate (+ headless render/visual)
-node tools/arc.mjs build      # dist/arcengine-<version>.zip (playable without the repo)
-node tools/arc.mjs scaffold my-game --starter survival
+```bash
+node tools/arc.mjs run        # игра на http://localhost:8080 (или следующий свободный порт)
+node tools/arc.mjs editor     # редактор набора на http://localhost:8090/_utils/editor/
+node tools/arc.mjs check      # типы + тесты + синхронность скиллов + манифест
+node tools/arc.mjs check --all# релизный гейт: + headless-рендер и визуальный дым
+node tools/arc.mjs build      # dist/arcengine-<version>.zip — играбельно без репозитория
 ```
 
-Thin wrappers, same commands: Windows `run.bat` / `editor.bat` / `check.bat` / `build.bat`,
-macOS/Linux `./run.sh` / `./editor.sh` / `./check.sh` / `./build.sh`. Servers pick a free
-port, print the URL and open the browser themselves (win32 `start`, darwin `open`,
-linux `xdg-open`).
-Requires Node.js (any modern LTS); the game itself needs none of it.
+Нужен только Node.js (любой современный LTS) для инструментов; **игре он не нужен** —
+откройте `index.html` через любой статический сервер, и она работает.
 
-## Making a game
+## Игровой цикл
 
-1. Logic lives in `js/Game.js` (`constructor(app)`, `update(dt)`); bigger games add files
-   as `<script>` before `main.js` (+ a line in `CODE_FILES`, `tools/asset-scan.mjs`).
-2. Static props — editor Objects tab (`Objects.js`); in code — `app.location.objects`,
-   `Model3D.load/build` + `World3D.addObject`, ground height via `terrain.heightAt(x, y)`.
-3. Animated characters — `.glb` + `Model3D.clips(root).play('run')` (cross-fade built in).
-4. HUD — records in `UILayout.js` (editor UI tab) + `UI.get(id).setText/setValue/show/onClick`.
+| Шаг | Экран | Что происходит |
+|---|---|---|
+| 1. Студия | `Студия` | Деньги, фанбаза, репутация, хроника; покупка и **перестройка декораций** (активы с уровнями) |
+| 2. Сценарий | `Снять фильм` | Жанр с «модой» по эпохам, бюджет, сценарист, название, сиквелы; заказ за деньги и недели или «на коленке» |
+| 3. Читалка | `Фильмы → Читать` | Три акта, сцены по декорациям, RU-диалоги без повторов; **дневники съёмок по каждой сцене** |
+| 4. Кастинг | `Кастинг` | Скоринг ролей из пяти весов с объяснением, химия пар, авто-кастинг, найм с биржи |
+| 5. Съёмки | `Производство` | Недели смен, броски качества по строкам, темп, инциденты, черновой монтаж |
+| 6. Монтажная | `Монтажная` | Темп монтажа по жанру, музыка, кампания со прогнозом старта по строкам |
+| 7. Прокат | `Касса и критика` | 8 недель сборов с decay по слову зрителей, рецензии с цитатами, постеры, прибыль |
+| 8. Зал | `Кинотеатр` | **Смотреть свой фильм**: камеры, склейки, субтитры, музыка, титры |
 
-## Starting your own game on the kit
+Плюс: контракты и переманивание звёзд, дружба/романы/соперничество со скандалами,
+школа мастерства, старение и пенсии, события студии, дрейф десятилетий, франшизы,
+«Золотой Кадр» раз в год, три сценария игры («Золотой Кадр за 10 лет», «Империя грёз», песочница),
+13 достижений, автосохранение + 3 слота + экспорт/импорт `.json`.
 
-```
-node tools/create-arcengine.mjs my-game --starter survival   # or empty | kit
-cd my-game && node tools/dev-server.mjs
-```
+## Управление
 
-The scaffold copies the whole kit (game, editor, tools, tests, skills), overlays the
-starter's `js/` files and regenerates the agent skill copies inside the target
-(`--no-skills` to skip). No npm and no build step in the target, ever.
-Starters: `kit` (sample as is), `empty` (blank scene), `survival` (waves chase the hero
-through the Scene API — a working reference of the semantic layer).
+- **Мышь**: все экраны — карточки и кнопки; колесо — зум студии; ПКМ — осмотреться; WASD/QE — полёт камеры.
+- **В кино**: `Пробел` — пауза, `Esc` — выйти, кнопки темпа и перемотки внизу.
+- **Неделя**: кнопка «Следующая неделя ▶» (или авто-неделя в настройках на экране «Ещё»).
 
-## AI-native workflow
+## Галерея
 
-Agents start from `AGENTS.md` (or `CLAUDE.md`): read the skill for the area you touch,
-keep the invariants (zero deps, constants in `Constants.js`, 3D is a view, HUD via layout),
-verify with `check.mjs` and `Debug3D.lint()`. Skills ship in three flavors from one canon:
-hand-edit `claude/skills/` or `claude/vendor/`, then `node tools/sync-skills.mjs`.
+| | |
+|---|---|
+| ![Меню и сценарии игры](docs/screenshots/00-scenarios.png) | ![Кастинг](docs/screenshots/06-casting.png) |
+| ![Производство](docs/screenshots/12-production.png) | ![Монтажная](docs/screenshots/14-editing-room.png) |
+| ![Кадр вашего фильма](docs/screenshots/08b-film-still.png) | ![Касса и критика](docs/screenshots/15-reviews.png) |
+| ![Отношения и скандалы](docs/screenshots/16-bonds.png) | ![Хроника студии](docs/screenshots/17-chronicle.png) |
 
-Composite agent edits are transactions: `Edit.begin(label).add/update/remove…commit()`
-validates every op before applying and rolls back to a snapshot on failure
-(`Scene.journal()` records the outcome). Determinism: `Scene.seed(n)` + `Scene.random()`
-(starters never call `Math.random`), terrain noise from `TERRAIN_NOISE_SEED`.
-Release gate: `node tools/check.mjs --all` (fast profile + headless render/visual smoke;
-puppeteer is a dev-only dependency of the verify environment, not of the kit).
-`tools/headless-gate.mjs --json=report.json` writes a machine-readable report (console
-errors, pixel/DOM smoke, screenshots) — agents read it instead of exit codes. In-page visual
-assertions: `Debug3D.assertVisible/assertInFrame/assertPosition/capture`.
+## Как это устроено
 
-The editor server is localhost-only (127.0.0.1) and hardened: no dot-path serving, path
-traversal contained, request size limits (413), JSON validation (400), constant names behind
-an identifier whitelist, model imports magic-byte checked and confined to `assets/models/`.
-The contract lives in `tests/editor-security.test.mjs`.
+- **`js/MovieSequencer.js`** — плеер таймлайна: сцены → кадры → beats (действия, реплики, SFX, позы
+  камер). Один и тот же плеер показывает демо-фильм, дневники, черновой монтаж и релиз.
+- **`js/ScriptGenerator.js`** — сценарии и **компиляция сценарий+каст → таймлайн**: встречная
+  постановка актёров, операторский кран с решёнными позами (интерьеры снимаются «кукольным
+  домиком», улица — с открытых сторон), киношные дистанции и трёхчетвертные крупные.
+- **`js/ActorRig3D.js` / `js/SetPieces3D.js`** — процедурные актёры (19 действий) и 12 декораций
+  с реквизитом: внешность и площадки существуют без единого ассета-модели.
+- **`js/StudioManager.js`, `PeopleSystem.js`, `ProductionSystem.js`, `ReleaseSystem.js`,
+  `MetaSystem.js`, `SaveSystem.js`, `Tutorial.js`** — экономика, люди, съёмки, прокат,
+  мета-игра, сохранения и обучение. Вся логика — чистые данные на детерминированном `Rng`:
+  фильм воспроизводим из seed байт-в-байт.
+- **Инварианты набора**: числа только в `Constants.js` (редактируются редактором), HUD только
+  через `UILayout.js`, 3D — это вид (логика не спрашивает у рендера высоты), ассеты литералами.
 
-Roadmap (phases A+/B+ and beyond): `ROADMAP.md`.
+## Проверка
 
-## License
+Релиз держится на трёх контурах, а не на вере:
 
-MIT — see `LICENSE`. Bundled third-party components and attribution: `NOTICE`.
+1. `node tools/check.mjs` — **170+ тестов**: контракты таймлайна для всех жанров и бюджетов,
+   детерминизм seed, экономика, инциденты, химия, франшизы, сохранения; типы игры и редактора;
+   синхронность скиллов и манифест констант.
+2. `node tools/verify-gameplay.mjs` — **сквозной прогон в headless-Chrome**: от выбора сценария
+   игры до просмотра выпущенного фильма, ~60 проверок, включая «фильм проигран целиком»,
+   «субтитры идут», «актёры двигаются», «ни одной ошибки консоли».
+3. `node tools/balance-sim` (тест `tests/fabrika-balance.test.mjs`) — продюсерская политика
+   ведёт студию **20 лет на 10 разных seed**: без NaN, без банкротства, с растущей фильмографией.
+4. `node tools/capture-stills.mjs` — контактные листы по жанрам: способ *смотреть* на операторскую
+   работу, а не верить ей на слово.
+
+Именно прогон в браузере нашёл релиз-блокеры, невидимые юнит-тестам: декорации не строились
+(плеер падал на первой сцене), фильм застревал на заставке, UI рендерился нестилизованым.
+
+## Баланс в одном абзаце
+
+Труппа стоит ~10–25k в неделю; фильм живёт ~11 недель от заказа до премьеры; старт кассы =
+фанаты × 1200 + качество × 90 000, умноженные на кампанию, звёзд, моду жанра, сезон, франшизу
+и **производственную ценность** (деньги на экране продают билеты). Прокат decay-ит по слову
+зрителей: любовь держит экраны, ненависть топит. Хит приносит ~0.5–1.5M прибыли, провал — убыток;
+налог и инциденты ограничены, чтобы успех не становился наказанием.
+
+## Лицензия и благодарности
+
+MIT (см. `LICENSE`, `NOTICE`). Движок — PlayCanvas 2 (libs/, локально) и PlayArcEngine.

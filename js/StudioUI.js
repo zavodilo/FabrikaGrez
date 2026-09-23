@@ -316,14 +316,20 @@ const StudioUI = {
         const s = StudioManager.state;
         const vol = (typeof Sound3D !== 'undefined' && Sound3D.master && Sound3D.master.gain) ? Math.round(Sound3D.master.gain.value * 100) : 80;
         return '<div class="sc"><h1 class="title">ЕЩЁ<span class="sub">настройки, сохранения, справка</span></h1>' +
-            '<div class="cols"><div class="col panel"><div class="h3">🔊 Звук</div>' +
+            '<div class="cols"><div class="col panel"><div class="h3">🔊 Звук и темп жизни</div>' +
             '<label class="fld">Общая громкость: <b id="volVal">' + vol + '%</b></label>' +
             '<input type="range" min="0" max="100" value="' + vol + '" data-act="volume" style="width:100%">' +
-            '</div>' +
+            '<label class="fld" style="margin-top:8px">Авто-неделя (0 — вручную): <b>' + ((s.settings || {}).autoWeek || 0) + ' с</b></label>' +
+            '<input type="range" min="0" max="12" step="2" value="' + ((s.settings || {}).autoWeek || 0) + '" data-act="autoweek" style="width:100%">' +
+            '<div class="row tight" style="margin-top:8px">' +
+            '<span class="btn small' + ((s.settings || {}).hints !== false ? ' gold' : '') + '" data-act="set:hints">💡 Подсказки ' + ((s.settings || {}).hints !== false ? 'включены' : 'выключены') + '</span>' +
+            '</div></div>' +
             '<div class="col panel"><div class="h3">💾 Сохранения</div>' +
             '<div class="row tight"><span class="btn" data-act="save:1">Слот 1</span><span class="btn" data-act="save:2">Слот 2</span><span class="btn" data-act="save:3">Слот 3</span></div>' +
             '<div class="row tight" style="margin-top:8px"><span class="btn" data-act="load:1">Загрузить 1</span><span class="btn" data-act="load:2">Загрузить 2</span><span class="btn" data-act="load:3">Загрузить 3</span></div>' +
-            '<p class="hint" style="margin-top:8px">' + (typeof SaveSystem !== 'undefined' && SaveSystem.slotInfo ? SaveSystem.slotsInfo() : 'Автосохранение каждую неделю.') + '</p>' +
+            '<p class="hint" style="margin-top:8px">' + (typeof SaveSystem !== 'undefined' && SaveSystem.slotsInfo ? SaveSystem.slotsInfo() : 'Автосохранение каждую неделю.') + '</p>' +
+            '<div class="row tight"><span class="btn small" data-act="save:export">⬇ Экспорт .json</span>' +
+            '<span class="btn small" data-act="save:import">⬆ Импорт .json</span></div>' +
             '</div>' +
             '<div class="col panel"><div class="h3">📊 Хроника</div><span class="btn" data-act="meta:stats">Статистика и достижения</span>' +
             '<div class="h3">❔ Справка</div><span class="btn" data-act="help">Как играть</span>' +
@@ -479,6 +485,8 @@ const StudioUI = {
         if (act === 'change:volume') {
             const v = Number(el.value) / 100;
             if (typeof Sound3D !== 'undefined' && Sound3D.master) Sound3D.master.gain.value = Math.max(0, Math.min(1, v));
+            Store.set('fg.volume', String(Math.max(0, Math.min(1, v))));
+            if (s && s.settings) s.settings.volume = Math.max(0, Math.min(1, v));
             const lbl = screenEl && screenEl.querySelector ? screenEl.querySelector('#volVal') : null;
             if (lbl) lbl.textContent = Math.round(v * 100) + '%';
             return;
@@ -501,6 +509,37 @@ const StudioUI = {
             rel: typeof ReleaseSystem !== 'undefined' ? ReleaseSystem : null,
             meta: typeof MetaSystem !== 'undefined' ? MetaSystem : null,
         };
+        if (act === 'change:autoweek') {
+            if (s && s.settings) s.settings.autoWeek = Number(el.value) || 0;
+            rerender();
+            return;
+        }
+        if (parts[0] === 'set' && parts[1] === 'hints') {
+            if (s && s.settings) s.settings.hints = s.settings.hints === false;
+            rerender();
+            return;
+        }
+        if (act === 'save:export') {
+            if (typeof SaveSystem !== 'undefined') { SaveSystem.exportJSON(s); game.toast('⬇ Файл сохранения скачан.'); }
+            return;
+        }
+        if (act === 'save:import') {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json,application/json';
+            input.onchange = () => {
+                const f = input.files && input.files[0];
+                if (!f) return;
+                const rd = new FileReader();
+                rd.onload = () => {
+                    const ok = typeof SaveSystem !== 'undefined' && SaveSystem.importJSON(String(rd.result), game);
+                    game.toast(ok ? '⬆ Сохранение загружено из файла.' : 'Файл не похож на сохранение «Фабрики Грёз».');
+                };
+                rd.readAsText(f);
+            };
+            input.click();
+            return;
+        }
         // A control change arrives as 'change:<system>:<verb>' — route it to its system too.
         const key = parts[0] === 'change' && parts.length > 2 ? parts[1] : parts[0];
         if (sys[key]) {

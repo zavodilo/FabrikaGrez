@@ -121,9 +121,12 @@ const PeopleSystem = {
     /** A weekly wage that matches the person's value (used at hire and on renegotiation). */
     fairSalary(p, talent) {
         const t = talent != null ? talent : (p.skills.drama + p.skills.comedy + p.skills.action + p.skills.romance) / 4;
-        const base = p.role === 'actor' ? 500 : 420;
+        // Balance (Phase З): the old curve (t²·85 + star·500) made a decent troupe cost ~95k a
+        // week — more than a whole film grosses — so every studio starved on its own payroll.
+        // The curve now keeps a strong cast at ~25-35k/week: expensive, but payable by hits.
+        const base = p.role === 'actor' ? 350 : 300;
         const ageFactor = p.age < 22 ? 0.75 : p.age > 55 ? 0.85 : 1;
-        return Math.round((base + t * t * 85 + p.star * 500 + p.charm * 25) * ageFactor / 10) * 10;
+        return Math.round((base + t * t * 45 + p.star * 300 + p.charm * 15) * ageFactor / 10) * 10;
     },
 
     /** 0..5 stars from fame (exp, hits, awards). */
@@ -252,7 +255,7 @@ const PeopleSystem = {
             if (p.contract) {
                 p.contract.weeksLeft--;
                 if (p.contract.weeksLeft <= 0 && !p.demand) {
-                    const raise = Math.round(p.salary * (c.raisePerStar * (p.star || 0) + 0.15 + (100 - (p.loyalty || 50)) / 400) / 10) * 10;
+                    const raise = Math.round(p.salary * (c.raisePerStar * (p.star || 0) + 0.1 + (100 - (p.loyalty || 50)) / 500) / 10) * 10;
                     p.demand = { raise: raise, weeksLeft: c.grace };
                     out.push('📝 ' + p.name + ' ждёт продления контракта: +' + StudioUI_money(raise) + '/нед (' + c.grace + ' нед. на ответ).');
                     continue;                       // the grace starts NEXT week, not inside this one

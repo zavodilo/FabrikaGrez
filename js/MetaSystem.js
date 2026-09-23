@@ -136,7 +136,9 @@ const MetaSystem = {
             id: 'tax', ru: 'Налоговая проверка', w: 2,
             cond: (s) => s.cash > 200000,
             run(s, mgr, r) {
-                const cost = Math.round(s.cash * 0.03);
+                // An audit scales with the books, not with the vault: uncapped, a rich studio
+                // bled millions a year and success became a liability.
+                const cost = Math.min(250000, Math.round(s.cash * 0.03));
                 mgr.pay(cost, 'Налоговая проверка');
                 return { toast: '🧾 Налоговая нашла «творческую» бухгалтерию: доплата ' + StudioUI_money(cost) + '.', kind: 'bad' };
             },

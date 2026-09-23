@@ -58,6 +58,7 @@ function wrappedStudio(opts) {
     pr.nextScene = sc.timeline.scenes.length;
     pr.spent = Math.round(pr.budget * 0.9);
     pr.state = 'post';
+    pr.postWeeks = 2;                 // the editing room has taken its weeks
     return { s, sc, pr };
 }
 

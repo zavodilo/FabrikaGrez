@@ -403,5 +403,4 @@ interface ReleasedMovie {
     [key: string]: any;
 }
 
-// Game systems that arrive in later phases (typeof-guarded at runtime).
-declare const SaveSystem: any;
+

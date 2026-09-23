@@ -36,6 +36,15 @@ class Game {
 
         this._wireUi();
         StudioManager.init(this);
+        // The master volume survives sessions even before a save exists.
+        try {
+            const v = Number(Store.get('fg.volume'));
+            if (Number.isFinite(v) && v >= 0 && v <= 1 && typeof Sound3D !== 'undefined' && Sound3D.master) {
+                Sound3D.master.gain.value = v;
+            }
+        } catch (e) { /* a closed storage is not a reason to fail the boot */ }
+        this._autoWeekT = 0;
+        this._tipT = 0;
         this.toMenu();
         Kit.onFrame('game-music', () => { /* music starts on the first user gesture (browser rule) */ });
     }
@@ -278,6 +287,20 @@ class Game {
         this._crowdT -= dt;
         if (this._crowdT <= 0) { this._crowdT = 0.5; this._updateCrowd(); }
         this._updateHud(dt);
-        if (this.started) StudioManager.update(dt);
+        if (this.started) {
+            StudioManager.update(dt);
+            // The tutorial speaks at most once a second and only while the lot is on screen.
+            this._tipT -= dt;
+            if (this._tipT <= 0) {
+                this._tipT = 1;
+                if (typeof Tutorial !== 'undefined' && this.screen === 'none') Tutorial.maybeTip(this);
+            }
+            // An auto-week cadence for players who want the calendar to flow by itself.
+            const aw = StudioManager.state && StudioManager.state.settings ? StudioManager.state.settings.autoWeek : 0;
+            if (aw > 0 && this.screen === 'none' && !MovieSequencer.playing) {
+                this._autoWeekT += dt;
+                if (this._autoWeekT >= aw) { this._autoWeekT = 0; this.nextWeek(); }
+            }
+        }
     }
 }
