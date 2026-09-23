@@ -678,8 +678,24 @@ const ScriptGenerator = {
         // Staging: distinct anchors so nobody stands inside anybody.
         const order = ['a', 'b', 'c', 'd', 'e', 'f'];
         const at = {};
-        let oi = 0;
-        for (const k of keys) { at[idOf[k]] = S[order[oi++ % order.length]] || S.a; }
+        // Two things in one staging point z-fight and read as a bug: actors, crowd and props all
+        // draw from ONE registry of taken anchors, so no pair ever shares a spot.
+        const taken = {};
+        // The pool is every anchor the set actually declares, not just the seven slots: a big
+        // cast plus crowd plus props needs more points than the slot table has.
+        // Never stage anyone on the master shot's look-at point (or the room centre): an object
+        // there sits between the lens and the whole set and blocks the establishing frame.
+        const blocked = {};
+        if (S.wide) blocked[S.wide] = 1;
+        if (S.center) blocked[S.center] = 1;
+        const pool = Object.keys((MovieData.ANCHOR_XY || {})[sc.set] || {}).filter((n) => !blocked[n]);
+        const prefer = order.map((o) => S[o]).filter((n) => n && !blocked[n]);
+        const pickSlot = () => {
+            for (const name of prefer) if (!taken[name]) { taken[name] = 1; return name; }
+            for (const name of pool) if (!taken[name]) { taken[name] = 1; return name; }
+            return null;                       // no free point: better absent than overlapping
+        };
+        for (const k of keys) { at[idOf[k]] = pickSlot() || S.a; }
         const ids = keys.map((k) => idOf[k]);
         const anchorXY = (id) => this._slotXY(sc.set, S, at[id]);
         // Cinema spacing: two speakers ~140 px apart leave no room for a single — the partner's
@@ -713,8 +729,10 @@ const ScriptGenerator = {
         // A couple of background faces in the wide shots, turned toward the action.
         const crowdN = Math.min(extraIds.length, sc.kind === 'intro' || sc.kind === 'climax' || sc.kind === 'coda' ? 3 : 1);
         for (let i = 0; i < crowdN; i++) {
-            const anchor = S[order[(oi + i) % order.length]] || S.wide;
-            const exy = this._slotXY(sc.set, S, order[(oi + i) % order.length]);
+            const slotName = pickSlot();
+            if (!slotName) break;              // the set has no free point left for an extra
+            const anchor = slotName;
+            const exy = this._slotXY(sc.set, S, slotName);
             const axy = xyOf(ids[0]);
             enter.push({
                 who: extraIds[i], anchor: anchor, act: i % 2 ? 'idle' : 'talk',
@@ -726,14 +744,17 @@ const ScriptGenerator = {
         const props = [];
         for (let i = 0; i < (sc.props || []).length; i++) {
             const id = sc.props[i];
-            // A side anchor away from the acting line; no nudge toward the centre — props pushed
-            // into the middle end up between the lens and the actor.
-            const anchor = S[order[(oi + i + 2) % order.length]] || S.c;
-            props.push({ id: id, anchor: anchor, heading: r.range(0, 359) });
+            // A free side anchor away from the acting line; no nudge toward the centre — props
+            // pushed into the middle end up between the lens and the actor.
+            const propName = pickSlot();
+            if (!propName) break;              // never stack a prop on a person or a prop
+            props.push({ id: id, anchor: propName, heading: r.range(0, 359) });
         }
 
         // Shots from the recipe.
         const recipe = this.RECIPES[K.recipe] || this.RECIPES.talk;
+        const side = r.chance(0.5) ? 1 : -1;
+        const indoor = !!(MovieData.SET_INFO[sc.set] || {}).indoor;
         const shots = [];
         let lineIdx = 0;
         const lines = sc.lines || [];
@@ -745,9 +766,10 @@ const ScriptGenerator = {
             // A single looks straight down the acting axis (the partner ends up behind the lens —
             // a clean single, and indoors the camera stays inside the room); a medium steps a
             // little to the side for a less flat, three-quarter feel.
-            const off = camType === 'medium' ? (si % 2 ? -14 : 14)
-                : camType === 'dutch' ? (si % 2 ? -18 : 18) : 0;
-            const indoor = !!(MovieData.SET_INFO[sc.set] || {}).indoor;
+            // The 180-degree rule: one side of the acting axis per scene, chosen once. Alternating
+            // the off-axis sign shot by shot makes the partners jump across the frame.
+            const off = camType === 'medium' ? 14 * side
+                : camType === 'dutch' ? 18 * side : 0;
             const cam = this._cam(camType, subj, A, B, S, at, sc.set, xyOf, off, indoor);
             if (!cam) continue;
             const beats = [];
@@ -756,22 +778,34 @@ const ScriptGenerator = {
             if (first && sc.narr) beats.push({ t: 0.5, narr: sc.narr, dur: Math.min(3.2, dur - 1.2) });
             // Dialogue: one line per speaking shot, in scene order.
             const speaks = camType === 'close' || camType === 'medium' || camType === 'over' || camType === 'duo' || camType === 'dutch';
+            let sayWho = null;
             if (speaks && lineIdx < lines.length) {
                 const ln = lines[lineIdx++];
                 const who = idOf[ln.role];
                 if (who && (who === A || who === B || camType === 'duo' || camType === 'over')) {
                     const t = first && sc.narr ? Math.min(3.6, dur * 0.55) : 0.45;
                     beats.push({ t: t, who: who, say: ln.text, dur: Math.max(1.6, dur - t - 0.5) });
+                    sayWho = who;
                 }
             }
             // Action beats by archetype.
             this._actionBeats(beats, sc, script, camType, si, A, B, dur, r, at, S, extraIds, crowdN);
-            // The very last shot of the film carries the end card.
-            if (isLast && si === recipe.length - 1) beats.push({ t: Math.max(1.2, dur * 0.45), endCard: 'КОНЕЦ' });
             beats.sort((x, y) => x.t - y.t);
             // tag — the semantic framing ('wide', 'close', 'over'…): the rig may realise it as a
             // 'fixed' pose, but tools and tests reason in the language of the cutting room.
-            shots.push({ dur: dur, trans: si === 0 ? 'fade' : 'cut', cam: cam, beats: beats, tag: camType });
+            // role — the cutting-room job of the shot: master / two / single.
+            shots.push({
+                dur: dur, trans: si === 0 ? 'fade' : 'cut', cam: cam, beats: beats, tag: camType,
+                role: (camType === 'wide' || camType === 'crane') ? 'master' : (camType === 'duo' || camType === 'over') ? 'two' : 'single',
+                sayWho: sayWho || null, side: side,
+            });
+        }
+        this._coverage(shots, sc, script, ids, S, at, xyOf, side, r, indoor, props);
+        // The end card rides on the VERY LAST shot of the film, after coverage is cut in.
+        if (isLast && shots.length) {
+            const lastSh = shots[shots.length - 1];
+            lastSh.beats.push({ t: Math.max(1.2, lastSh.dur * 0.45), endCard: 'КОНЕЦ' });
+            lastSh.beats.sort((x, y) => x.t - y.t);
         }
         if (!shots.length) return null;
         return {
@@ -779,6 +813,54 @@ const ScriptGenerator = {
             music: (MovieData.GENRES[script.genre] || {}).music, tint: sc.tint,
             enter: enter, props: props, shots: shots,
         };
+    },
+
+    /**
+     * The cutting-room pass: every scene opens on a master, dialogue gets reaction shots of the
+     * listener, a prop earns one insert, and the end card stays last. This is what makes the
+     * generated film read as COVERAGE instead of a slide show of the same frame.
+     */
+    _coverage(shots, sc, script, ids, S, at, xyOf, side, r, indoor, tlProps) {
+        const A = ids[0], B = ids[1] || null;
+        // 1) An establishing master first: the viewer must know where they are.
+        if (!shots.length || (shots[0].tag !== 'wide' && shots[0].tag !== 'crane')) {
+            const cam = this._cam('wide', 'c', A, B, S, at, sc.set, xyOf, 0, indoor);
+            if (cam) shots.unshift({ dur: this._dur('wide', script, r), trans: 'fade', cam: cam, beats: [], tag: 'wide', role: 'master', sayWho: null });
+            if (shots[1]) shots[1].trans = 'cut';
+        }
+        // 2) Reaction shots: after a speaking shot, a short close of whoever listens. A line
+        //    delivered over a shoulder still deserves the listener's face — that cut is half
+        //    of what makes dialogue read as dialogue.
+        const listener = (who) => ids.find((id) => id !== who) || null;
+        for (let i = shots.length - 1; i >= 0; i--) {
+            const sh = shots[i];
+            if ((sh.role !== 'single' && sh.role !== 'two') || !sh.sayWho) continue;
+            const other = listener(sh.sayWho);
+            if (!other) continue;
+            const cam = this._cam('close', sh.sayWho === A ? 'b' : 'a', A, B, S, at, sc.set, xyOf, 0, indoor);
+            if (!cam) continue;
+            const dur = Math.round(Math.max(1.1, this._dur('close', script, r) * 0.42) * 10) / 10;
+            shots.splice(i + 1, 0, {
+                dur: dur, trans: 'cut', cam: cam, tag: 'close', role: 'reaction', sayWho: null,
+                beats: [{ t: 0.15, who: other, act: 'look', look: sh.sayWho, dur: dur - 0.2 }],
+            });
+        }
+        // 3) One insert on a prop: hands, steel and glass sell the scene without a word.
+        //    The anchor names live on the TIMELINE props (the script scene carries bare ids).
+        const pEntry = (tlProps || [])[0];
+        const prop = pEntry ? pEntry.id : null;
+        if (prop && shots.length > 2 && r.chance(0.65)) {
+            const name = pEntry && pEntry.anchor ? pEntry.anchor : null;
+            const xy = name ? ((MovieData.ANCHOR_XY[sc.set] || {})[name]) : null;
+            if (xy) {
+                const sfx = { horse: 'hooves', car: 'carhorn', robot: 'laser', coffin: 'thunder', tomb: 'thunder', saucer: 'laser' }[prop];
+                shots.splice(2, 0, {
+                    dur: 1.3, trans: 'cut', tag: 'fixed', role: 'insert', sayWho: null,
+                    cam: { type: 'fixed', local: true, x: Math.round(xy[0]), y: Math.round(xy[1]), h: 70, az: Math.round(90 * side), pitch: 16, zoom: 4.6, fov: 40 },
+                    beats: sfx ? [{ t: 0.2, sfx: sfx, vol: 0.5 }] : [],
+                });
+            }
+        }
     },
 
     _dur(camType, script, r) {

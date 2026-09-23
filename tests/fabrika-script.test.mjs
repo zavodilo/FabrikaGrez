@@ -667,3 +667,44 @@ test('MovieData.SET_SLOTS: слоты покрывают все декораци
         }
     }
 });
+
+test('покрытие: мастер первым, реакции слушателя, вставки по реквизиту, ось 180 не прыгает', () => {
+    const s = stateWith(8);
+    let reactions = 0, inserts = 0, insertsNoProp = 0;
+    for (const genre of GENRES) {
+        for (const budget of [400000, 1500000]) {
+            const sc = ScriptGenerator.draft(s, { genre, budget, seed: Rng.hash('cov-' + genre + budget) });
+            const castByKey = {};
+            const r = Rng.create('cov-cast-' + genre);
+            for (const role of sc.roles) castByKey[role.key] = PeopleSystem.randomPerson(r, { role: 'actor', minSkill: 5, maxSkill: 9 });
+            const tl = ScriptGenerator.compile(sc, castByKey, s);
+            for (const scn of tl.scenes) {
+                // 1) the viewer always learns where they are: a master opens the scene
+                assert.equal(scn.shots[0].role, 'master', scn.label + ': сцена без установочного мастер-плана');
+                // 2) dialogue earns reaction shots of the listener
+                const says = scn.shots.filter((sh) => (sh.beats || []).some((b) => b.say != null)).length;
+                const react = scn.shots.filter((sh) => sh.role === 'reaction').length;
+                // A monologue has nobody to react: reactions require a second person on the set.
+                const people = (scn.enter || []).filter((e) => /^a/.test(e.who)).length;
+                if (says >= 2 && people >= 2) { assert.ok(react >= 1, scn.label + ': диалог без реакции слушателя'); reactions += react; }
+                // 3) inserts only where a prop exists to insert
+                const ins = scn.shots.filter((sh) => sh.role === 'insert');
+                if (ins.length) {
+                    inserts++;
+                    assert.ok((scn.props || []).length, scn.label + ': вставка без реквизита');
+                    for (const sh of ins) assert.equal(sh.cam.type, 'fixed', 'вставка снята не фиксированной камерой');
+                } else if (!(scn.props || []).length) insertsNoProp++;
+                // 4) the 180-degree rule: one side of the axis per scene
+                const sides = new Set(scn.shots.filter((sh) => sh.side != null).map((sh) => sh.side));
+                assert.ok(sides.size <= 1, scn.label + ': камера прыгает через ось 180°');
+            }
+            // 5) the end card rides on the very last shot of the very last scene
+            const cards = tl.scenes.flatMap((scn) => scn.shots).filter((sh) => (sh.beats || []).some((b) => b.endCard != null));
+            assert.equal(cards.length, 1, 'титр «КОНЕЦ» не один');
+            const lastScene = tl.scenes[tl.scenes.length - 1];
+            assert.ok(lastScene.shots[lastScene.shots.length - 1] === cards[0], 'титр «КОНЕЦ» не последний кадр');
+        }
+    }
+    assert.ok(reactions >= GENRES.length, 'реакций слишком мало для диалогового кино: ' + reactions);
+    assert.ok(inserts >= 1, 'ни одной вставки на реквизит');
+});

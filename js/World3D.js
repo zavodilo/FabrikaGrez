@@ -890,6 +890,14 @@ class View3D {
         this.sun = this.sunEntity.light;
         this.sun.intensity = 1;
         this.sun.color = new pc.Color(1, 1, 1);
+        // The cinema fill: a second shadowless directional the MovieSequencer aims from behind
+        // the lens, so a face turned to the camera is never a silhouette. Off outside playback.
+        this.fillEntity = new pc.Entity('cinema-fill');
+        this.root.addChild(this.fillEntity);
+        this.fillEntity.addComponent('light', { type: 'directional' });
+        this.fill = this.fillEntity.light;
+        this.fill.intensity = 0;
+        this.fill.castShadows = false;
         this._shadowRadius = opts.shadowRadius || (IS_MOBILE ? Math.min(520, c.shadowRadius) : c.shadowRadius);
         this._mapSize = IS_MOBILE ? Math.max(512, c.shadowMap / 2) : c.shadowMap;
 
@@ -915,6 +923,24 @@ class View3D {
     // Light, sky, fog and shadows from the render constants (the view's opts override them).
     // The shadow color/strength travel to the toon chunks as uniforms; the sun component
     // only provides direction, intensity and the shadow map.
+    /**
+     * Aim (or kill) the cinema fill. az/el are the cine camera's azimuth and pitch in the same
+     * map-space degrees the sun uses: the light travels along the lens axis, front-lighting
+     * whatever the frame sees. intensity 0 hides it.
+     */
+    setCinemaFill(on, azDeg, elDeg, intensity, colorHex) {
+        if (!this.fill) return;
+        if (!on || !intensity) { this.fill.intensity = 0; return; }
+        const c = World3D.cfg();
+        const dir = World3D.sunDirection({ sunAz: azDeg, sunEl: Math.max(6, Math.min(50, elDeg)), sunIntensity: 1, sunColor: 0xffffff });
+        this.fillEntity.setPosition(0, 0, 0);
+        this.fillEntity.lookAt(new pc.Vec3(dir.x, dir.y, dir.z).add(this.fillEntity.getPosition()), pc.Vec3.UP);
+        const col = World3D.hexColor3(colorHex != null ? colorHex : 0xffe9cf);
+        this.fill.color = new pc.Color(col.r * intensity, col.g * intensity, col.b * intensity);
+        this.fill.intensity = 1;
+        void c;
+    }
+
     applyLighting(c) {
         c = c || World3D.cfg();
         const o = this.opts || {};

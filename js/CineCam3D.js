@@ -66,6 +66,18 @@ const CineCam3D = {
         this._shakeUntil = performance.now() + (ms || 250);
     },
 
+    /** The fill rides on the lens: whatever the frame sees is lit from the frame's side. */
+    _syncFill() {
+        const view = this.view;
+        if (!view || !view.setCinemaFill) return;
+        const U = 'undefined';
+        const inten = typeof WORLD3D_CINEMA_FILL !== U ? WORLD3D_CINEMA_FILL : 0.5;
+        const color = typeof WORLD3D_CINEMA_FILL_COLOR !== U ? WORLD3D_CINEMA_FILL_COLOR : 0xffe9cf;
+        if (!inten) { view.setCinemaFill(false); return; }
+        const t = this.tgt || this.cur;
+        view.setCinemaFill(true, t.az, t.pitch, inten, color);
+    },
+
     update(dt) {
         if (!this.active || !this.cur || !this.tgt || !this.view) return;
         const k = 1 - Math.exp(-Math.max(0.1, this.lerp * this.speedMul) * dt);
@@ -120,6 +132,8 @@ const CineCam3D = {
         }
         // Keep the shadow frustum around the shot (the controller did it for its own pose).
         view.fitShadowFrustum(c.x, c.y, c.h, dist * 0.8 + 120);
+        // And light the frame from the frame's side: the fill rides on the live pose.
+        this._syncFill();
     },
 
     // main.js calls this right after camera.update(dt) while a film plays.
@@ -129,6 +143,7 @@ const CineCam3D = {
 
     /** Hand the camera back to the controller, synced to the last cinematic pose. */
     end() {
+        if (this.view && this.view.setCinemaFill) this.view.setCinemaFill(false);
         if (!this.active || !this.ctrl || !this.cur) { this.active = false; return; }
         const c = this.cur, ctrl = this.ctrl;
         ctrl.target.x = c.x;

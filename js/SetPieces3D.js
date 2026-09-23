@@ -191,6 +191,76 @@ const SetPieces3D = {
         return { root: root, anchors: anchors, view: view, groundH: gh, id: '', shell: b.shell.slice() };
     },
 
+    // --- de-flicker: no two visible surfaces may share a plane ----------------------------------
+    // Z-fighting («блики») is born where two coincident or coplanar faces overlap: the depth test
+    // cannot choose a winner and the pixels shimmer. Bottom faces are buried in the ground and
+    // exempt; tops and vertical sides are visible (the dollhouse camera looks from above), so the
+    // builder separates them here for EVERY set, present and future: a coplanar top is lifted a
+    // hair (keeping its bottom planted), a flush vertical face is inset a hair.
+    DEFLICKER_EPS: 0.5,
+    DEFLICKER_STEP: 0.75,
+
+    _over1(a1, a2, b1, b2) { return Math.abs(a1 - b1) < (a2 + b2) - this.DEFLICKER_EPS; },
+
+    /** parts: [{ m, lx, ly, cz, hx, hy, hz }] in set-local px; mutated in place. */
+    _deflicker(parts) {
+        const E = this.DEFLICKER_EPS, D = this.DEFLICKER_STEP;
+        for (let i = 0; i < parts.length; i++) {
+            for (let pass = 0; pass < 4; pass++) {
+                let moved = false;
+                const a = parts[i];
+                for (let j = 0; j < i; j++) {
+                    const b = parts[j];
+                    // exact duplicate: lift it clear of its twin
+                    if (a.lx === b.lx && a.ly === b.ly && a.cz === b.cz && a.hx === b.hx && a.hy === b.hy && a.hz === b.hz) {
+                        a.cz += D / 2; a.hz += D / 2; moved = true; continue;
+                    }
+                    // coplanar tops with overlapping footprints
+                    if (Math.abs((a.cz + a.hz) - (b.cz + b.hz)) < E &&
+                        this._over1(a.lx, a.hx, b.lx, b.hx) && this._over1(a.ly, a.hy, b.ly, b.hy)) {
+                        a.cz += D / 2; a.hz += D / 2; moved = true; continue;
+                    }
+                    // flush vertical faces: inset the later part on that axis
+                    if (Math.abs((a.lx - a.hx) - (b.lx - b.hx)) < E &&
+                        this._over1(a.ly, a.hy, b.ly, b.hy) && this._over1(a.cz, a.hz, b.cz, b.hz)) {
+                        a.lx += D; a.hx = Math.max(0.5, a.hx - D); moved = true; continue;
+                    }
+                    if (Math.abs((a.lx + a.hx) - (b.lx + b.hx)) < E &&
+                        this._over1(a.ly, a.hy, b.ly, b.hy) && this._over1(a.cz, a.hz, b.cz, b.hz)) {
+                        a.lx -= D; a.hx = Math.max(0.5, a.hx - D); moved = true; continue;
+                    }
+                    if (Math.abs((a.ly - a.hy) - (b.ly - b.hy)) < E &&
+                        this._over1(a.lx, a.hx, b.lx, b.hx) && this._over1(a.cz, a.hz, b.cz, b.hz)) {
+                        a.ly += D; a.hy = Math.max(0.5, a.hy - D); moved = true; continue;
+                    }
+                    if (Math.abs((a.ly + a.hy) - (b.ly + b.hy)) < E &&
+                        this._over1(a.lx, a.hx, b.lx, b.hx) && this._over1(a.cz, a.hz, b.cz, b.hz)) {
+                        a.ly -= D; a.hy = Math.max(0.5, a.hy - D); moved = true; continue;
+                    }
+                }
+                if (!moved) break;
+            }
+        }
+        return parts;
+    },
+
+    /** The finalized boxes of a set, after the de-flicker pass: what the audit and the eye see. */
+    partsOf(setId) {
+        const parts = [];
+        const anchors = {};
+        const box = (m, lx, ly, cz, hx, hy, hz) => parts.push({ m, lx, ly, cz, hx, hy, hz });
+        const S = {
+            B: (lx, ly, h0, w, d, hh) => { box('box', lx, ly, h0 + hh / 2, w / 2, d / 2, hh / 2); return S; },
+            C: (lx, ly, h0, r, hh) => { box('cyl', lx, ly, h0 + hh / 2, r, r, hh / 2); return S; },
+            G: (lx, ly, hc, rx, ry, rz) => { box('gem', lx, ly, hc, rx, ry, rz); return S; },
+            A: (name, lx, ly, heading, h) => { anchors[name] = { x: lx, y: ly, heading: heading || 0, h: h || 0 }; return S; },
+        };
+        const fn = this.SETS[setId];
+        if (fn) fn(S);
+        this._deflicker(parts);
+        return { parts, anchors };
+    },
+
     // --- handles ----------------------------------------------------------------------
 
     /** Re-place a built handle (map px + heading deg) — for moving props (cars, horses). */
@@ -212,6 +282,7 @@ const SetPieces3D = {
         if (!fn) return null;
         SetPieces3D.begin();
         fn(SetPieces3D);
+        SetPieces3D._deflicker(SetPieces3D._b.parts);
         const h = SetPieces3D.finish(view, baseX, baseY, groundH);
         h.id = id;
         return h;

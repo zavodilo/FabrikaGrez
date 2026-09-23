@@ -921,6 +921,17 @@ const SCENE_SCHEMA = {
         },
         {
             "group": "game",
+            "name": "WORLD3D_CINEMA_FILL",
+            "min": 0,
+            "max": 1.5,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Cinema fill light",
+            "value": 0.5
+        },
+        {
+            "group": "game",
             "name": "META_EVENT_CHANCE",
             "min": 0,
             "max": 1,
