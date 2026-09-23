@@ -877,6 +877,83 @@ const SCENE_SCHEMA = {
         },
         {
             "group": "game",
+            "name": "SCRIPT_QUALITY_SPREAD",
+            "min": 0,
+            "max": 3,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "Script luck spread",
+            "value": 0.9
+        },
+        {
+            "group": "game",
+            "name": "SCRIPT_QUICK_PENALTY",
+            "min": 0,
+            "max": 5,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "In-house script penalty",
+            "value": 2.2
+        },
+        {
+            "group": "game",
+            "name": "SCRIPT_ORDER_FEE",
+            "min": 0,
+            "max": 200000,
+            "step": 1000,
+            "kind": "number",
+            "options": null,
+            "label": "Script commission fee ($)",
+            "value": 15000
+        },
+        {
+            "group": "game",
+            "name": "SCRIPT_MAX_ORDERS",
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "Concurrent script orders",
+            "value": 3
+        },
+        {
+            "group": "game",
+            "name": "CAST_W_SKILL",
+            "min": 0,
+            "max": 1,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Casting weight: skill",
+            "value": 0.5
+        },
+        {
+            "group": "game",
+            "name": "CAST_W_STAR",
+            "min": 0,
+            "max": 1,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Casting weight: star power",
+            "value": 0.16
+        },
+        {
+            "group": "game",
+            "name": "CAST_CHEM_QUALITY",
+            "min": 0,
+            "max": 3,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "Chemistry → quality",
+            "value": 0.9
+        },
+        {
+            "group": "game",
             "name": "SHOOT_ACTOR_BONUS",
             "min": 0,
             "max": 1,
