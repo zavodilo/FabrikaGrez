@@ -138,8 +138,10 @@ const CastingSystem = {
         let v;
         if (rel != null) v = (rel / 100) * c.chemRel;
         else {
-            // Sorted ids, so chemistry(a, b) === chemistry(b, a): a pair has ONE shared past.
-            const lo = a.id < b.id ? a.id : b.id, hi = a.id < b.id ? b.id : a.id;
+            // Sorted by a STABLE person key: ids come from a global counter and differ
+            // between otherwise identical games, which would break seed determinism.
+            const ka = a.name + '/' + a.age, kb = b.name + '/' + b.age;
+            const lo = ka < kb ? ka : kb, hi = ka < kb ? kb : ka;
             const h = Rng.hash(lo + '×' + hi);
             v = (((h % 5000) / 5000) * 2 - 1) * 0.28;      // a mild ±0.28 of unspoken history
         }

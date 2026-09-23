@@ -429,6 +429,51 @@ try {
     });
     check('декорация-актив перестраивается выше', up.ok && up.after === up.before + 1, 'уровень ' + up.before + ' → ' + up.after);
 
+    // --- 11c. Phase Д: the editing room, the premiere, the run ------------------------------------------------
+    await click('rel:open:' + pr0.id);
+    await sleep(400);
+    check('монтажная открыта', await st(() => app.game.screen === 'post'));
+    await shot('14-editing-room');
+    await click('rel:edit:' + pr0.id + ':fast');
+    await sleep(200);
+    await click('rel:music:' + pr0.id + ':studio');
+    await sleep(200);
+    const edSet = await st((id) => {
+        const ed = (app.game.uiState.postEdit || {})[id];
+        return ed ? ed.edit + '/' + ed.music : '';
+    }, pr0.id);
+    check('монтаж и музыка выбираются', edSet === 'fast/studio', edSet);
+    await st(() => { StudioManager.state.cash += 800000; });   // the campaign is a capability check
+    const cashPreRel = await st(() => StudioManager.state.cash);
+    await click('rel:premiere:' + pr0.id);
+    await sleep(500);
+    const mv = await st(() => {
+        const m = (StudioManager.state.released || [])[0];
+        return m ? { id: m.id, screens: m.screens, opening: m.opening, score: m.score, audience: m.audience, state: m.state, reviews: m.reviews.length, cash: StudioManager.state.cash } : null;
+    });
+    check('премьера состоялась', !!mv && mv.state === 'run' && mv.screens > 0,
+        mv ? mv.screens + ' экранов, старт ' + Math.round(mv.opening / 1000) + 'k, критики ' + mv.score + ', зрители ' + mv.audience + '%' : 'фильм не вышел');
+    check('кампания списана, рецензии написаны', !!mv && mv.cash < cashPreRel && mv.reviews >= 2, 'рецензий ' + (mv ? mv.reviews : 0));
+    await shot('15-reviews');
+
+    // Let it run: the gross must accumulate week by week.
+    for (let i = 0; i < 4; i++) { await page.evaluate(() => app.game.nextWeek()); await sleep(120); }
+    const run1 = await st((id) => {
+        const m = StudioManager.state.released.find((x) => x.id === id);
+        return { takes: m.takes.length, gross: m.boxOffice, profit: m.profit, state: m.state };
+    }, mv.id);
+    check('прокат приносит кассу неделя за неделей', run1.takes >= 3 && run1.gross > 0,
+        'недель ' + run1.takes + ', касса ' + Math.round(run1.gross / 1000) + 'k');
+
+    // The released film is watchable from the cinema ledger.
+    await page.evaluate(() => app.game.showScreen('reviews'));
+    await sleep(300);
+    await click('watch:' + mv.id);
+    await sleep(1500);
+    check('выпущенный фильм смотрится из кинотеатра', await st(() => MovieSequencer.playing));
+    await st(() => { if (MovieSequencer.playing) MovieSequencer.stop(true); });
+    await sleep(600);
+
     // --- 12. no console errors across the whole journey -------------------------------------------------------------
     await shot('11-back-to-studio');
     check('за весь прогон ни одной ошибки консоли', errors.length === 0, errors.slice(0, 5).join(' | '));

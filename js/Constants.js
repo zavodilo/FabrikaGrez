@@ -152,6 +152,24 @@ const RELEASE_OPEN_PER_MARKETING = 0.9; // opening multiplier per marketing $ / 
 const RELEASE_STAR_BONUS = 0.08;        // opening multiplier per star ★ of the leads
 const RELEASE_SCREEN_BASE = 150;        // screens at a wide release
 const MARKETING_MAX_FRAC = 1.0;         // marketing cap as a fraction of the movie budget
+// Post-production and release (ReleaseSystem): the cut, the score, the premiere and the run.
+const RELEASE_STUDIO_SHARE = 0.55;      // fraction of the gross the studio keeps
+const RELEASE_EDIT_MATCH = 0.5;         // quality when the cut tempo suits the genre
+const RELEASE_EDIT_MISMATCH = -0.6;     // quality when the cut tempo fights the genre
+const RELEASE_MUSIC_FIT = 0.3;          // quality when the score is the genre's own
+const RELEASE_MUSIC_MISS = -0.4;        // quality when the score is borrowed from a foreign genre
+const RELEASE_CRITIC_NOISE = 0.8;       // ±: the critics' luck (gaussian, score points)
+const RELEASE_AUDIENCE_STAR = 4;        // audience points per star of the leads
+const RELEASE_HEAT_FACTOR = 0.06;       // gross multiplier per genre-heat point above 5
+const RELEASE_SEASON_AMP = 1.0;         // season table is used as is (multipliers per month)
+const RELEASE_SCREEN_PER_QUALITY = 12;  // screens added per point of the final quality
+const RELEASE_SCREEN_GROSS = 9000;      // $ a screen yields on the opening weekend
+const RELEASE_FANS_PER_QUALITY = 0.8;   // fans gained per quality point above 6 at the wrap
+const RELEASE_FANS_LOSS = 0.6;          // fans lost per quality point below 4.5 at the wrap
+const RELEASE_HOLD_BONUS = 0.12;        // weekly decay softened per 10 audience points above 60
+const AWARD_REP = 6;                    // studio reputation per «Золотой Кадр»
+const AWARD_FANS = 4;                   // fans per «Золотой Кадр»
+const AWARD_CASH = 25000;               // $ prize of a «Золотой Кадр»
 // MovieSequencer and the cinematic camera.
 const MOVIE_CAM_LERP = 6;               // 1/s: camera glide speed toward the shot pose
 const MOVIE_TITLE_SEC = 3.5;            // s: the title card holds

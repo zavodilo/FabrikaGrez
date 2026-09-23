@@ -364,7 +364,45 @@ interface ProductionProject {
     [key: string]: any;
 }
 
+/** A released film (StudioState.released entry, ReleaseSystem.premiere). */
+interface ReleasedMovie {
+    id: string;
+    projectId: string;
+    scriptId: string;
+    title: string;
+    genre: string;
+    year: number;
+    week: number;
+    logline: string;
+    timeline: any;
+    sequelOf: string;
+    /** 'fast' | 'normal' | 'slow' */
+    edit: string;
+    music: string;
+    marketing: number;
+    budget: number;
+    spent: number;
+    quality: number;
+    screens: number;
+    /** the critics' score 0..10 */
+    score: number;
+    /** the audience score 0..100 */
+    audience: number;
+    boxOffice: number;
+    takes: number[];
+    weeksLeft: number;
+    take: number;
+    opening: number;
+    /** 'run' | 'done' */
+    state: string;
+    awards: string[];
+    directorId: string;
+    castIds: Record<string, string>;
+    reviews: { text: string, score: number }[];
+    profit?: number;
+    [key: string]: any;
+}
+
 // Game systems that arrive in later phases (typeof-guarded at runtime).
-declare const ReleaseSystem: any;
 declare const MetaSystem: any;
 declare const SaveSystem: any;

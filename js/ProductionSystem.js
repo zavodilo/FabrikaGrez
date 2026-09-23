@@ -524,7 +524,7 @@ const ProductionSystem = {
         // The rough cut of everything shot so far: the point of dailies is to WATCH the film
         // growing, and in post it is the material the editor will cut (Phase Д).
         h += '<div class="row tight" style="margin-top:10px"><span class="btn small" data-act="prod:cut:' + proj.id + '">🎞 Черновой монтаж (' + proj.scenesShot.length + ' сцен)</span>' +
-            (proj.state === 'post' ? '<span class="hint">материал в монтажной: ' + proj.scenesShot.length + ' сцен ждут фазы постпродакшна</span>' : '') +
+            (proj.state === 'post' ? '<span class="btn gold" data-act="rel:open:' + proj.id + '">✂ В монтажную</span>' : '') +
             '</div>';
         h += '</div>';
 

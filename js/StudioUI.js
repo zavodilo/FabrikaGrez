@@ -254,6 +254,7 @@ const StudioUI = {
         return '<div class="sc"><h1 class="title">КИНОТЕАТР<span class="sub">фильмография студии — каждый фильм можно посмотреть</span></h1>' +
             (list || '<p class="hint">Показывать пока нечего. Снимите первый фильм — или посмотрите демо-сцену из главного меню.</p>') +
             '<div class="row" style="margin-top:12px"><span class="btn" data-act="close">← Закрыть</span><span class="sp"></span>' +
+            (typeof ReleaseSystem !== 'undefined' ? '<span class="btn" data-act="rel:list">📰 Касса и критика</span>' : '') +
             '<span class="btn" data-act="demo">🤠 Демо-сцена</span></div></div>';
     },
 

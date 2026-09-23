@@ -1009,6 +1009,28 @@ const SCENE_SCHEMA = {
         },
         {
             "group": "game",
+            "name": "RELEASE_STUDIO_SHARE",
+            "min": 0.2,
+            "max": 1,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Studio share of the gross",
+            "value": 0.55
+        },
+        {
+            "group": "game",
+            "name": "RELEASE_EDIT_MATCH",
+            "min": -1,
+            "max": 2,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "Cut tempo match bonus",
+            "value": 0.5
+        },
+        {
+            "group": "game",
             "name": "RELEASE_DROP",
             "min": 0.1,
             "max": 0.9,
