@@ -229,6 +229,11 @@ const MovieSequencer = {
     _enterScene(i, first) {
         const sc = this.tl.scenes[i];
         if (!sc) { this._beginCredits(); return; }
+        // Leave the intro card behind. Without this the state stayed 'intro' forever: the intro
+        // branch re-entered this method on EVERY frame (rebuilding the set each time) and the
+        // only other writer of 'scene' — _nextScene — is reachable solely from the 'scene'
+        // branch, so no film ever got past its title card.
+        this.state = 'scene';
         this.transitioning = false;
         this.si = i;
         this.shot = 0;
@@ -243,6 +248,8 @@ const MovieSequencer = {
         const view = this._app.location.view;
         this.set = SetPieces3D.buildSet(view, sc.set || 'western', this.base.x, this.base.y, 0);
         if (!this.set) this.set = SetPieces3D.buildSet(view, 'western', this.base.x, this.base.y, 0);
+        // Interiors are shot as a dollhouse: the ceiling/fourth wall comes off for the take.
+        if (this.set && this.set.shell) for (const e of this.set.shell) e.enabled = false;
         // Scene props.
         for (const p of sc.props || []) {
             const at = this._resolvePoint(p.anchor != null ? p.anchor : { x: p.x || 0, y: p.y || 0 });

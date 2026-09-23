@@ -189,11 +189,11 @@ const Scene = {
         const entities = area
             ? snaps.filter(sn => sn.x >= area[0] && sn.y >= area[1] && sn.x <= area[2] && sn.y <= area[3])
             : snaps;
-        const view = /** @type {any} */ (window).World3D ? /** @type {any} */ (window).World3D.view : null;
+        const view = (typeof World3D !== "undefined" ? World3D : null) ? (typeof World3D !== "undefined" ? World3D : null).view : null;
         let findings = [];
         let triangles = 0;
-        if (view && /** @type {any} */ (window).Debug3D) {
-            const r = await /** @type {any} */ (window).Debug3D.lint(view, { silent: true, frame: false });
+        if (view && (typeof Debug3D !== "undefined" ? Debug3D : null)) {
+            const r = await (typeof Debug3D !== "undefined" ? Debug3D : null).lint(view, { silent: true, frame: false });
             findings = r.findings;
             triangles = r.stats ? r.stats.triangles : 0;
         }
@@ -205,7 +205,7 @@ const Scene = {
             loaded: snaps.filter(sn => sn.loaded).length,
             errors: snaps.filter(sn => sn.error).map(sn => ({ name: sn.name, error: sn.error })),
             triangles: triangles,
-            fps: /** @type {any} */ (window).World3D ? Math.round(/** @type {any} */ (window).World3D.fps()) : 0,
+            fps: (typeof World3D !== "undefined" ? World3D : null) ? Math.round((typeof World3D !== "undefined" ? World3D : null).fps()) : 0,
             findings: findings,
             entities: entities.map(sn => ({
                 id: sn.name, kind: sn.kind, model: sn.model,
@@ -379,7 +379,7 @@ const Kit = {
     /** Seconds since the game loop started / last frame dt / smoothed fps. */
     time: () => Kit._t,
     dt: () => Kit._dt,
-    fps: () => (/** @type {any} */ (window).World3D ? Math.round(/** @type {any} */ (window).World3D.fps()) : 0),
+    fps: () => ((typeof World3D !== "undefined" ? World3D : null) ? Math.round((typeof World3D !== "undefined" ? World3D : null).fps()) : 0),
 
     // called by the kit loop (main.js) — not part of the agent contract
     _run(dt) {

@@ -122,14 +122,14 @@ const SetPieces3D = {
     // --- builder ----------------------------------------------------------------------
 
     begin() {
-        this._b = { parts: [], anchors: {} };
+        this._b = { parts: [], anchors: {}, shell: [] };
         return this;
     },
 
     /** A box: bottom at h0, footprint w × d, height hh, centered at (lx, ly). */
     B(lx, ly, h0, w, d, hh, hex, opts) {
         const o = opts || {};
-        this._b.parts.push({ m: 'box', lx: lx, ly: ly, lh: h0 + hh / 2, sx: w, sy: hh, sz: d, hex: hex, yaw: o.yaw || 0, tilt: o.tilt || 0, glow: !!o.glow });
+        this._b.parts.push({ m: 'box', lx: lx, ly: ly, lh: h0 + hh / 2, sx: w, sy: hh, sz: d, hex: hex, yaw: o.yaw || 0, tilt: o.tilt || 0, glow: !!o.glow, shell: !!o.shell });
         return this;
     },
 
@@ -157,6 +157,10 @@ const SetPieces3D = {
     finish(view, baseX, baseY, groundH) {
         const b = this._b;
         this._b = null;
+        if (!b) {
+            throw new Error('SetPieces3D.finish() без begin(): строитель не открыт. ' +
+                'Каждый buildSet/buildProp/buildLot обязан вызвать begin() до fn(S).');
+        }
         const root = new pc.Entity('set');
         view.root.addChild(root);
         const gh = groundH || 0;
@@ -173,6 +177,9 @@ const SetPieces3D = {
                 : p.m === 'cyl' ? this.cylMesh(view) : this.gemMesh(view);
             const mat = p.glow ? this.glowMat(p.hex) : ActorRig3D.mat(p.hex);
             e.render.meshInstances = [new pc.MeshInstance(mesh, mat, e)];
+            // Shell parts (ceilings, the fourth wall) are handed back on the handle so the
+            // cinema can drop them and shoot the interior as a dollhouse.
+            if (p.shell) b.shell.push(e);
         }
         World3D.addObject(view, root, 'prop');
         /** @type {Record<string, SetAnchor>} */
@@ -181,7 +188,7 @@ const SetPieces3D = {
             const a = b.anchors[name];
             anchors[name] = { x: baseX + a.lx, y: baseY + a.ly, heading: a.heading, h: a.h };
         }
-        return { root: root, anchors: anchors, view: view, groundH: gh, id: '' };
+        return { root: root, anchors: anchors, view: view, groundH: gh, id: '', shell: b.shell.slice() };
     },
 
     // --- handles ----------------------------------------------------------------------
@@ -196,10 +203,14 @@ const SetPieces3D = {
         if (handle && handle.root) World3D.removeObject(handle.view, handle.root);
     },
 
-    /** Build a set by id at a base point (its anchors come back in absolute map coords). */
+    /** Build a set by id at a base point (its anchors come back in absolute map coords).
+     *  begin() is mandatory here: buildLot's finish() leaves _b null, so a set built without
+     *  opening the builder crashes on its very first box — which silently killed every film
+     *  playback (the demo only ever reached its intro card before anyone played a real scene). */
     buildSet(view, id, baseX, baseY, groundH) {
         const fn = SetPieces3D.SETS[id];
         if (!fn) return null;
+        SetPieces3D.begin();
         fn(SetPieces3D);
         const h = SetPieces3D.finish(view, baseX, baseY, groundH);
         h.id = id;
@@ -209,6 +220,7 @@ const SetPieces3D = {
     buildProp(view, id, x, y, headingDeg, groundH) {
         const fn = SetPieces3D.PROPS[id];
         if (!fn) return null;
+        SetPieces3D.begin();
         fn(SetPieces3D);
         const h = SetPieces3D.finish(view, x, y, groundH);
         h.id = id;
@@ -262,7 +274,7 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
         S.B(0, 0, 0, 520, 420, 5, '#7a5230');                                   // floor
         S.B(0, -206, 0, 520, 12, 190, '#6a4a2e').B(-256, 0, 0, 12, 420, 190, '#6a4a2e').B(256, 0, 0, 12, 420, 190, '#6a4a2e');
         S.B(0, 206, 0, 520, 12, 190, '#5a3e26');
-        S.B(0, 0, 190, 520, 420, 8, '#4a3220');                                 // ceiling
+        S.B(0, 0, 190, 520, 420, 8, '#4a3220', { shell: 1 });                   // ceiling (hidden in the cinema)
         // Bar
         S.B(-100, -130, 0, 260, 42, 66, '#5a3a20').B(-100, -130, 66, 272, 52, 7, '#3a2412');
         S.B(-100, -186, 0, 260, 14, 120, '#4a3018');                            // back shelf
@@ -297,7 +309,7 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
         S.B(0, 0, 0, 560, 460, 6, '#232833');                                   // deck
         S.B(0, -226, 0, 560, 14, 200, '#2e3542').B(-276, 0, 0, 14, 460, 200, '#2a3140').B(276, 0, 0, 14, 460, 200, '#2a3140');
         S.B(0, 226, 0, 560, 14, 200, '#262d3a');
-        S.B(0, 0, 200, 560, 460, 10, '#1c212b');                                // ceiling
+        S.B(0, 0, 200, 560, 460, 10, '#1c212b', { shell: 1 });                  // ceiling (hidden in the cinema)
         S.B(0, -216, 60, 320, 6, 100, '#05070f');                               // viewport
         const stars = [[-120, 90], [-60, 130], [10, 80], [70, 140], [130, 100], [-90, 140], [40, 120], [100, 70], [-30, 70], [150, 130]];
         for (const st of stars) S.B(st[0], -213, st[1], 4, 2, 4, '#dfe8ff', { glow: true });

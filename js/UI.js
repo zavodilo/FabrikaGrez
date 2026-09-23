@@ -35,7 +35,7 @@ const UI = {
         // screen — a full-size management panel (menus, tables, forms): a panel whose inner
         // HTML the game feeds through setHTML(html); clicks/changes on [data-act] nodes are
         // delegated to onAction(fn). Content styling — STUDIO_CSS (injected once as <style>).
-        screen: { anchor: 'top-left', x: 0, y: 0, w: 1280, h: 720, fill: '#131a26', border: '', radius: 0, alpha: 1, visible: 1 },
+        screen: { anchor: 'top-left', x: 0, y: 0, w: 1280, h: 720, fill: '#131a26', border: '', radius: 0, alpha: 1, visible: 1, bleed: 0 },
     },
 
     /** @type {HTMLElement | null} */
@@ -81,7 +81,11 @@ const UI = {
     // (a plain string constant in a game script); the kit alone has none — guarded.
     injectCss() {
         if (document.getElementById('arc-screen-css')) return;
-        const css = /** @type {any} */ (window).STUDIO_CSS;
+        // STUDIO_CSS is a top-level `const` of UiCss.js — a lexical global binding, NOT a
+        // property of `window`. Reading it off `window` always came back undefined, which left
+        // the entire management UI (every 'screen' element's inner HTML) unstyled: black text on
+        // a see-through panel. Read it by direct reference, guarded for the bare kit.
+        const css = typeof STUDIO_CSS !== 'undefined' ? STUDIO_CSS : null;
         if (typeof css !== 'string' || !css) return;
         const st = document.createElement('style');
         st.id = 'arc-screen-css';
@@ -247,6 +251,15 @@ class UIElement {
         const d = this.def, s = this.el.style, a = UI.parseAnchor(d.anchor);
         const x = Number(d.x) || 0, y = Number(d.y) || 0, px = (v) => (Number(v) || 0) + 'px';
         const sized = d.kind !== 'text';
+        // A full-bleed 'screen' (bleed: 1) is an overlay over the whole VIEWPORT. A record cannot
+        // know the window's aspect ratio, so its stored w/h would either fall short (3D world
+        // leaking in at the edges) or overshoot (content centered in a 2560-wide panel lands off
+        // the right edge on 16:9). Size it to the layout-space viewport instead (skill ui).
+        let w = d.w, h = d.h;
+        if (d.kind === 'screen' && Number(d.bleed)) {
+            const vs = UI.size();
+            if (vs.w > 0 && vs.h > 0) { w = vs.w; h = vs.h; }
+        }
         s.cssText = '';
         s.position = 'absolute';
         s.boxSizing = 'border-box';
@@ -255,7 +268,7 @@ class UIElement {
         s.top = a.v === 'top' ? px(y) : a.v === 'middle' ? 'calc(50% + ' + px(y) + ')' : '';
         s.bottom = a.v === 'bottom' ? px(y) : '';
         s.transform = 'translate(' + (a.h === 'center' ? '-50%' : '0') + ', ' + (a.v === 'middle' ? '-50%' : '0') + ')';
-        if (sized) { s.width = px(d.w); s.height = px(d.h); }
+        if (sized) { s.width = px(w); s.height = px(h); }
         s.opacity = String(d.alpha == null ? 1 : Math.max(0, Math.min(1, Number(d.alpha))));
         s.display = this.visible || UI.editing ? 'block' : 'none';
         if (UI.editing && !this.visible) s.opacity = String(Number(s.opacity) * 0.35);

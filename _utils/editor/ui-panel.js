@@ -25,7 +25,7 @@ const UIPanel = {
     // Editors of the record fields, in panel order. type: num | text | color | flag.
     FIELDS: [
         ['x', 'num'], ['y', 'num'], ['w', 'num'], ['h', 'num'], ['text', 'text'], ['fontSize', 'num'], ['value', 'unit'],
-        ['color', 'color'], ['shadow', 'color'], ['fill', 'color'], ['border', 'color'], ['radius', 'num'], ['alpha', 'unit'], ['visible', 'flag'],
+        ['color', 'color'], ['shadow', 'color'], ['fill', 'color'], ['border', 'color'], ['radius', 'num'], ['alpha', 'unit'], ['visible', 'flag'], ['bleed', 'flag'],
     ],
     HANDLES: ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'],
     MIN_SIZE: 8,

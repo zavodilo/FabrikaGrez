@@ -263,21 +263,21 @@ const UI_COLOR = /^#[0-9a-fA-F]{6}$/;
 // color — '#rrggbb' or '', text — a string, flag — 0 | 1.
 const UI_TYPES = {
   x: 'px', y: 'px', w: 'size', h: 'size', radius: 'size', fontSize: 'size', value: 'unit', alpha: 'unit',
-  color: 'color', fill: 'color', border: 'color', shadow: 'color', text: 'text', visible: 'flag',
+  color: 'color', fill: 'color', border: 'color', shadow: 'color', text: 'text', visible: 'flag', bleed: 'flag',
 };
 export const UI_FIELDS = {
   text: ['x', 'y', 'text', 'fontSize', 'color', 'shadow', 'alpha', 'visible'],
   panel: ['x', 'y', 'w', 'h', 'fill', 'border', 'radius', 'alpha', 'visible'],
   bar: ['x', 'y', 'w', 'h', 'value', 'color', 'fill', 'border', 'radius', 'alpha', 'visible'],
   button: ['x', 'y', 'w', 'h', 'text', 'fontSize', 'color', 'fill', 'border', 'radius', 'alpha', 'visible'],
-  screen: ['x', 'y', 'w', 'h', 'fill', 'border', 'radius', 'alpha', 'visible'],
+  screen: ['x', 'y', 'w', 'h', 'fill', 'border', 'radius', 'alpha', 'visible', 'bleed'],
 };
 
 // A field value -> its literal in the file; invalid — null.
 function fmtUIField(type, v) {
   if (type === 'text') return JSON.stringify(String(v == null ? '' : v).replace(/[\x00-\x09\x0b-\x1f]/g, '').slice(0, 200));
   if (type === 'color') return v === '' || v == null ? "''" : (UI_COLOR.test(v) ? `'${String(v).toLowerCase()}'` : null);
-  if (type === 'flag') return v === 0 || v === false ? '0' : '1';
+  if (type === 'flag') return (v === 1 || v === true) ? '1' : '0';
   const n = fmtFixed(v, type === 'unit' ? 2 : 1);
   if (n === null) return null;
   if (type === 'size' && Number(n) < 0) return null;

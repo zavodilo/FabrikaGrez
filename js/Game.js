@@ -188,12 +188,16 @@ class Game {
         if (this._hudT > 0) return;
         this._hudT = 0.25;
         const S = StudioManager.state;
-        const money = UI.get('hudMoney');
-        if (money) money.setText(StudioUI.money(S.cash));
-        const date = UI.get('hudDate');
-        if (date) date.setText(StudioUI.dateLong(S));
-        const fans = UI.get('hudFans');
-        if (fans) fans.setText('♥ поклонники ' + Math.round(S.fans));
+        // Before «Новая игра» there is no studio state yet (StudioManager.state === null), so the
+        // counters stay dark — dereferencing it here used to throw every 0.25 s on the main menu.
+        if (S) {
+            const money = UI.get('hudMoney');
+            if (money) money.setText(StudioUI.money(S.cash));
+            const date = UI.get('hudDate');
+            if (date) date.setText(StudioUI.dateLong(S));
+            const fans = UI.get('hudFans');
+            if (fans) fans.setText('♥ поклонники ' + Math.round(S.fans));
+        }
         // Toasts.
         const now = Kit.time();
         if (this._toastUntil && now > this._toastUntil) {
@@ -206,6 +210,9 @@ class Game {
     }
 
     toast(msg) {
+        // The cinema owns the frame: a management toast over the picture would spoil it, so it
+        // waits in the queue and shows up when the film is over.
+        if (typeof MovieSequencer !== 'undefined' && MovieSequencer.playing) { this._toastQueue.push(msg); return; }
         if (this._toastUntil > Kit.time()) { this._toastQueue.push(msg); return; }
         const tp = UI.get('toastPanel'), tt = UI.get('toastText');
         if (!tp || !tt) return;
@@ -244,6 +251,13 @@ class Game {
         const main = UI.get('screenMain'), modal = UI.get('screenModal');
         if (main) main.show(false);
         if (modal) modal.show(false);
+        // Put an on-screen toast back in the queue: the frame belongs to the picture.
+        if (this._toastUntil) {
+            const tt = UI.get('toastText');
+            if (tt && tt._text) this._toastQueue.unshift(tt._text);
+            this._toastUntil = 0;
+        }
+        for (const id of ['toastPanel', 'toastText']) { const el = UI.get(id); if (el) el.show(false); }
         MovieSequencer.play(timeline, o);
     }
 
