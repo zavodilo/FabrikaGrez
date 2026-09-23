@@ -142,4 +142,254 @@ const PeopleSystem = {
     moodWord(m) {
         return m >= 85 ? 'в восторге' : m >= 65 ? 'доволен' : m >= 45 ? 'ровно' : m >= 25 ? 'раздражён' : 'в ярости';
     },
+
+    // =========================================================================================
+    // Phase Е: contracts, bonds, scandals, aging, the school.
+    // =========================================================================================
+
+    cfg() {
+        const U = 'undefined';
+        return {
+            contractWeeks: typeof PEOPLE_CONTRACT_WEEKS !== U ? PEOPLE_CONTRACT_WEEKS : 52,
+            starWeeks: typeof PEOPLE_CONTRACT_STAR_WEEKS !== U ? PEOPLE_CONTRACT_STAR_WEEKS : 26,
+            raisePerStar: typeof PEOPLE_RENEW_RAISE_PER_STAR !== U ? PEOPLE_RENEW_RAISE_PER_STAR : 0.1,
+            grace: typeof PEOPLE_RENEW_GRACE !== U ? PEOPLE_RENEW_GRACE : 4,
+            poachChance: typeof PEOPLE_POACH_CHANCE !== U ? PEOPLE_POACH_CHANCE : 0.05,
+            poachMult: typeof PEOPLE_POACH_MULT !== U ? PEOPLE_POACH_MULT : 1.4,
+            bondChance: typeof PEOPLE_BOND_CHANCE !== U ? PEOPLE_BOND_CHANCE : 0.12,
+            scandalChance: typeof PEOPLE_SCANDAL_CHANCE !== U ? PEOPLE_SCANDAL_CHANCE : 0.25,
+            scandalFans: typeof PEOPLE_SCANDAL_FANS !== U ? PEOPLE_SCANDAL_FANS : 2.5,
+            scandalRep: typeof PEOPLE_SCANDAL_REP !== U ? PEOPLE_SCANDAL_REP : 4,
+            romancePress: typeof PEOPLE_ROMANCE_PRESS !== U ? PEOPLE_ROMANCE_PRESS : 0.2,
+            declineAge: typeof PEOPLE_DECLINE_AGE !== U ? PEOPLE_DECLINE_AGE : 60,
+            retireAge: typeof PEOPLE_RETIRE_AGE !== U ? PEOPLE_RETIRE_AGE : 70,
+            youngAge: typeof PEOPLE_YOUNG_AGE !== U ? PEOPLE_YOUNG_AGE : 24,
+            charmMult: typeof PEOPLE_COURSE_CHARM_MULT !== U ? PEOPLE_COURSE_CHARM_MULT : 1.5,
+            mediaMult: typeof PEOPLE_COURSE_MEDIA_MULT !== U ? PEOPLE_COURSE_MEDIA_MULT : 2,
+            mediaExp: typeof PEOPLE_COURSE_MEDIA_EXP !== U ? PEOPLE_COURSE_MEDIA_EXP : 20,
+            trainCost: typeof PEOPLE_TRAIN_COST !== U ? PEOPLE_TRAIN_COST : 4000,
+            trainWeeks: typeof PEOPLE_TRAIN_WEEKS !== U ? PEOPLE_TRAIN_WEEKS : 3,
+            trainGain: typeof PEOPLE_TRAIN_GAIN !== U ? PEOPLE_TRAIN_GAIN : 1,
+        };
+    },
+
+    /** A contract for a hire: stars sign short, everyone else signs a year. */
+    makeContract(p) {
+        const c = this.cfg();
+        const term = (p.star || 0) >= 3 ? c.starWeeks : c.contractWeeks;
+        return { salary: p.salary, term: term, weeksLeft: term };
+    },
+
+    /** The named kind of a bond: romance, friendship or rivalry (null — just colleagues). */
+    relKind(a, b) {
+        const v = this.relValue(a, b);
+        if (v <= -40) return 'rival';
+        if (v >= 70 && a.gender !== b.gender) return 'romance';
+        if (v >= 50) return 'friend';
+        return null;
+    },
+    REL_RU: { friend: 'дружба', romance: 'роман', rival: 'соперничество' },
+    REL_EMOJI: { friend: '🤝', romance: '💞', rival: '⚔' },
+
+    relValue(a, b) {
+        if (!a || !b || a.id === b.id) return 0;
+        const x = (a.relationships || {})[b.id];
+        const y = (b.relationships || {})[a.id];
+        return x != null ? x : (y != null ? y : 0);
+    },
+
+    setRel(a, b, v) {
+        const cl = Math.max(-100, Math.min(100, Math.round(v)));
+        a.relationships = a.relationships || {}; b.relationships = b.relationships || {};
+        a.relationships[b.id] = cl; b.relationships[a.id] = cl;
+        return cl;
+    },
+
+    /** The notable bonds of a person, strongest first, for the card and the bonds tab. */
+    bondsOf(state, person) {
+        const out = [];
+        const all = (state.roster || []).concat(state.staff || []);
+        for (const o of all) {
+            if (o.id === person.id) continue;
+            const v = this.relValue(person, o);
+            const kind = this.relKind(person, o);
+            if (kind || Math.abs(v) >= 40) out.push({ person: o, value: v, kind: kind || (v > 0 ? 'friend' : 'rival') });
+        }
+        out.sort((x, y) => Math.abs(y.value) - Math.abs(x.value));
+        return out;
+    },
+
+    /** Everyone on the studio's books. */
+    books(state) { return (state.roster || []).concat(state.staff || []); },
+
+    /** Remove a person from the books (leaves, poached, retired). */
+    leave(state, mgr, person, reason) {
+        let arr = state.roster || [], i = arr.indexOf(person);
+        if (i < 0) { arr = state.staff || []; i = arr.indexOf(person); }
+        if (i < 0) return false;
+        arr.splice(i, 1);
+        // A departing person takes their bonds off any active casting sheet.
+        for (const pr of state.projects || []) {
+            if (pr.state !== 'shooting') continue;
+            for (const k of Object.keys(pr.cast || {})) {
+                if (pr.cast[k] === person.id) delete pr.cast[k];
+            }
+            if (pr.directorId === person.id) pr.directorId = '';
+        }
+        mgr.pushNews(person.name + ' ' + reason, 'bad');
+        return true;
+    },
+
+    /** The weekly life of the troupe: contracts, poaching, bonds, scandals, romances. */
+    weekly(state, mgr) {
+        const c = this.cfg();
+        const out = [];
+        const r = Rng.create(((state.seed ^ Math.imul(state.weekIdx + 3, 2654435761)) >>> 0) || 1);
+        const books = this.books(state);
+
+        // Contracts run down; an unanswered renewal demand walks out the door.
+        for (const p of books.slice()) {
+            if (p.contract) {
+                p.contract.weeksLeft--;
+                if (p.contract.weeksLeft <= 0 && !p.demand) {
+                    const raise = Math.round(p.salary * (c.raisePerStar * (p.star || 0) + 0.15 + (100 - (p.loyalty || 50)) / 400) / 10) * 10;
+                    p.demand = { raise: raise, weeksLeft: c.grace };
+                    out.push('📝 ' + p.name + ' ждёт продления контракта: +' + StudioUI_money(raise) + '/нед (' + c.grace + ' нед. на ответ).');
+                    continue;                       // the grace starts NEXT week, not inside this one
+                }
+            }
+            if (p.demand) {
+                p.demand.weeksLeft--;
+                if (p.demand.weeksLeft <= 0) {
+                    p.demand = null;
+                    this.leave(state, mgr, p, 'не дождался(ась) продления контракта и ушёл(ла) к конкурентам.');
+                    state.rep = Math.max(0, (state.rep || 20) - 2);
+                    out.push('💼 ' + p.name + ' покидает студию: контракт не продлён.');
+                    continue;
+                }
+            }
+            // Poaching: a disloyal star hears money elsewhere.
+            if (!p.offer && (p.star || 0) >= 3 && (p.loyalty || 50) < 60 && r.chance(c.poachChance)) {
+                p.offer = { salary: Math.round(p.salary * c.poachMult), weeksLeft: 3 };
+                out.push('🕵 Конкуренты манят ' + p.name + ': ' + StudioUI_money(p.offer.salary) + '/нед. Удержать — поднять зарплату.');
+                mgr.pushNews('Слух: ' + p.name + ' ведёт переговоры с конкурентами.', 'bad');
+            }
+            if (p.offer) {
+                p.offer.weeksLeft--;
+                if (p.offer.weeksLeft <= 0) {
+                    const stays = r.chance(0.35 + (p.loyalty || 50) / 200);
+                    p.offer = null;
+                    if (!stays) {
+                        this.leave(state, mgr, p, 'ушёл(ла) к конкурентам на их условия.');
+                        state.fans = Math.max(0, state.fans - 1.5);
+                        out.push('💔 ' + p.name + ' снялся(ась) в фильме конкурентов.');
+                    } else {
+                        p.loyalty = Math.min(100, (p.loyalty || 50) + 5);
+                        out.push('✊ ' + p.name + ' отклоняет предложение конкурентов: лояльность растёт.');
+                    }
+                }
+            }
+        }
+
+        // Bonds deepen or sour on their own momentum.
+        for (let i = 0; i < books.length; i++) {
+            for (let j = i + 1; j < books.length; j++) {
+                const a = books[i], b = books[j];
+                const v = this.relValue(a, b);
+                if (Math.abs(v) < 40) continue;
+                this.setRel(a, b, v + (v > 0 ? 1 : -1));
+            }
+        }
+
+        // Co-stars on one floor: bonds shift, rivalries blow up, romances make the papers.
+        for (const pr of (state.projects || [])) {
+            if (pr.state !== 'shooting') continue;
+            const cast = [];
+            for (const k of Object.keys(pr.cast || [])) {
+                const p = this.personById(state, pr.cast[k]);
+                if (p) cast.push(p);
+            }
+            const dir = this.personById(state, pr.directorId);
+            if (dir) cast.push(dir);
+            for (let i = 0; i < cast.length; i++) {
+                for (let j = i + 1; j < cast.length; j++) {
+                    const a = cast[i], b = cast[j];
+                    const kind = this.relKind(a, b);
+                    if (kind === 'rival' && r.chance(c.scandalChance)) {
+                        const v = this.relValue(a, b);
+                        this.setRel(a, b, v - 10);
+                        a.mood = Math.max(5, a.mood - 12); b.mood = Math.max(5, b.mood - 12);
+                        state.fans = Math.max(0, state.fans - c.scandalFans);
+                        state.rep = Math.max(0, (state.rep || 20) - c.scandalRep);
+                        pr.qualityPenalty = (pr.qualityPenalty || 0) + 0.3;
+                        state.scandals = state.scandals || [];
+                        state.scandals.unshift({ week: state.weekIdx, year: state.year, a: a.name, b: b.name, project: pr.title });
+                        out.push('⚔ Скандал на площадке «' + pr.title + '»: ' + a.name + ' и ' + b.name + ' не поделили гримёрку. Пресса ликует, фанаты уходят.');
+                        mgr.pushNews('Скандал: ' + a.name + ' против ' + b.name + ' на съёмках «' + pr.title + '».', 'bad');
+                    } else if (kind === 'romance' && r.chance(c.romancePress)) {
+                        state.fans = Math.min(100, state.fans + 1);
+                        a.mood = Math.min(100, a.mood + 6); b.mood = Math.min(100, b.mood + 6);
+                        out.push('💞 Пресса поймала ' + a.name + ' и ' + b.name + ' за ужином: студии +поклонники.');
+                    } else if (!kind && r.chance(c.bondChance)) {
+                        // A shared shift starts something: charm and reliability decide the sign.
+                        const pull = ((a.charm + b.charm) / 2 - 5) + ((a.reliability + b.reliability) / 2 - 6);
+                        const v = this.relValue(a, b);
+                        this.setRel(a, b, v + (pull >= 0 ? 12 : -14));
+                    }
+                }
+            }
+        }
+        return out;
+    },
+
+    personById(state, id) {
+        if (!id) return null;
+        return this.books(state).find((p) => p.id === id) || null;
+    },
+
+    /** Once a year: the young grow, the old decline, the elders retire. */
+    yearly(state, mgr) {
+        const c = this.cfg();
+        const out = [];
+        for (const p of this.books(state).slice()) {
+            if (p.age >= c.retireAge) {
+                this.leave(state, mgr, p, 'ушёл(ла) на покой: красивая карьера, тёплые титры.');
+                state.rep = Math.min(100, (state.rep || 20) + 1);
+                out.push('🎩 ' + p.name + ' провожает карьеру на пенсию: студия аплодирует стоя.');
+                continue;
+            }
+            if (p.age >= c.declineAge) {
+                const lost = Math.min(p.skills.action, 1);
+                p.skills.action = Math.max(0, p.skills.action - lost);
+                p.skills.drama = Math.min(10, p.skills.drama + (p.age % 2 === 0 ? 1 : 0));   // craft ripens
+                if (lost) p.salary = this.fairSalary(p);
+            } else if (p.age <= c.youngAge) {
+                const main = this.SKILLS.slice().sort((x, y) => p.skills[y] - p.skills[x])[0];
+                p.skills[main] = Math.min(8, p.skills[main] + 1);
+                p.salary = this.fairSalary(p);
+            }
+        }
+        return out;
+    },
+
+    /** The school: a genre skill, charm, or media training toward a star. */
+    courseInfo(skill) {
+        const c = this.cfg();
+        if (skill === 'charm') return { ru: 'Обаяние и присутствие', cost: Math.round(c.trainCost * c.charmMult), weeks: 2 };
+        if (skill === 'media') return { ru: 'Медиа-тренинг', cost: Math.round(c.trainCost * c.mediaMult), weeks: 1 };
+        return { ru: this.SKILL_RU[skill] || skill, cost: c.trainCost, weeks: c.trainWeeks };
+    },
+
+    /** Finish a course: applies the gain of whatever was studied. */
+    finishCourse(state, p) {
+        const sk = p.training ? p.training.skill : null;
+        const c = this.cfg();
+        if (sk === 'charm') { p.charm = Math.min(10, p.charm + 1); return 'обаяние ' + p.charm; }
+        if (sk === 'media') { p.exp = (p.exp || 0) + c.mediaExp; p.star = starOfPerson(p); return 'медиа-опыт +' + c.mediaExp; }
+        p.skills[sk] = Math.min(10, (p.skills[sk] || 0) + c.trainGain);
+        return (this.SKILL_RU[sk] || sk) + ' ' + p.skills[sk];
+    },
 };
+
+/** starOf lives on the namespace; the school needs it without a this-binding. */
+function starOfPerson(p) { return PeopleSystem.starOf(p); }

@@ -921,6 +921,28 @@ const SCENE_SCHEMA = {
         },
         {
             "group": "game",
+            "name": "PEOPLE_POACH_CHANCE",
+            "min": 0,
+            "max": 0.5,
+            "step": 0.01,
+            "kind": "number",
+            "options": null,
+            "label": "Poaching chance per week",
+            "value": 0.05
+        },
+        {
+            "group": "game",
+            "name": "PEOPLE_SCANDAL_CHANCE",
+            "min": 0,
+            "max": 1,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Scandal chance per week",
+            "value": 0.25
+        },
+        {
+            "group": "game",
             "name": "CAST_W_SKILL",
             "min": 0,
             "max": 1,

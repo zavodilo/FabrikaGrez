@@ -134,34 +134,56 @@ const StudioUI = {
 
     personCard(p, mode) {
         const S = PeopleSystem;
-        const busy = p.training ? '<span class="tag blue">учёба: ' + S.SKILL_RU[p.training.skill] + ', ещё ' + p.training.weeksLeft + ' нед.</span>' : '';
+        const course = p.training ? S.courseInfo(p.training.skill) : null;
+        const busy = p.training ? '<span class="tag blue">учёба: ' + this.esc(course.ru) + ', ещё ' + p.training.weeksLeft + ' нед.</span>' : '';
+        const contract = p.contract ? '<span class="tag' + (p.contract.weeksLeft <= 8 ? ' red' : '') + '">контракт ' + p.contract.weeksLeft + ' нед.</span>' : '';
+        const demand = p.demand ? '<span class="tag gold">ждёт продления: +' + this.money(p.demand.raise) + '/нед (' + p.demand.weeksLeft + ' нед.)</span>' : '';
+        const offer = p.offer ? '<span class="tag red">манят конкуренты: ' + this.money(p.offer.salary) + '/нед</span>' : '';
         let btns = '';
-        if (mode === 'market') btns = '<span class="btn gold small" data-act="p:hire:' + p.id + '">Нанять · ' + StudioUI.money(p.salary) + '/нед</span>';
+        if (mode === 'market') {
+            const term = S.makeContract(p).term;
+            btns = '<span class="btn gold small" data-act="p:hire:' + p.id + '">Нанять · ' + StudioUI.money(p.salary) + '/нед</span>' +
+                '<div class="hint" style="margin-top:4px;text-align:right">контракт на ' + term + ' нед.</div>';
+        }
         if (mode === 'roster') {
             btns = '<span class="btn red small" data-act="p:fire:' + p.id + '">Уволить</span>';
-            if (!p.training && p.role === 'actor') {
+            if (p.demand) btns += ' <span class="btn gold small" data-act="p:renew:' + p.id + '">📝 Продлить</span> <span class="btn small" data-act="p:letgo:' + p.id + '">Отказать</span>';
+            if (p.offer) btns += ' <span class="btn gold small" data-act="p:counter:' + p.id + '">💰 Перебить</span>';
+            if (!p.training) {
                 for (const k of S.SKILLS) {
-                    if (p.skills[k] < 10) btns += ' <span class="btn small" data-act="p:train:' + p.id + ':' + k + '">🎓 ' + S.SKILL_RU[k] + '</span>';
+                    if ((p.skills[k] || 0) < 10) btns += ' <span class="btn small" data-act="p:train:' + p.id + ':' + k + '" title="Курс: ' + this.money(S.courseInfo(k).cost) + ', ' + S.courseInfo(k).weeks + ' нед.">🎓 ' + S.SKILL_RU[k] + '</span>';
                 }
+                if (p.charm < 10) btns += ' <span class="btn small" data-act="p:train:' + p.id + ':charm" title="Курс: ' + this.money(S.courseInfo('charm').cost) + ', 2 нед.">✨ Обаяние</span>';
+                btns += ' <span class="btn small" data-act="p:train:' + p.id + ':media" title="Курс: ' + this.money(S.courseInfo('media').cost) + ', 1 нед., +опыт к звёздности">📰 Медиа</span>';
             }
         }
+        const bonds = S.bondsOf(StudioManager.state, p).slice(0, 3);
+        const bondsHtml = bonds.length ? '<div class="meta">' + bonds.map((b) =>
+            '<span title="' + this.esc(b.person.name) + '">' + (S.REL_EMOJI[b.kind] || '·') + ' ' + this.esc(b.person.first) +
+            ' ' + (b.value > 0 ? '+' : '') + b.value + '</span>').join(' · ') + '</div>' : '';
         return '<div class="card" style="cursor:default"><div class="row" style="align-items:flex-start">' +
             this.avatar(p, 52) +
             '<div style="flex:1;min-width:200px"><div class="row tight"><span class="name">' + this.esc(p.name) + '</span>' + this.stars(p) +
             '<span class="tag">' + S.ROLE_RU[p.role] + '</span><span class="tag">' + p.age + ' лет</span>' +
-            '<span class="tag ' + (p.mood >= 60 ? 'green' : p.mood >= 35 ? '' : 'red') + '">' + S.moodWord(p.mood) + '</span>' + busy + '</div>' +
+            '<span class="tag ' + (p.mood >= 60 ? 'green' : p.mood >= 35 ? '' : 'red') + '">' + S.moodWord(p.mood) + '</span>' +
+            contract + demand + offer + busy + '</div>' +
             '<div class="meta" style="margin-top:4px">' + this.skillRow(p) + '</div>' +
-            '<div class="meta">Обаяние ' + p.charm + '/10 · Надёжность ' + p.reliability + '/10 · Зарплата ' + StudioUI.money(p.salary) + '/нед' +
-            (p.films ? ' · Фильмов: ' + p.films : '') + (p.quirks.length ? ' · ' + p.quirks.join(', ') : '') + '</div></div>' +
-            '<div class="row tight" style="align-self:center">' + btns + '</div></div></div>';
+            '<div class="meta">Обаяние ' + p.charm + '/10 · Надёжность ' + p.reliability + '/10 · Лояльность ' + this.bar((p.loyalty || 50) / 100, (p.loyalty || 50) >= 60 ? 'green' : '') + ' ' + Math.round(p.loyalty || 50) +
+            ' · Зарплата ' + StudioUI.money(p.salary) + '/нед' +
+            (p.films ? ' · Фильмов: ' + p.films : '') + (p.quirks.length ? ' · ' + p.quirks.join(', ') : '') + '</div>' +
+            bondsHtml + '</div>' +
+            '<div class="row tight" style="align-self:center;max-width:340px;justify-content:flex-end">' + btns + '</div></div></div>';
     },
 
     people(game) {
         const s = StudioManager.state;
         const ui = game.uiState;
         const tab = ui.peopleTab || 'roster';
-        const tabs = [['roster', 'Актёры (' + s.roster.length + ')'], ['staff', 'Команда (' + s.staff.length + ')'], ['market', 'Биржа талантов']];
-        let h = '<div class="sc"><h1 class="title">ЛЮДИ<span class="sub">труппа, команда и биржа талантов</span></h1><div class="tabs">';
+        const S = PeopleSystem;
+        const scandalN = (s.scandals || []).length;
+        const tabs = [['roster', 'Актёры (' + s.roster.length + ')'], ['staff', 'Команда (' + s.staff.length + ')'],
+        ['market', 'Биржа талантов'], ['bonds', 'Отношения' + (scandalN ? ' (' + scandalN + '⚔)' : '')]];
+        let h = '<div class="sc"><h1 class="title">ЛЮДИ<span class="sub">труппа, команда, биржа и то, что между ними</span></h1><div class="tabs">';
         for (const t of tabs) h += '<span class="tab' + (tab === t[0] ? ' on' : '') + '" data-act="tab:people:' + t[0] + '">' + t[1] + '</span>';
         h += '</div>';
         if (tab === 'roster') {
@@ -170,8 +192,40 @@ const StudioUI = {
         } else if (tab === 'staff') {
             h += s.staff.length ? '' : '<p class="hint">Без сценариста и режиссёра фильм не снять.</p>';
             for (const p of s.staff) h += this.personCard(p, 'roster');
+        } else if (tab === 'bonds') {
+            h += '<div class="cols"><div class="col"><div class="h2">💞 Дружба, романы и соперничество</div>';
+            const seen = {};
+            let any = false;
+            for (const p of S.books(s)) {
+                for (const b of S.bondsOf(s, p)) {
+                    const key = [p.id, b.person.id].sort().join('-');
+                    if (seen[key]) continue;
+                    seen[key] = 1; any = true;
+                    h += '<div class="card" style="cursor:default"><div class="row tight">' +
+                        '<span style="font-size:18px">' + (S.REL_EMOJI[b.kind] || '·') + '</span>' +
+                        '<b>' + this.esc(p.name) + '</b><span class="hint">и</span><b>' + this.esc(b.person.name) + '</b>' +
+                        '<span class="tag">' + (S.REL_RU[b.kind] || 'связь') + '</span><span class="sp"></span>' +
+                        '<span class="tag ' + (b.value > 0 ? 'green' : 'red') + '">' + (b.value > 0 ? '+' : '') + b.value + '</span></div>' +
+                        '<div class="meta hint">' + (b.kind === 'rival' ? 'На одной площадке эта пара взрывоопасна: скандал бьёт по фанатам, репутации и качеству дублей.'
+                            : b.kind === 'romance' ? 'Роман на площадке — это хорошая пресса и химия в кадре.'
+                                : 'Друзья держат настроение группы и химию в кадре.') + '</div></div>';
+                }
+            }
+            if (!any) h += '<p class="hint">Заметных связей пока нет: они рождаются на общих съёмках — от обаяния и надёжности пары зависит, дружбой или соперничеством.</p>';
+            h += '</div><div class="col"><div class="h2">⚔ Хроника скандалов</div>';
+            if ((s.scandals || []).length) {
+                for (const sc of s.scandals.slice(0, 12)) {
+                    h += '<div class="news bad">' + sc.year + ' · ' + this.esc(sc.a) + ' против ' + this.esc(sc.b) + ' на «' + this.esc(sc.project) + '»</div>';
+                }
+            } else h += '<p class="hint">Тишина в гримёрках. Подозрительно тихо.</p>';
+            h += '<div class="h2">🎓 Школа мастерства</div>' +
+                '<div class="meta">Курсы: ' + S.SKILLS.map((k) => S.SKILL_RU[k] + ' — ' + this.money(S.courseInfo(k).cost) + '/' + S.courseInfo(k).weeks + ' нед.').join(', ') +
+                '; ✨ Обаяние — ' + this.money(S.courseInfo('charm').cost) + '/2 нед.; 📰 Медиа-тренинг — ' + this.money(S.courseInfo('media').cost) + '/1 нед. (опыт к звёздности).</div>' +
+                '<div class="meta hint" style="margin-top:6px">Контракты: год у рабочих лошадок и полгода у звёзд. Не ответить на требование продления за ' +
+                S.cfg().grace + ' нед. — значит потерять человека и немного репутации.</div>' +
+                '</div></div>';
         } else {
-            h += '<p class="hint">Обновление через ' + Math.max(0, s.marketIn) + ' нед. Кандидаты подписывают контракт на свою запрашиваемую зарплату.</p>';
+            h += '<p class="hint">Обновление через ' + Math.max(0, s.marketIn) + ' нед. Кандидат подписывает контракт на свою запрашиваемую зарплату.</p>';
             for (const p of s.market) h += this.personCard(p, 'market');
         }
         h += '<div class="row" style="margin-top:12px"><span class="btn" data-act="close">← Закрыть</span></div></div>';
@@ -368,6 +422,25 @@ const StudioUI = {
                 return;
             }
             if (p) { S.fire(p); game.toast(p.name + ' уволен(а).'); }
+            rerender();
+            return;
+        }
+        if (parts[0] === 'p' && parts[1] === 'renew') {
+            const p = s.roster.concat(s.staff).find((x) => x.id === parts[2]);
+            if (p && S.renew(p)) { game.toast('📝 ' + p.name + ' продлевает контракт: ' + StudioUI.money(p.salary) + '/нед.'); }
+            rerender();
+            return;
+        }
+        if (parts[0] === 'p' && parts[1] === 'counter') {
+            const p = s.roster.concat(s.staff).find((x) => x.id === parts[2]);
+            if (p && S.counter(p)) { Sound3D.play(MovieData.SFX.cash, { volume: 0.5 }); game.toast('💰 ' + p.name + ' остаётся: предложение перебито.'); }
+            else if (p) game.toast('Не хватает денег на подписной бонус.');
+            rerender();
+            return;
+        }
+        if (parts[0] === 'p' && parts[1] === 'letgo') {
+            const p = s.roster.concat(s.staff).find((x) => x.id === parts[2]);
+            if (p && S.letGo(p)) game.toast(' ' + p.name + ' покидает студию без продления.');
             rerender();
             return;
         }

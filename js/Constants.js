@@ -87,6 +87,24 @@ const PEOPLE_TRAIN_GAIN = 1;            // skill points per course
 const PEOPLE_TRAIN_WEEKS = 3;           // weeks a course takes (the person is busy)
 const PEOPLE_START_ACTORS = 3;          // actors on the roster at a new game
 const PEOPLE_START_STAFF = 2;           // staff (writer/director) at a new game
+// Contracts, bonds and the school (PeopleSystem): tenure, renewals, poaching, scandals, aging.
+const PEOPLE_CONTRACT_WEEKS = 52;       // weeks of a standard contract
+const PEOPLE_CONTRACT_STAR_WEEKS = 26;  // weeks a star signs for (stars want freedom)
+const PEOPLE_RENEW_RAISE_PER_STAR = 0.1;// salary raise demanded per star at renewal
+const PEOPLE_RENEW_GRACE = 4;           // weeks to answer a renewal demand before the person walks
+const PEOPLE_POACH_CHANCE = 0.05;       // weekly chance a disloyal star hears a rival offer
+const PEOPLE_POACH_MULT = 1.4;          // the rival offer as a fraction of the salary
+const PEOPLE_BOND_CHANCE = 0.12;        // weekly chance co-stars shift their bond noticeably
+const PEOPLE_SCANDAL_CHANCE = 0.25;     // weekly chance a rivalry on one floor blows up
+const PEOPLE_SCANDAL_FANS = 2.5;        // fans lost in a scandal
+const PEOPLE_SCANDAL_REP = 4;           // reputation lost in a scandal
+const PEOPLE_ROMANCE_PRESS = 0.2;       // weekly chance a floor romance makes good press
+const PEOPLE_DECLINE_AGE = 60;          // age when the body starts saying no (action declines)
+const PEOPLE_RETIRE_AGE = 70;           // age of the retirement ceremony
+const PEOPLE_YOUNG_AGE = 24;            // age until a talent grows on its own
+const PEOPLE_COURSE_CHARM_MULT = 1.5;   // price of the charm course, in training costs
+const PEOPLE_COURSE_MEDIA_MULT = 2;     // price of the media course
+const PEOPLE_COURSE_MEDIA_EXP = 20;     // exp of the media course (a step toward a star)
 // Scripts and shooting.
 const SCRIPT_WRITE_WEEKS = 2;           // weeks a writer needs per script
 const SCRIPT_QUALITY_BASE = 3.5;        // base script quality 0..10

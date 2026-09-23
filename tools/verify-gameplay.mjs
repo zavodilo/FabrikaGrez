@@ -474,6 +474,53 @@ try {
     await st(() => { if (MovieSequencer.playing) MovieSequencer.stop(true); });
     await sleep(600);
 
+    // --- 11d. Phase Е: contracts, the school, bonds ----------------------------------------------------------------
+    await page.evaluate(() => app.game.showScreen('people'));
+    await sleep(300);
+    check('нанятые с биржи подписали контракт', await st(() => {
+        const c = PeopleSystem.cfg();
+        return StudioManager.state.roster.every((p) => !p.contract || (p.contract.weeksLeft > 0 && p.contract.weeksLeft <= c.contractWeeks));
+    }));
+    await click('tab:people:bonds');
+    await sleep(300);
+    const bondsHtml = await st(() => (document.querySelector('.arc-ui') || {}).innerHTML || '');
+    check('вкладка отношений и школа на экране', /Дружба, романы и соперничество/.test(bondsHtml) && /Школа мастерства/.test(bondsHtml));
+    await shot('16-bonds');
+    // The school: a charm course runs its two weeks and lands.
+    const charm = await st(() => {
+        const p = StudioManager.state.roster.find((x) => !x.training && x.charm < 10);
+        if (!p) return null;
+        const before = p.charm;
+        StudioManager.startTraining(p, 'charm');
+        return { id: p.id, before: before };
+    });
+    if (charm) {
+        await page.evaluate(() => { app.game.nextWeek(); app.game.nextWeek(); });
+        await sleep(200);
+        check('курс обаяния заканчивается прибавкой', await st((c0) => {
+            const p = StudioManager.state.roster.find((x) => x.id === c0.id) || StudioManager.state.staff.find((x) => x.id === c0.id);
+            return !!p && p.charm === c0.before + 1 && !p.training;
+        }, charm));
+    } else bad('некого учить обаянию');
+    // A renewal demand can be answered from the card.
+    const renew = await st(() => {
+        const p = StudioManager.state.roster[0];
+        p.contract = { salary: p.salary, term: 2, weeksLeft: 1 };
+        return { id: p.id, salary: p.salary };
+    });
+    await page.evaluate(() => app.game.nextWeek());
+    await sleep(200);
+    await page.evaluate(() => app.game.showScreen('people'));
+    await sleep(250);
+    await click('tab:people:roster');       // the renew button lives on the troupe cards
+    await sleep(250);
+    await click('p:renew:' + renew.id);
+    await sleep(250);
+    check('требование продления закрывается с экрана людей', await st((r0) => {
+        const p = StudioManager.state.roster.find((x) => x.id === r0.id);
+        return !!p && !p.demand && p.salary > r0.salary && p.contract.weeksLeft === p.contract.term;
+    }, renew));
+
     // --- 12. no console errors across the whole journey -------------------------------------------------------------
     await shot('11-back-to-studio');
     check('за весь прогон ни одной ошибки консоли', errors.length === 0, errors.slice(0, 5).join(' | '));

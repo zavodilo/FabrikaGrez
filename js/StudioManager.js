@@ -110,6 +110,9 @@ const StudioManager = {
             s.week = 1;
             s.year++;
             toasts.push('🎆 Наступил ' + s.year + ' год!');
+            if (typeof PeopleSystem !== 'undefined' && PeopleSystem.yearly) {
+                for (const t of PeopleSystem.yearly(s, this)) toasts.push(t);
+            }
             if (typeof ReleaseSystem !== 'undefined' && ReleaseSystem.awardsCeremony) {
                 const aw = ReleaseSystem.awardsCeremony(s);
                 for (const a of aw) toasts.push(a);
@@ -124,21 +127,21 @@ const StudioManager = {
         const upkeep = c.upkeep + setCount * 350;
         this.pay(wages + upkeep, 'Зарплаты и содержание');
 
-        // People: moods settle, training progresses, the market refreshes.
+        // People: moods settle, the school finishes courses, contracts and bonds live their life.
         if (typeof PeopleSystem !== 'undefined') {
             for (const p of s.roster.concat(s.staff)) {
                 p.mood += (62 - p.mood) * 0.08;
                 if (p.training) {
                     p.training.weeksLeft--;
                     if (p.training.weeksLeft <= 0) {
-                        const sk = p.training.skill;
-                        p.skills[sk] = Math.min(10, p.skills[sk] + c.trainGain);
+                        const gain = PeopleSystem.finishCourse(s, p);
                         p.training = null;
-                        toasts.push('🎓 ' + p.name + ' повышает навык: ' + PeopleSystem.SKILL_RU[sk] + ' ' + p.skills[sk]);
+                        toasts.push('🎓 ' + p.name + ' заканчивает курс: ' + gain + '.');
                     }
                 }
                 p.age = this._ageFor(p);
             }
+            for (const t of PeopleSystem.weekly(s, this)) toasts.push(t);
         }
         s.marketIn--;
         if (s.marketIn <= 0) this.refreshMarket(false);
@@ -229,6 +232,8 @@ const StudioManager = {
         person.role = asRole || person.role;
         person.mood = Math.min(100, person.mood + 10);
         person.loyalty = Math.min(100, person.loyalty + 5);
+        person.demand = null; person.offer = null;
+        person.contract = PeopleSystem.makeContract(person);
         if (person.role === 'actor') s.roster.push(person);
         else s.staff.push(person);
         this.pushNews(person.name + ' (' + PeopleSystem.ROLE_RU[person.role] + ') подписывает контракт: ' + StudioUI_money(person.salary) + '/нед.', 'good');
@@ -250,12 +255,57 @@ const StudioManager = {
 
     startTraining(person, skill) {
         const s = this.state;
-        const c = this.cfg();
+        const course = PeopleSystem.courseInfo(skill);
+        const known = PeopleSystem.SKILLS.indexOf(skill) >= 0;
         if (person.training) return false;
-        if (person.skills[skill] >= 10) return false;
-        if (!this.canAfford(c.trainCost)) return false;
-        this.pay(c.trainCost, 'Обучение: ' + person.name);
-        person.training = { skill: skill, weeksLeft: c.trainWeeks };
+        if (known && (person.skills[skill] || 0) >= 10) return false;
+        if (skill === 'charm' && person.charm >= 10) return false;
+        if (!this.canAfford(course.cost)) return false;
+        this.pay(course.cost, 'Курс «' + course.ru + '»: ' + person.name);
+        person.training = { skill: skill, weeksLeft: course.weeks };
+        return true;
+    },
+
+    // --- contracts: renew, counter a poach, let go -------------------------------------------------
+
+    /** Accept the renewal demand: the raise lands in the salary and the term restarts. */
+    renew(person) {
+        const s = this.state;
+        if (!person || !person.demand) return false;
+        const raise = person.demand.raise;
+        person.salary += raise;
+        if (person.contract) person.contract.salary = person.salary;
+        person.contract = PeopleSystem.makeContract(person);
+        person.contract.salary = person.salary;
+        person.demand = null;
+        person.loyalty = Math.min(100, (person.loyalty || 50) + 10);
+        person.mood = Math.min(100, person.mood + 8);
+        this.pushNews(person.name + ' продлевает контракт: ' + StudioUI_money(person.salary) + '/нед.', '');
+        return true;
+    },
+
+    /** Match the rival offer: expensive, but the star stays and remembers it. */
+    counter(person) {
+        const s = this.state;
+        if (!person || !person.offer) return false;
+        const want = person.offer.salary;
+        const cost = Math.round((want - person.salary) * 8);   // a signing bonus of the difference
+        if (!this.canAfford(cost)) return false;
+        this.pay(cost, 'Подписной бонус: ' + person.name);
+        person.salary = want;
+        if (person.contract) person.contract.salary = want;
+        person.offer = null;
+        person.loyalty = Math.min(100, (person.loyalty || 50) + 15);
+        this.pushNews(person.name + ' остаётся: студия перебила предложение конкурентов.', 'good');
+        return true;
+    },
+
+    /** Decline the renewal: the person leaves without severance, but with a grudge. */
+    letGo(person) {
+        const s = this.state;
+        if (!person || !person.demand) return false;
+        person.demand = null;
+        PeopleSystem.leave(s, this, person, 'отклонил(а) условия продления: студия отпустила.');
         return true;
     },
 
