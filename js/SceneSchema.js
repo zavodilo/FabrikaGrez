@@ -954,6 +954,39 @@ const SCENE_SCHEMA = {
         },
         {
             "group": "game",
+            "name": "PROD_PACE_RICH_Q",
+            "min": -1,
+            "max": 2,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "«With scope» quality delta",
+            "value": 0.7
+        },
+        {
+            "group": "game",
+            "name": "PROD_INCIDENT_CHANCE",
+            "min": 0,
+            "max": 1,
+            "step": 0.02,
+            "kind": "number",
+            "options": null,
+            "label": "Incident chance per week",
+            "value": 0.22
+        },
+        {
+            "group": "game",
+            "name": "PROD_OVERSPEND_Q",
+            "min": 0,
+            "max": 2,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "Overspend quality loss",
+            "value": 0.4
+        },
+        {
+            "group": "game",
             "name": "SHOOT_ACTOR_BONUS",
             "min": 0,
             "max": 1,

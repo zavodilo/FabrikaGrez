@@ -359,6 +359,76 @@ try {
     await st(() => { if (MovieSequencer.playing) MovieSequencer.stop(false); });
     await sleep(800);
 
+    // --- 11b. Phase Г: the shooting floor ---------------------------------------------------------------
+    await page.evaluate(() => app.game.showScreen('films'));
+    await sleep(300);
+    const scriptId = await st(() => StudioManager.state.scripts[0].id);
+    await click('prod:start:' + scriptId);
+    await sleep(400);
+    const pr0 = await st(() => {
+        const p = (StudioManager.state.projects || [])[0];
+        return p ? { id: p.id, state: p.state, scenes: p.sceneCount, screen: app.game.screen } : null;
+    });
+    check('фильм встал на съёмочную площадку', !!pr0 && pr0.state === 'shooting' && pr0.screen === 'production',
+        pr0 ? pr0.id + ', сцен в листе ' + pr0.scenes : 'проект не создался');
+    await shot('12-production');
+    await click('prod:pace:' + pr0.id + ':rich');
+    await sleep(250);
+    check('темп съёмок переключается', await st((id) => (StudioManager.state.projects.find((p) => p.id === id) || {}).pace === 'rich', pr0.id));
+
+    // Shoot to wrap, watching dailies on the way.
+    let guard = 0;
+    while (guard++ < 30) {
+        const stt = await st((id) => (StudioManager.state.projects.find((p) => p.id === id) || {}).state, pr0.id);
+        if (stt !== 'shooting') break;
+        await page.evaluate((id) => {
+            const p = StudioManager.state.projects.find((x) => x.id === id);
+            if (p && p.scenesShot.length >= 2 && !window.__dailiesSeen) { window.__dailiesSeen = p.scenesShot[0].idx; }
+        }, pr0.id);
+        await click('prod:week:' + pr0.id);
+        await sleep(120);
+    }
+    const pr1 = await st((id) => {
+        const p = StudioManager.state.projects.find((x) => x.id === id);
+        return { state: p.state, shot: p.scenesShot.length, total: p.sceneCount, spent: p.spent, budget: p.budget, incidents: p.incidents.length, weeks: p.weeksShot };
+    }, pr0.id);
+    check('съёмки дошли до монтажной', pr1.state === 'post' && pr1.shot === pr1.total,
+        'снято ' + pr1.shot + '/' + pr1.total + ' за ' + pr1.weeks + ' нед., потрачено ' + Math.round(pr1.spent / 1000) + 'k из ' + Math.round(pr1.budget / 1000) + 'k, инцидентов ' + pr1.incidents);
+    check('каждый дубль в границах и с объяснением', await st((id) => {
+        const p = StudioManager.state.projects.find((x) => x.id === id);
+        return p.scenesShot.every((x) => x.quality > 0 && x.quality <= 10 && x.parts && typeof x.parts.director === 'number');
+    }, pr0.id));
+
+    // Dailies: a shot scene plays in the cinema.
+    await page.evaluate(() => app.game.showScreen('production'));
+    await sleep(300);
+    await click('prod:dailies:' + pr0.id + ':0');
+    await sleep(1500);
+    check('дневники снятой сцены играются', await st(() => MovieSequencer.playing && MovieSequencer.opts && MovieSequencer.opts.dailies === 0));
+    await shot('13-dailies');
+    await st(() => { if (MovieSequencer.playing) MovieSequencer.stop(true); });
+    await sleep(600);
+
+    // The rough cut of everything shot.
+    await page.evaluate(() => app.game.showScreen('production'));
+    await sleep(300);
+    await click('prod:cut:' + pr0.id);
+    await sleep(1500);
+    const cut = await st(() => ({ playing: MovieSequencer.playing, scenes: MovieSequencer.tl ? MovieSequencer.tl.scenes.length : 0 }));
+    check('черновой монтаж снятого играется', cut.playing && cut.scenes === pr1.shot, 'сцен в черновике ' + cut.scenes);
+    await st(() => { if (MovieSequencer.playing) MovieSequencer.stop(true); });
+    await sleep(600);
+
+    // A set is an asset: rebuild it one level up.
+    const up = await st(() => {
+        StudioManager.state.cash += 500000;      // capability check, not an economy check
+        const id = Object.keys(StudioManager.state.ownedSets)[0];
+        const before = StudioManager.state.ownedSets[id].level;
+        const res = ProductionSystem.upgradeSet(StudioManager.state, StudioManager, id);
+        return { ok: res.ok, before: before, after: StudioManager.state.ownedSets[id].level };
+    });
+    check('декорация-актив перестраивается выше', up.ok && up.after === up.before + 1, 'уровень ' + up.before + ' → ' + up.after);
+
     // --- 12. no console errors across the whole journey -------------------------------------------------------------
     await shot('11-back-to-studio');
     check('за весь прогон ни одной ошибки консоли', errors.length === 0, errors.slice(0, 5).join(' | '));

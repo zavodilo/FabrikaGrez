@@ -336,8 +336,35 @@ interface Script {
     [key: string]: any;
 }
 
+/** A film in production (StudioState.projects entry, ProductionSystem.start). */
+interface ProductionProject {
+    id: string;
+    scriptId: string;
+    title: string;
+    genre: string;
+    year: number;
+    budget: number;
+    spent: number;
+    /** 'cheap' | 'std' | 'rich' */
+    pace: string;
+    /** 'shooting' | 'post' | 'released' | 'shelf' */
+    state: string;
+    weekStarted: number;
+    weeksShot: number;
+    overWeeks: number;
+    delay: number;
+    nextScene: number;
+    sceneCount: number;
+    scenesShot: { idx: number, label: string, set: string, quality: number, parts: Record<string, number>, hadSet: boolean, week: number }[];
+    incidents: { week: number, id: string, ru: string, text: string }[];
+    cast: Record<string, string>;
+    directorId: string;
+    writerId: string;
+    quality: number;
+    [key: string]: any;
+}
+
 // Game systems that arrive in later phases (typeof-guarded at runtime).
-declare const ProductionSystem: any;
 declare const ReleaseSystem: any;
 declare const MetaSystem: any;
 declare const SaveSystem: any;

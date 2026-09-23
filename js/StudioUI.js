@@ -96,9 +96,13 @@ const StudioUI = {
         for (const id of Object.keys(M.SET_INFO)) {
             const info = M.SET_INFO[id];
             const owned = s.ownedSets[id];
+            // A set is an ASSET: once built it can be rebuilt to a higher level, which lifts the
+            // quality of every scene shot in it (ProductionSystem.upgradeSet).
+            const upCost = owned && typeof ProductionSystem !== 'undefined' ? ProductionSystem.upgradeCost(s, id) : null;
             sets += '<div class="card' + (owned ? '' : '') + '" style="cursor:default">' +
                 '<div class="row"><b>' + info.ru + '</b><span class="sp"></span>' +
-                (owned ? '<span class="tag green">построена · ур. ' + owned.level + '</span>'
+                (owned ? '<span class="tag green">построена · ур. ' + owned.level + '</span>' +
+                    (upCost != null ? '<span class="btn small' + (StudioManager.canAfford(upCost) ? '' : ' off') + '" data-act="prod:upgrade:' + id + '" title="Перестроить: сцены в этой декорации станут качественнее">🏗 ' + this.money(upCost) + '</span>' : '<span class="hint">макс.</span>')
                     : '<span class="btn gold small" data-act="set:buy:' + id + '"' + (StudioManager.canAfford(info.cost) ? '' : ' style="opacity:.45"') + '>Построить · ' + this.money(info.cost) + '</span>') +
                 '</div>' +
                 '<div class="meta">Жанры: ' + info.genres.map((g) => M.GENRES[g].ru).join(', ') + (info.indoor ? ' · павильон' : ' · открытая') + '</div></div>';
