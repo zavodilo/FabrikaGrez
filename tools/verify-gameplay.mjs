@@ -299,10 +299,11 @@ try {
     });
     await sleep(400);
     await shot('08b-film-still');
-    check('панель управления скрыта под плёнкой', await st(() => {
-        const m = UI.get('screenMain');
-        return !!m && !m.visible;
-    }), 'иначе экран кастинга лежит поверх картины');
+    // A very short film may already have ended inside the still-capture loop above, in which
+    // case onEnd has legitimately put the screen back — only assert while the picture runs.
+    const panel = await st(() => ({ playing: MovieSequencer.playing, hidden: (() => { const m = UI.get('screenMain'); return !!m && !m.visible; })() }));
+    check('панель управления скрыта под плёнкой', panel.playing ? panel.hidden : true,
+        panel.playing ? 'иначе экран кастинга лежит поверх картины' : 'фильм короче захвата кадра — нечего проверять');
 
     // Run the WHOLE picture deterministically: main.js clamps dt to 0.1 s and swiftshader gives a
     // handful of FPS, so wall-clock sampling would under-report. Driving update(dt) by hand plays
