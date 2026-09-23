@@ -62,6 +62,20 @@ const ScriptGenerator = {
             { key: 'side', ru: 'Инженер', voc: 'приятель', tier: 'sup', skill: 'comedy', w: 0.55, sex: 'm', age: [22, 52] },
             { key: 'mentor', ru: 'Учёный', voc: 'профессор', tier: 'sup', skill: 'drama', w: 0.45, sex: 'any', age: [40, 74] },
         ],
+        noir: [
+            { key: 'hero', ru: 'Частный детектив', voc: 'детектив', tier: 'lead', skill: 'drama', w: 1.0, sex: 'any', age: [30, 58] },
+            { key: 'villain', ru: 'Хозяин города', voc: 'господин', tier: 'lead', skill: 'drama', w: 0.9, sex: 'm', age: [38, 70] },
+            { key: 'love', ru: 'Роковая клиентка', voc: 'мадам', tier: 'lead', skill: 'romance', w: 0.8, sex: 'f', age: [24, 46] },
+            { key: 'side', ru: 'Информатор', voc: 'приятель', tier: 'sup', skill: 'comedy', w: 0.5, sex: 'm', age: [20, 50] },
+            { key: 'mentor', ru: 'Редактор', voc: 'шеф', tier: 'sup', skill: 'drama', w: 0.45, sex: 'any', age: [45, 72] },
+        ],
+        musical: [
+            { key: 'hero', ru: 'Солист', voc: 'дорогой', tier: 'lead', skill: 'romance', w: 1.0, sex: 'any', age: [20, 42] },
+            { key: 'love', ru: 'Прима', voc: 'мисс', tier: 'lead', skill: 'romance', w: 0.95, sex: 'f', age: [19, 40] },
+            { key: 'villain', ru: 'Продюсер', voc: 'босс', tier: 'lead', skill: 'drama', w: 0.75, sex: 'm', age: [35, 66] },
+            { key: 'side', ru: 'Тапёр', voc: 'маэстро', tier: 'sup', skill: 'comedy', w: 0.55, sex: 'm', age: [22, 55] },
+            { key: 'mentor', ru: 'Балетмейстер', voc: 'учитель', tier: 'sup', skill: 'drama', w: 0.45, sex: 'any', age: [40, 70] },
+        ],
         romance: [
             { key: 'hero', ru: 'Он', voc: 'милый', tier: 'lead', skill: 'romance', w: 0.95, sex: 'm', age: [22, 48] },
             { key: 'love', ru: 'Она', voc: 'милая', tier: 'lead', skill: 'romance', w: 1.0, sex: 'f', age: [20, 46] },
@@ -99,6 +113,8 @@ const ScriptGenerator = {
         horror: { reveal: 4, crisis: 3, threat: 3, chase: 2, fight: 1, romance: 1, comic: 1 },
         scifi: { reveal: 3, threat: 3, chase: 2, crisis: 2, fight: 2, comic: 1, romance: 1 },
         romance: { romance: 4, comic: 3, reveal: 2, crisis: 2, threat: 1, chase: 1, talk: 0 },
+        noir: { threat: 4, reveal: 4, crisis: 3, talk: 0, chase: 2, comic: 1, romance: 1 },
+        musical: { romance: 4, comic: 4, reveal: 2, crisis: 2, chase: 1, threat: 1, talk: 0 },
     },
 
     // Shot lists per recipe: [camera type, subject] where subject is 'a' | 'b' | 'ab' | 'c'
@@ -132,7 +148,7 @@ const ScriptGenerator = {
     TOD_RU: { day: 'день', sunset: 'закат', night: 'ночь' },
 
     // The ideal budget of a genre (quality peaks around it; below it the film looks cheap).
-    IDEAL_BUDGET: { western: 350000, comedy: 300000, drama: 400000, action: 900000, horror: 450000, scifi: 1200000, romance: 350000 },
+    IDEAL_BUDGET: { western: 350000, comedy: 300000, drama: 400000, action: 900000, horror: 450000, scifi: 1200000, romance: 350000, noir: 400000, musical: 550000 },
 
     // Logline templates: {hero}, {villain}, {love}, {city}, {g} — genre name.
     LOGLINES: [

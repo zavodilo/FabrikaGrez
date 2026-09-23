@@ -340,6 +340,61 @@ function musicScifi() {
 }
 
 // Warm slow chords and a soft arpeggio for romance.
+// Noir: a brushed kit, a walked double bass and a lonely trumpet in the rain.
+function musicNoir() {
+    const T = new Track(84, 4, 77);
+    const prog = [[41, 'min7'], [44, 'dom7'], [39, 'min7'], [46, 'dom7']];
+    for (let bar = 0; bar < 4; bar++) {
+        const [root, type] = prog[bar];
+        const n = CHORD[type];
+        for (let b = 0; b < 4; b++) {
+            const t = (bar * 4 + b) * T.beat;
+            T.voice(t, 0.9 * T.beat, midi(root - 12 + n[b % n.length] - (b === 3 ? 1 : 0)), 0.3, 5, { wave: tri, lp: 0.25 });  // walked bass
+            T.hat(t + T.beat * 0.5, 0.035);                                       // brushes
+            if (b === 1 || b === 3) T.noise(t + T.beat * 0.5, 0.09, 0.05, 40, 0.35);
+        }
+        // The trumpet line: three notes, then silence that does the talking.
+        if (bar % 2 === 1) {
+            const line = [root + 12, root + 15, root + 11];
+            for (let k = 0; k < 3; k++) {
+                T.voice((bar * 4 + k * 1.5) * T.beat, 1.4 * T.beat, midi(line[k]), 0.11, 2.2,
+                    { wave: saw, lp: 0.12, attack: 0.06, vib: 0.012, vibHz: 5.2 });
+            }
+        }
+        T.pad(bar, root, type, 0.07, { attack: 0.8, lp: 0.06 });
+    }
+    // Rain on the window: a thin filtered noise bed.
+    for (let t = 0; t < T.bars * 4 * T.beat; t += 0.5 * T.beat) T.noise(t, 0.4 * T.beat, 0.02, 30, 0.12);
+    return T.render();
+}
+
+// Musical: a bright stride piano, handclaps and a section of sustained thirds.
+function musicMusical() {
+    const T = new Track(138, 8, 88);
+    const prog = [[48, 'maj'], [55, 'dom7'], [45, 'min7'], [53, 'maj'], [41, 'min7'], [46, 'dom7'], [50, 'dom7'], [48, 'maj']];
+    for (let bar = 0; bar < 8; bar++) {
+        const [root, type] = prog[bar];
+        const n = CHORD[type];
+        for (let b = 0; b < 4; b++) {
+            const t = (bar * 4 + b) * T.beat;
+            // Stride: low note on the beat, chord off it.
+            T.voice(t, 0.25 * T.beat, midi(root - 12), 0.3, 8, { wave: sine, lp: 0.5 });
+            for (let k = 0; k < 3; k++) {
+                T.pluck(t + T.beat * 0.5, midi(root + 12 + n[(k + b) % n.length]), 0.09, 10, { dur: 0.3, lp: 0.7 });
+            }
+            T.hat(t + T.beat * 0.5, 0.05);
+            if (b === 1 || b === 3) T.snare(t, 0.06);
+            if (b === 3) T.noise(t + T.beat * 0.75, 0.05, 0.08, 50, 0.4);   // handclap
+        }
+        // The section: sustained thirds that lift the last two bars.
+        if (bar >= 6) {
+            T.voice(bar * 4 * T.beat, 4 * T.beat, midi(root + 12), 0.09, 1.5, { wave: tri, lp: 0.3, attack: 0.2 });
+            T.voice(bar * 4 * T.beat, 4 * T.beat, midi(root + 16), 0.08, 1.5, { wave: tri, lp: 0.3, attack: 0.25 });
+        }
+    }
+    return T.render();
+}
+
 function musicRomance() {
     const T = new Track(76, 4, 93);
     const prog = [[50, 'maj7'], [47, 'min7'], [43, 'maj7'], [45, 'dom7']];
@@ -633,6 +688,8 @@ function buildMovieSounds() {
         'music_scifi.wav': writeWav(musicScifi()),
         'music_romance.wav': writeWav(musicRomance()),
         'music_western.wav': writeWav(musicWestern()),
+        'music_noir.wav': writeWav(musicNoir()),
+        'music_musical.wav': writeWav(musicMusical()),
         // sfx
         'cut.wav': writeWav(sfxCut()),
         'gunshot.wav': writeWav(sfxGunshot()),

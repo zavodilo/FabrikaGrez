@@ -40,6 +40,8 @@ const MovieData = {
 
     MUSIC: {
         studio: 'assets/sounds/music_studio.wav',
+        noir: 'assets/sounds/music_noir.wav',
+        musical: 'assets/sounds/music_musical.wav',
         western: 'assets/sounds/music_western.wav',
         drama: 'assets/sounds/music_drama.wav',
         comedy: 'assets/sounds/music_comedy.wav',
@@ -88,6 +90,16 @@ const MovieData = {
             sets: ['beach', 'mansion', 'diner', 'city', 'stage'], props: ['bed', 'table', 'car'],
             moods: ['love', 'neutral', 'humor', 'parting', 'fear'],
         },
+        noir: {
+            ru: 'Нуар', emoji: '🌧', skill: 'drama', music: 'noir', heat: 7,
+            sets: ['city', 'office', 'diner', 'rooftop', 'nightclub'], props: ['car', 'chair', 'lamp'],
+            moods: ['threat', 'villain', 'neutral', 'fear', 'parting'],
+        },
+        musical: {
+            ru: 'Мюзикл', emoji: '🎺', skill: 'romance', music: 'musical', heat: 7,
+            sets: ['stage', 'nightclub', 'diner', 'city', 'beach'], props: ['chair', 'table', 'car'],
+            moods: ['love', 'humor', 'neutral', 'surprise', 'parting'],
+        },
     },
 
     // --- sets (SetPieces3D.SETS ids) ------------------------------------------------------
@@ -104,6 +116,8 @@ const MovieData = {
         office: { ru: 'Офис', indoor: true, cost: 45000, genres: ['drama', 'comedy', 'action'] },
         stage: { ru: 'Театральная сцена', indoor: true, cost: 65000, genres: ['romance', 'comedy', 'drama'] },
         rooftop: { ru: 'Крыша небоскрёба', indoor: false, cost: 75000, genres: ['action', 'drama', 'horror'] },
+        nightclub: { ru: 'Ночной клуб', indoor: true, cost: 85000, genres: ['musical', 'noir', 'comedy', 'romance'] },
+        train: { ru: 'Вокзал и вагон', indoor: false, cost: 70000, genres: ['romance', 'drama', 'noir', 'comedy'] },
     },
 
     // --- set staging slots -----------------------------------------------------------------
@@ -124,6 +138,8 @@ const MovieData = {
         office: { boss: [0, -50], guest1: [-60, 60], guest2: [60, 60], door: [-200, 180], window: [60, -150], center: [0, 20] },
         stage: { mic: [0, 60], piano: [-150, -60], drums: [140, -70], center: [0, -40], curtain_l: [-200, 40], curtain_r: [200, 40], audience: [0, 240], stage_back: [0, -180] },
         rooftop: { edge_s: [0, 190], edge_n: [0, -190], tank: [-140, -20], center: [0, 0], door: [120, -100], ac: [200, 0], antenna: [-60, -160] },
+        nightclub: { stage_l: [-90, -140], stage_r: [60, -140], bar: [-160, 40], booth: [200, 0], floor: [0, 60], door: [0, 190], center: [0, -20] },
+        train: { platform_w: [-200, 20], platform_e: [160, 20], bench: [-120, 10], kiosk: [220, -40], door_w: [-280, 0], tracks: [0, 120], center: [0, -20] },
     },
 
     SET_SLOTS: {
@@ -139,6 +155,8 @@ const MovieData = {
         office: { wide: 'center', a: 'boss', b: 'guest1', c: 'guest2', d: 'window', e: 'door', f: 'door', enter: 'door' },
         stage: { wide: 'center', a: 'mic', b: 'piano', c: 'drums', d: 'stage_back', e: 'curtain_l', f: 'curtain_r', enter: 'curtain_l' },
         rooftop: { wide: 'center', a: 'edge_s', b: 'edge_n', c: 'tank', d: 'ac', e: 'antenna', f: 'door', enter: 'door' },
+        nightclub: { wide: 'center', a: 'stage_l', b: 'stage_r', c: 'bar', d: 'booth', e: 'floor', f: 'door', enter: 'door' },
+        train: { wide: 'center', a: 'platform_w', b: 'platform_e', c: 'bench', d: 'kiosk', e: 'door_w', f: 'tracks', enter: 'door_w' },
     },
 
     // --- people ---------------------------------------------------------------------------
@@ -267,6 +285,50 @@ const MovieData = {
                 'Я перепишу этот мир. Начну с тебя.'],
             humor: ['Инопланетяне, а ведут себя как туристы.', 'Космос большой. А кофе на борту закончился.'],
         },
+        noir: {
+            neutral: ['Дождь идёт третью ночь. Улики смывает вместе с алиби.',
+                'В этом городе честных хоронят быстрее, чем богатых.',
+                'Оставь оружие в ящике, {other}. Разговор будет длинным.',
+                'Мой гонорар — пятьдесят в день. Плюс расходы на совесть.'],
+            threat: ['Ты копаешь не там, {other}. Там фундамент моего дома.',
+                'Ещё один вопрос — и ты станешь частью пейзажа.',
+                'Полиция куплена до участкового включительно. Думай головой.',
+                'У тебя есть ночь уехать. Поезда ходят, пока горит вокзал.'],
+            villain: ['Порядок в городе — это моя бухгалтерия, {other}.',
+                'Я не злодей. Я просто раньше прочих прочитал договор.',
+                'Свидетели стареют. Дела закрываются. Я остаюсь.',
+                'За каждую правду кто-то платит. Сегодня платишь ты.'],
+            fear: ['Кто-то поднял мою трубку и молчал. Дышал и молчал.',
+                'За хвостом идёт третий день. Он даже не прячется.',
+                'В моем сейфе лежит то, за что нас обоих закопают, {other}.',
+                'Не гаси свет. В темноте они считают шаги.'],
+            parting: ['Садись на поезд, {other}. Билет у кондуктора, фамилия чужая.',
+                'Я вернусь, когда город станет дешевле моей совести.',
+                'Не ищи меня. Я умею пропадать по документам.',
+                'Если не вернусь к утру — сожги архив. Весь.'],
+        },
+        musical: {
+            neutral: ['Оркестр играет до трёх. После трёх играет долг.',
+                'Кулисы помнят всех, кого не помнит зал.',
+                'Репетиция в шесть. Слава — в восемь. Сон — никогда.',
+                'Танцуй так, будто аренда не грозит, {other}.'],
+            love: ['Твой голос вытащил меня из третьего ряда.',
+                'Спой ещё раз — и я поверю во всё, включая нас.',
+                'Между тактами я успеваю тебя полюбить.',
+                'Танец — это разговор, который не боится свидетелей, {other}.'],
+            humor: ['У меня слух абсолютный: я абсолютно не слышу нот.',
+                'Продюсер сказал «бюджет скромный». Скромный уже уволился.',
+                'Если сорвём премьеру — сорвём её красиво, с оркестром.',
+                'Я не путаю шаги. Я импровизирую сюжет, {other}.'],
+            surprise: ['Зал встал! Зал, который не вставал даже на пожар!',
+                'Критик улыбнулся. У него, оказывается, лицо работает.',
+                'Третий выход на бис. У нас столько песен нет!',
+                'Оркестр сыграл мою партию. Мою!'],
+            parting: ['Гастроли уходят на рассвете. Aplodисменты остаются.',
+                'Держи билет. Я останусь доиграть этот город.',
+                'Кулисы смыкаются, {other}. Но занавес — не стена.',
+                'Если вернёшься — начнём с той же ноты. С самой верхней.'],
+        },
         romance: {
             neutral: ['Ты всегда заказываешь два кофе. Пьёшь один.', 'Этот вечер был почти идеальным.',
                 'Мы знакомы три дня. Почему я всё о тебе знаю?'],
@@ -289,6 +351,8 @@ const MovieData = {
         horror: ['Ночь была безлунной…', 'Дом ждал новых гостей…', 'Тени в этом городе живут своей жизнью…'],
         scifi: ['Год 2147. Орбита Нептуна…', 'Сигнал пришёл из пустоты…', 'Бортовой журнал, запись последняя…'],
         romance: ['Тот вечер изменил всё…', 'Их разделял целый океан…', 'Судьба назначила встречу в семь…'],
+        noir: ['Дождь смывал улики быстрее, чем память…', 'В этом городе правду продают оптом…', 'Она вошла, и где-то щёлкнул курок…'],
+        musical: ['Оркестр настроился, и город затаил дыхание…', 'Кулисы пахли пудрой и удачей…', 'В этот вечер танцевали даже долги…'],
         comedy: ['Ничего не предвещало катастрофы…', 'Как обычно, всё пошло не по плану…'],
         action: ['До взрыва оставалось четыре минуты…', 'Операция «Полночь» началась…'],
         drama: ['Город хранил эту тайну сорок лет…', 'Всё решилось в тот тихий вечер…'],
@@ -297,23 +361,25 @@ const MovieData = {
     // Title generator parts.
     TITLES: {
         western: { a: ['Дикий', 'Пыльный', 'Последний', 'Свирепый', 'Одинокий', 'Грозный'], n: ['Запад', 'Револьвер', 'Шериф', 'Каньон', 'Дилижанс', 'Полдень', 'Закон', 'След'] },
-        comedy: { a: ['Безумный', 'Неуловимый', 'Весёлый', 'Ужасно', 'Совершенно', 'Почти'], n: ['Переполох', 'Котелок', 'Уик-энд', 'Родственник', 'Сосед', 'Обман', 'Тост'] },
+        comedy: { a: ['Безумный', 'Неуловимый', 'Весёлый', 'Ужасный', 'Совершенный', 'Полоумный'], n: ['Переполох', 'Котелок', 'Уик-энд', 'Родственник', 'Сосед', 'Обман', 'Тост'] },
         drama: { a: ['Тихий', 'Долгий', 'Последний', 'Стеклянный', 'Горький', 'Забытый'], n: ['Океан', 'Вечер', 'Свет', 'Выбор', 'Разрыв', 'Сад', 'Свидетель'] },
         action: { a: ['Стальной', 'Горячий', 'Крайний', 'Мёртвый', 'Высший', 'Двойной'], n: ['Удар', 'Рубеж', 'Протокол', 'Захват', 'Бросок', 'Эскорт', 'Шторм'] },
         horror: { a: ['Чёрный', 'Мёртвый', 'Старый', 'Безмолвный', 'Проклятый', 'Гнилой'], n: ['Дом', 'Подвал', 'Шёпот', 'Туман', 'Обряд', 'Склеп', 'Гость'] },
         scifi: { a: ['Нулевой', 'Ледяной', 'Дальний', 'Квантовый', 'Седьмой', 'Пустотный'], n: ['Орбит', 'Горизонт', 'Код', 'Сектор', 'Сигнал', 'Предел', 'Марс'] },
         romance: { a: ['Последний', 'Нежный', 'Случайный', 'Долгий', 'Тёплый', 'Первый'], n: ['Вальс', 'Поцелуй', 'Билет', 'Маяк', 'Романс', 'Дождь', 'Вокзал'] },
+        noir: { a: ['Мокрый', 'Чужой', 'Поздний', 'Гнусный', 'Тихий', 'Кривой'], n: ['Свидетель', 'Переулок', 'Гонорар', 'След', 'Полуночник', 'Двойник', 'Пепел'] },
+        musical: { a: 'Певучий,Весёлый,Звонкий,Танцующий,Праздничный,Голосистый'.split(','), n: 'Танец,Голос,Праздник,Дебют,Бенефис,Финал,Огонь'.split(',') },
     },
     CITIES: ['Силвер-Крик', 'Абилин', 'Тумстоун', 'Додж-Сити', 'Сан-Вера', 'Порто-Белло', 'Грайтон', 'Фэр-Оукс', 'Ривермут', 'Эльдорадо'],
 
     // Era drift: genre heat by decade (1950s start). Keys — decade start year.
     ERAS: {
-        1950: { western: 10, comedy: 8, drama: 7, action: 6, horror: 5, scifi: 6, romance: 9 },
-        1960: { western: 8, comedy: 9, drama: 8, action: 7, horror: 6, scifi: 7, romance: 8 },
-        1970: { western: 5, comedy: 8, drama: 9, action: 9, horror: 8, scifi: 8, romance: 6 },
-        1980: { western: 4, comedy: 9, drama: 7, action: 10, horror: 8, scifi: 10, romance: 7 },
-        1990: { western: 5, comedy: 9, drama: 8, action: 9, horror: 7, scifi: 9, romance: 8 },
-        2000: { western: 4, comedy: 10, drama: 7, action: 10, horror: 8, scifi: 9, romance: 8 },
+        1950: { noir: 6, musical: 8, western: 10, comedy: 8, drama: 7, action: 6, horror: 5, scifi: 6, romance: 9 },
+        1960: { noir: 7, musical: 8, western: 8, comedy: 9, drama: 8, action: 7, horror: 6, scifi: 7, romance: 8 },
+        1970: { noir: 8, musical: 6, western: 5, comedy: 8, drama: 9, action: 9, horror: 8, scifi: 8, romance: 6 },
+        1980: { noir: 6, musical: 5, western: 4, comedy: 9, drama: 7, action: 10, horror: 8, scifi: 10, romance: 7 },
+        1990: { noir: 7, musical: 6, western: 5, comedy: 9, drama: 8, action: 9, horror: 7, scifi: 9, romance: 8 },
+        2000: { noir: 7, musical: 6, western: 4, comedy: 10, drama: 7, action: 10, horror: 8, scifi: 9, romance: 8 },
     },
 
     // Review quote templates by score band. {t} — title, {g} — genre name, {d} — director, {s} — a lead.
@@ -497,6 +563,24 @@ const MovieData = {
         ],
     },
 };
+
+// Content consistency: GENRES[g].sets and SET_INFO[set].genres are two views of ONE relation.
+// Sync them at load so a half-wired set or genre can never ship: a set a genre films in is a
+// set that claims the genre, and vice versa. Tests (fabrika-content) enforce the symmetry.
+(() => {
+    for (const g of Object.keys(MovieData.GENRES)) {
+        for (const set of MovieData.GENRES[g].sets || []) {
+            const info = MovieData.SET_INFO[set];
+            if (info && (info.genres || []).indexOf(g) < 0) info.genres = (info.genres || []).concat(g);
+        }
+    }
+    for (const set of Object.keys(MovieData.SET_INFO)) {
+        for (const g of MovieData.SET_INFO[set].genres || []) {
+            const G = MovieData.GENRES[g];
+            if (G && (G.sets || []).indexOf(set) < 0) G.sets = (G.sets || []).concat(set);
+        }
+    }
+})();
 
 // The genre heat for a year (era drift): heat 1..10.
 MovieData.heat = function (genre, year) {

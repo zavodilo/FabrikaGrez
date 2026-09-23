@@ -47,6 +47,18 @@ const PeopleSystem = {
                 hat: r.pick(['#6a4a2a', '#3a2a1a', '#8a6a42', '#2a2a2e']),
             };
         }
+        if (g === 'noir') {
+            return {
+                shirt: r.pick(['#3a3a42', '#4a4a52', '#2e2e36', '#5a5a62']),
+                pants: r.pick(['#22222a', '#2a2a32']),
+                hat: r.chance(0.6) ? r.pick(['#2a2a32', '#3a3a42', '#1c1c24']) : '',
+            };
+        }
+        if (g === 'musical') {
+            return gender === 'f'
+                ? { shirt: r.pick(['#c84a6a', '#d8a03a', '#4aa0c8', '#a04ac8']), pants: r.pick(['#c84a6a', '#d8a03a', '#4aa0c8']), hat: '' }
+                : { shirt: r.pick(['#e8e0d0', '#c8a24a', '#4a8ac8']), pants: r.pick(['#22262e', '#2e2438']), hat: '' };
+        }
         if (g === 'scifi') return { shirt: r.pick(['#3a4a6a', '#5a6a7a', '#2e3a4a']), pants: '#2a3140', hat: '' };
         if (g === 'horror') return { shirt: r.pick(['#2a2e2a', '#3a2a34', '#1e2420']), pants: '#1a1c1a', hat: '' };
         if (g === 'romance') {
