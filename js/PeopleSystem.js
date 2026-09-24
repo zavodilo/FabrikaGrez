@@ -47,6 +47,20 @@ const PeopleSystem = {
                 hat: r.pick(['#6a4a2a', '#3a2a1a', '#8a6a42', '#2a2a2e']),
             };
         }
+        if (g === 'war') {
+            return {
+                shirt: r.pick(['#5a5a42', '#4a4a36', '#6a6a4a']),
+                pants: r.pick(['#4a4a36', '#3a3a2a']),
+                hat: r.chance(0.7) ? r.pick(['#5a5a42', '#4a4a36']) : '',
+            };
+        }
+        if (g === 'adventure') {
+            return {
+                shirt: r.pick(['#c8b088', '#a89068', '#8a7a58']),
+                pants: r.pick(['#6a5a3a', '#5a4a2e']),
+                hat: r.chance(0.6) ? r.pick(['#c8b088', '#a89068']) : '',
+            };
+        }
         if (g === 'noir') {
             return {
                 shirt: r.pick(['#3a3a42', '#4a4a52', '#2e2e36', '#5a5a62']),

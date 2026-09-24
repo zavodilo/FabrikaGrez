@@ -678,6 +678,52 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
         S.A('platform_w', -200, 20, 90).A('platform_e', 160, 20, -90).A('bench', -120, 10, 90);
         S.A('kiosk', 220, -40, 180).A('door_w', -280, 0, 0).A('tracks', 0, 120, -90).A('center', 0, -20, 90);
     },
+    camp(S) {
+        // A frontline camp: two tents, sandbag line, flagpole, radio table, crate stack, fire pit.
+        S.B(0, 0, 0, 620, 420, 4, '#6a6a52');                                  // trampled ground
+        S.B(-160, -120, 4, 150, 110, 70, '#5a5a42').B(-160, -120, 74, 160, 120, 10, '#4a4a36');
+        S.B(140, -130, 4, 130, 100, 64, '#5a5a42').B(140, -130, 68, 140, 110, 10, '#4a4a36');
+        S.B(-160, -64, 4, 60, 6, 44, '#3a3a2a');                              // tent doors
+        S.B(140, -78, 4, 54, 6, 40, '#3a3a2a');
+        // Sandbag line along the south with a gap (the gate).
+        for (let i = 0; i < 6; i++) S.B(-260 + i * 60, 150, 4, 56, 26, 22, '#6a6a4a');
+        for (let i = 0; i < 5; i++) S.B(-230 + i * 60, 150, 26, 56, 24, 20, '#5a5a3e');
+        for (let i = 0; i < 4; i++) S.B(80 + i * 60, 150, 4, 56, 26, 22, '#6a6a4a');
+        // Flagpole, radio table with a set, crate stack, fire pit with logs.
+        S.C(-20, -20, 4, 4, 130, '#4a4a4a', { rt: 4 }).B(-20, -20, 120, 40, 6, 24, '#8a2a2a');
+        S.B(60, 40, 4, 80, 50, 30, '#5a4630').B(60, 40, 34, 40, 30, 22, '#3a4a3a');
+        S.C(60, 40, 56, 2, 30, '#3a3a3a', { rt: 2 });
+        S.B(-90, 60, 4, 50, 40, 34, '#6a5a3a').B(-90, 60, 38, 44, 36, 30, '#5a4a2e').B(-90, 60, 68, 38, 32, 26, '#6a5a3a');
+        S.C(220, 60, 4, 26, 10, '#3a3a3a', { rt: 26 });
+        S.B(200, 80, 10, 60, 12, 12, '#5a4630', { yaw: 20 }).B(240, 44, 10, 60, 12, 12, '#5a4630', { yaw: -25 });
+        S.G(220, 60, 26, 12, 14, 12, '#ff8a30', { glow: true });
+        S.A('tent_l', -160, -40, 90).A('tent_r', 140, -50, -90).A('flag', -20, 0, 0);
+        S.A('radio', 60, 70, -90).A('crate_stack', -90, 90, 90).A('fire', 220, 90, 180);
+        S.A('center', 0, 20, 90).A('gate', 0, 130, -90);
+    },
+
+    jungle(S) {
+        // Jungle clearing with a river bank, a half-buried temple block, rocks and vines.
+        S.B(0, 0, 0, 640, 440, 4, '#4a5a30');                                  // clearing floor
+        S.B(0, 190, 0, 640, 70, 3, '#3a5a6a');                                 // river
+        S.B(0, 152, 3, 640, 20, 6, '#c8c8a8');                                 // sand bank
+        // Temple: stepped block with a doorway and carved lintel.
+        S.B(-200, -140, 4, 200, 140, 60, '#6a6a5a').B(-200, -140, 64, 180, 120, 40, '#5a5a4a');
+        S.B(-200, -140, 104, 150, 100, 30, '#6a6a5a');
+        S.B(-200, -70, 4, 60, 8, 70, '#2a2a22');                                // doorway
+        S.B(-200, -70, 74, 90, 12, 16, '#7a7a62');                             // lintel
+        // Palms with leaning trunks, rocks, a vine curtain, fallen log bridge.
+        S.C(180, -120, 4, 10, 140, '#6a5a30', { rt: 7 }).B(180, -120, 140, 120, 14, 10, '#2e6a2e', { yaw: 12 });
+        S.C(240, -40, 4, 9, 120, '#6a5a30', { rt: 6 }).B(240, -40, 118, 110, 12, 9, '#2e7a2e', { yaw: -18 });
+        S.C(-40, 120, 4, 9, 110, '#6a5a30', { rt: 6 }).B(-40, 120, 108, 100, 12, 9, '#2e6a2e', { yaw: 30 });
+        S.G(80, -60, 20, 40, 26, 34, '#5a5a4a').G(120, -20, 14, 26, 18, 22, '#4a4a3e');
+        S.G(-120, 60, 16, 30, 20, 26, '#5a5a4a');
+        S.B(-260, -40, 60, 10, 10, 120, '#3a5a2a').B(-252, -20, 50, 8, 8, 100, '#3a6a2a');
+        S.B(0, 168, 6, 180, 26, 10, '#5a4630', { yaw: 4 });                   // log bridge
+        S.A('path', 40, 60, -90).A('clearing', -20, 0, 90).A('rock', 100, -40, 180);
+        S.A('river', 0, 140, -90).A('temple', -200, -50, 90).A('vine', -250, -20, 0);
+        S.A('center', 20, 20, 90);
+    },
 });
 
 // --- props (placed and moved individually) -------------------------------------------------

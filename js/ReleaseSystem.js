@@ -18,8 +18,8 @@ const ReleaseSystem = {
     // Which cut tempo suits which genre: an action picture cuts fast, a melodrama lets the
     // silence work, and fighting the genre reads as bad editing in every review.
     EDIT_FIT: {
-        fast: ['action', 'comedy', 'horror', 'musical'],
-        normal: ['western', 'scifi'],
+        fast: ['action', 'comedy', 'horror', 'musical', 'adventure'],
+        normal: ['western', 'scifi', 'war'],
         slow: ['drama', 'romance', 'noir'],
     },
     EDIT_RU: { fast: 'Быстрый', normal: 'Ровный', slow: 'Медленный' },

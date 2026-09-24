@@ -250,20 +250,19 @@ try {
     });
     check('авто-кастинг заполнил все роли', auto.complete, auto.filled + '/' + auto.need);
     // A manual override on top of the auto-cast.
-    const pickInfo = await st(() => {
-        const s = StudioManager.state.scripts[0];
-        const role = s.roles[0].key;
-        const taken = new Set(Object.values(s.cast || {}));
-        const list = CastingSystem.candidates(StudioManager.state, s, s.roles[0]);
-        const free = list.find((c) => c.score.roster && !c.score.busy && !taken.has(c.person.id));
-        return free ? { role: role, id: free.person.id, name: free.person.name } : null;
+    // A manual override: take whatever signed candidate the audition list actually shows.
+    const pickAct = await st(() => {
+        const node = document.querySelector('.arc-ui [data-act^="cast:pick:"]');
+        return node ? node.getAttribute('data-act') : null;
     });
-    if (pickInfo) {
-        await click('cast:pick:' + pickInfo.role + ':' + pickInfo.id);
+    if (pickAct) {
+        const roleKey = pickAct.split(':')[2];
+        const personId = pickAct.split(':')[3];
+        await click(pickAct);
         await sleep(300);
-        const now = await st((k) => StudioManager.state.scripts[0].cast[k], pickInfo.role);
-        check('ручной выбор перезаписывает роль', now === pickInfo.id, pickInfo.name);
-    } else bad('не нашлось свободного подписанного актёра для ручной пробы');
+        const now = await st((k) => StudioManager.state.scripts[0].cast[k], roleKey);
+        check('ручной выбор перезаписывает роль', now === personId, personId);
+        } else bad('не нашлось свободного подписанного актёра для ручной пробы');
     const chem = await st(() => {
         const s = StudioManager.state.scripts[0];
         const byKey = {};

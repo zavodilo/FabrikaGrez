@@ -395,6 +395,55 @@ function musicMusical() {
     return T.render();
 }
 
+// War: a field drum, a low brass chorale and a distant rumble that never quite arrives.
+function musicWar() {
+    const T = new Track(96, 4, 91);
+    const prog = [[38, 'min'], [36, 'min'], [41, 'min'], [43, 'dom7']];
+    for (let bar = 0; bar < 4; bar++) {
+        const [root, type] = prog[bar];
+        const n = CHORD[type];
+        for (let b = 0; b < 4; b++) {
+            const t = (bar * 4 + b) * T.beat;
+            T.snare(t, b % 2 === 0 ? 0.12 : 0.07);                       // field drum
+            if (b === 3) T.snare(t + T.beat * 0.5, 0.09);
+            T.voice(t, 0.9 * T.beat, midi(root - 12 + n[b % n.length]), 0.26, 4, { wave: tri, lp: 0.2 });
+        }
+        // The chorale: three low voices, a half-step of wrongness on the last bar.
+        for (let k = 0; k < 3; k++) {
+            T.voice(bar * 4 * T.beat, 4 * T.beat, midi(root + n[k % n.length] + (bar === 3 && k === 2 ? 1 : 0)),
+                0.07, 1.2, { wave: saw, lp: 0.08, attack: 0.6 });
+        }
+    }
+    // Distant rumble: filtered noise swells between bars.
+    for (let bar = 0; bar < 4; bar++) T.noise(bar * 4 * T.beat, 2.2 * T.beat, 0.05, 12, 0.06);
+    return T.render();
+}
+
+// Adventure: a 6/8 driving pluck, a brass fanfare and a tambourine on the push.
+function musicAdventure() {
+    const T = new Track(120, 8, 95);
+    const prog = [[45, 'min'], [50, 'maj'], [43, 'maj'], [52, 'dom7'], [45, 'min'], [48, 'maj'], [43, 'maj'], [45, 'min']];
+    for (let bar = 0; bar < 8; bar++) {
+        const [root, type] = prog[bar];
+        const n = CHORD[type];
+        for (let e = 0; e < 6; e++) {
+            const t = (bar * 4 + e * 2 / 3) * T.beat;
+            T.pluck(t, midi(root + 12 + n[e % n.length]), 0.11, 12, { dur: 0.26, lp: 0.5 });
+            if (e % 3 === 0) T.voice(t, 0.5 * T.beat, midi(root - 12), 0.3, 6, { wave: sine, lp: 0.35 });
+        }
+        if (bar % 4 === 3) T.hat((bar * 4 + 2) * T.beat, 0.07);
+        // The fanfare on bars 4-5: three rising brass notes.
+        if (bar === 4 || bar === 5) {
+            const line = [root + 12, root + 19, root + 24];
+            for (let k = 0; k < 3; k++) {
+                T.voice((bar * 4 + k * 1.25) * T.beat, 1.1 * T.beat, midi(line[k]), 0.1, 2,
+                    { wave: saw, lp: 0.16, attack: 0.04 });
+            }
+        }
+    }
+    return T.render();
+}
+
 function musicRomance() {
     const T = new Track(76, 4, 93);
     const prog = [[50, 'maj7'], [47, 'min7'], [43, 'maj7'], [45, 'dom7']];
@@ -690,6 +739,8 @@ function buildMovieSounds() {
         'music_western.wav': writeWav(musicWestern()),
         'music_noir.wav': writeWav(musicNoir()),
         'music_musical.wav': writeWav(musicMusical()),
+        'music_war.wav': writeWav(musicWar()),
+        'music_adventure.wav': writeWav(musicAdventure()),
         // sfx
         'cut.wav': writeWav(sfxCut()),
         'gunshot.wav': writeWav(sfxGunshot()),
