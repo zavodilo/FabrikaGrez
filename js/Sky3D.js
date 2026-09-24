@@ -19,6 +19,8 @@ const Sky3D = {
     mat: null,
     attached: false,
     visible: true,
+    /** Playback seconds for the cloud drift while a film runs (null — wall clock). */
+    movieT: null,
     _t: 0,
     _last: 0,
 
@@ -205,7 +207,7 @@ const Sky3D = {
         this._last = now;
         this._t += dt;
         if (this.dome) this.dome.setPosition(p.x, p.y, p.z);
-        if (this.mat) this.mat.setParameter('uTime', this._t);
+        if (this.mat) this.mat.setParameter('uTime', this.movieT != null ? this.movieT : this._t);
     },
 
     /** Wear an hour of day: grade is MovieSequencer.gradeFor(tod) plus the scene's sky color. */

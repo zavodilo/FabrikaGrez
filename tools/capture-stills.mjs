@@ -16,9 +16,16 @@ import url from 'node:url';
 
 const ROOT = path.resolve(path.dirname(url.fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
-const DIR = path.resolve(args[0] || 'stills');
-const GENRES = args.slice(1);
+const cmpArg = args.find((a) => a.startsWith('--compare='));
+const goldArg = args.find((a) => a.startsWith('--golden='));
+const COMPARE = cmpArg ? path.resolve(cmpArg.slice(10)) : null;
+const GOLDEN = goldArg ? path.resolve(goldArg.slice(9)) : null;
+const rest = args.filter((a) => !a.startsWith('--'));
+const DIR = path.resolve(rest[0] || 'stills');
+const GENRES = rest.slice(1);
 fs.mkdirSync(DIR, { recursive: true });
+if (GOLDEN) fs.mkdirSync(GOLDEN, { recursive: true });
+const SHOTS = [];
 
 const puppeteer = createRequire(import.meta.url)('puppeteer');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -80,6 +87,7 @@ for (const genre of list) {
     for (const mark of marks) {
         const hit = await page.evaluate((src) => {
             const want = new Function('st', 'return (' + src + ')(st)');   // arrow sources
+            MovieSequencer.paused = false;      // unfreeze from the previous mark's freeze
             for (let i = 0; i < 1400 && MovieSequencer.playing; i++) {
                 MovieSequencer.update(0.1);
                 const sc = MovieSequencer.tl && MovieSequencer.tl.scenes[MovieSequencer.si];
@@ -89,13 +97,26 @@ for (const genre of list) {
                     state: MovieSequencer.state, si: MovieSequencer.si,
                     camType: sh ? (sh.tag || sh.cam.type) : '', sub: !!(sp && sp.visible),
                 };
-                if (want(st)) return st;
+                if (want(st)) { MovieSequencer.paused = true; return st; }   // freeze in the same tick
             }
             return null;
         }, mark.want.toString());
         if (hit) {
+            // Freeze every wall-clock driver so the sheet is reproducible bit for bit:
+            // the picture pauses, CSS stock animations park on a fixed time, the adaptive
+            // resolution scale stops breathing.
+            await page.evaluate(() => {
+                MovieSequencer.paused = true;
+                if (document.getAnimations) {
+                    for (const a of document.getAnimations()) { try { a.pause(); a.currentTime = 400; } catch (e) { /* noop */ } }
+                }
+                CinePost3D.tick = () => {};
+                if (CinePost3D.frame) CinePost3D.frame.rendering.renderTargetScale = 1;
+            });
             await sleep(250);
-            await page.screenshot({ path: path.join(DIR, genre + '-' + mark.name + '.png') });
+            const file = path.join(DIR, genre + '-' + mark.name + '.png');
+            await page.screenshot({ path: file });
+            SHOTS.push(file);
         } else {
             console.log('  ' + genre + ': момент ' + mark.name + ' не пойман');
         }
@@ -104,6 +125,24 @@ for (const genre of list) {
     await page.evaluate(() => { if (MovieSequencer.playing) MovieSequencer.stop(true); });
     await sleep(400);
 }
+if (GOLDEN) {
+    for (const f of SHOTS) fs.copyFileSync(f, path.join(GOLDEN, path.basename(f)));
+    console.log('Золотые листы: ' + GOLDEN + ' (' + SHOTS.length + ' кадров)');
+}
+if (COMPARE) {
+    const { readPng, diffPngs } = await import('./png-diff.mjs');
+    let fails = 0;
+    for (const f of SHOTS) {
+        const g = path.join(COMPARE, path.basename(f));
+        if (!fs.existsSync(g)) { console.log('  нет золотого: ' + path.basename(f)); fails++; continue; }
+        const d = diffPngs(readPng(f), readPng(g));
+        const bad = d.mean > 6 || d.badShare > 0.12;
+        if (bad) fails++;
+        console.log('  ' + (bad ? 'DRIFT ' : 'ok    ') + path.basename(f) +
+            ' — mean ' + d.mean.toFixed(2) + ', bad ' + (d.badShare * 100).toFixed(1) + '%, worst ' + d.worst);
+    }
+    if (fails) { console.log('Визуальная регрессия: ' + fails + ' кадров ушли от золотых.'); process.exitCode = 1; }
+    else console.log('Золотые листы совпадают (в допуске).');
+}
 await browser.close();
 srv.kill();
-console.log('Контактные листы: ' + DIR);

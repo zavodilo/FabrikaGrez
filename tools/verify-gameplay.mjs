@@ -171,7 +171,33 @@ try {
         return !f || !f.enabled || (!f.colorLUT.texture && f.colorLUT.intensity === 0);
     }));
 
-    // --- 3. new game: the scenario picker decides what winning means -------------------------
+    // --- 2b. frame budget probe: the gate watches the frame time against its own baseline ---
+    const perf = await st(async () => {
+        const samples = [];
+        for (let i = 0; i < 10; i++) {
+            await new Promise((r) => setTimeout(r, 220));
+            const fps = (typeof World3D !== 'undefined' && World3D.fps) ? World3D.fps() : 0;
+            if (fps > 0) samples.push(1000 / fps);
+        }
+        if (!samples.length) return { ms: 0 };
+        samples.sort((a, b) => a - b);
+        return { ms: Math.round(samples[Math.floor(samples.length / 2)]) };
+    });
+    const base = fs.existsSync(path.join(ROOT, 'docs', 'perf-baseline.json'))
+        ? JSON.parse(fs.readFileSync(path.join(ROOT, 'docs', 'perf-baseline.json'), 'utf8')) : null;
+    if (process.argv.includes('--perf-baseline')) {
+        fs.mkdirSync(path.join(ROOT, 'docs'), { recursive: true });
+        fs.writeFileSync(path.join(ROOT, 'docs', 'perf-baseline.json'),
+            JSON.stringify({ env: 'headless swiftshader (CI-like)', frameMs: perf.ms, note: 'regress >1.35x fails the gate; real hardware targets 60 fps' }, null, 2) + '\n');
+        ok('базлайн кадра записан: ' + perf.ms + ' мс');
+    } else if (base && base.frameMs > 0) {
+        check('кадр не деградировал против базлайна', perf.ms <= base.frameMs * 1.35,
+            perf.ms + ' мс против базлайна ' + base.frameMs + ' мс (swiftshader; цель на железе — 60 fps)');
+    } else {
+        ok('замер кадра: ' + perf.ms + ' мс (базлайна нет — запишите --perf-baseline)');
+    }
+
+
     await click('new');
     await sleep(400);
     check('выбор сценария игры перед стартом', await st(() => {

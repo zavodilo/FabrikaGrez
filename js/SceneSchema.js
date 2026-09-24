@@ -2230,6 +2230,1499 @@ const SCENE_SCHEMA = {
             "options": null,
             "label": "Stereo width",
             "value": 0.7
+        },
+        {
+            "group": "advanced",
+            "name": "STUDIO_LOT_X",
+            "min": 0,
+            "max": 3000,
+            "step": 30,
+            "kind": "number",
+            "options": null,
+            "label": "studio lot x",
+            "value": 1000
+        },
+        {
+            "group": "advanced",
+            "name": "STUDIO_LOT_Y",
+            "min": 0,
+            "max": 3000,
+            "step": 30,
+            "kind": "number",
+            "options": null,
+            "label": "studio lot y",
+            "value": 1100
+        },
+        {
+            "group": "advanced",
+            "name": "STUDIO_BACKLOT_X",
+            "min": 0,
+            "max": 8000,
+            "step": 80,
+            "kind": "number",
+            "options": null,
+            "label": "studio backlot x",
+            "value": 3200
+        },
+        {
+            "group": "advanced",
+            "name": "STUDIO_BACKLOT_Y",
+            "min": 0,
+            "max": 8000,
+            "step": 80,
+            "kind": "number",
+            "options": null,
+            "label": "studio backlot y",
+            "value": 3200
+        },
+        {
+            "group": "advanced",
+            "name": "STUDIO_START_FANS",
+            "min": 0,
+            "max": 13,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "studio start fans",
+            "value": 5
+        },
+        {
+            "group": "advanced",
+            "name": "STUDIO_START_YEAR",
+            "min": 0,
+            "max": 5000,
+            "step": 50,
+            "kind": "number",
+            "options": null,
+            "label": "studio start year",
+            "value": 1950
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_MARKET_SIZE",
+            "min": 0,
+            "max": 30,
+            "step": 0.3,
+            "kind": "number",
+            "options": null,
+            "label": "people market size",
+            "value": 10
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_MARKET_REFRESH",
+            "min": 0,
+            "max": 8,
+            "step": 0.08,
+            "kind": "number",
+            "options": null,
+            "label": "people market refresh",
+            "value": 3
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_SKILL_CAP",
+            "min": 0,
+            "max": 30,
+            "step": 0.3,
+            "kind": "number",
+            "options": null,
+            "label": "people skill cap",
+            "value": 10
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_TRAIN_COST",
+            "min": 0,
+            "max": 10000,
+            "step": 100,
+            "kind": "number",
+            "options": null,
+            "label": "people train cost",
+            "value": 4000
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_TRAIN_GAIN",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "no"
+                },
+                {
+                    "value": 1,
+                    "label": "yes"
+                }
+            ],
+            "label": "people train gain",
+            "value": 1
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_TRAIN_WEEKS",
+            "min": 0,
+            "max": 8,
+            "step": 0.08,
+            "kind": "number",
+            "options": null,
+            "label": "people train weeks",
+            "value": 3
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_START_ACTORS",
+            "min": 0,
+            "max": 8,
+            "step": 0.08,
+            "kind": "number",
+            "options": null,
+            "label": "people start actors",
+            "value": 3
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_START_STAFF",
+            "min": 0,
+            "max": 5,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "people start staff",
+            "value": 2
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_CONTRACT_WEEKS",
+            "min": 0,
+            "max": 130,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "people contract weeks",
+            "value": 52
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_CONTRACT_STAR_WEEKS",
+            "min": 0,
+            "max": 70,
+            "step": 0.7,
+            "kind": "number",
+            "options": null,
+            "label": "people contract star weeks",
+            "value": 26
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_RENEW_RAISE_PER_STAR",
+            "min": 0,
+            "max": 0.30000000000000004,
+            "step": 0.003,
+            "kind": "number",
+            "options": null,
+            "label": "people renew raise per star",
+            "value": 0.1
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_RENEW_GRACE",
+            "min": 0,
+            "max": 10,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "people renew grace",
+            "value": 4
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_POACH_MULT",
+            "min": 0,
+            "max": 4,
+            "step": 0.04,
+            "kind": "number",
+            "options": null,
+            "label": "people poach multiplier",
+            "value": 1.4
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_BOND_CHANCE",
+            "min": 0,
+            "max": 0.30000000000000004,
+            "step": 0.003,
+            "kind": "number",
+            "options": null,
+            "label": "people bond chance",
+            "value": 0.12
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_SCANDAL_FANS",
+            "min": 0,
+            "max": 7,
+            "step": 0.07,
+            "kind": "number",
+            "options": null,
+            "label": "people scandal fans",
+            "value": 2.5
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_SCANDAL_REP",
+            "min": 0,
+            "max": 10,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "people scandal rep",
+            "value": 4
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_ROMANCE_PRESS",
+            "min": 0,
+            "max": 0.5,
+            "step": 0.005,
+            "kind": "number",
+            "options": null,
+            "label": "people romance press",
+            "value": 0.2
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_DECLINE_AGE",
+            "min": 0,
+            "max": 150,
+            "step": 2,
+            "kind": "number",
+            "options": null,
+            "label": "people decline age",
+            "value": 60
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_RETIRE_AGE",
+            "min": 0,
+            "max": 180,
+            "step": 2,
+            "kind": "number",
+            "options": null,
+            "label": "people retire age",
+            "value": 70
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_YOUNG_AGE",
+            "min": 0,
+            "max": 60,
+            "step": 0.6,
+            "kind": "number",
+            "options": null,
+            "label": "people young age",
+            "value": 24
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_COURSE_CHARM_MULT",
+            "min": 0,
+            "max": 4,
+            "step": 0.04,
+            "kind": "number",
+            "options": null,
+            "label": "people course charm multiplier",
+            "value": 1.5
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_COURSE_MEDIA_MULT",
+            "min": 0,
+            "max": 5,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "people course media multiplier",
+            "value": 2
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_COURSE_MEDIA_EXP",
+            "min": 0,
+            "max": 50,
+            "step": 0.5,
+            "kind": "number",
+            "options": null,
+            "label": "people course media exp",
+            "value": 20
+        },
+        {
+            "group": "advanced",
+            "name": "SCRIPT_WRITE_WEEKS",
+            "min": 0,
+            "max": 10,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "script write weeks",
+            "value": 4
+        },
+        {
+            "group": "advanced",
+            "name": "SCRIPT_QUALITY_BASE",
+            "min": 0,
+            "max": 9,
+            "step": 0.09,
+            "kind": "number",
+            "options": null,
+            "label": "script quality base",
+            "value": 3.5
+        },
+        {
+            "group": "advanced",
+            "name": "SCRIPT_HEAT_BONUS",
+            "min": 0,
+            "max": 0.30000000000000004,
+            "step": 0.003,
+            "kind": "number",
+            "options": null,
+            "label": "script heat bonus",
+            "value": 0.12
+        },
+        {
+            "group": "advanced",
+            "name": "SCRIPT_CHEAP_PENALTY",
+            "min": 0,
+            "max": 3,
+            "step": 0.03,
+            "kind": "number",
+            "options": null,
+            "label": "script cheap penalty",
+            "value": 1.1
+        },
+        {
+            "group": "advanced",
+            "name": "SCRIPT_RICH_PENALTY",
+            "min": 0,
+            "max": 1.3,
+            "step": 0.01,
+            "kind": "number",
+            "options": null,
+            "label": "script rich penalty",
+            "value": 0.5
+        },
+        {
+            "group": "advanced",
+            "name": "SCRIPT_SCENES_MIN",
+            "min": 0,
+            "max": 15,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "script scenes min",
+            "value": 6
+        },
+        {
+            "group": "advanced",
+            "name": "SCRIPT_SCENES_MAX",
+            "min": 0,
+            "max": 50,
+            "step": 0.5,
+            "kind": "number",
+            "options": null,
+            "label": "script scenes max",
+            "value": 18
+        },
+        {
+            "group": "advanced",
+            "name": "SCRIPT_ORDER_BUDGET_FRAC",
+            "min": 0,
+            "max": 0.15,
+            "step": 0.002,
+            "kind": "number",
+            "options": null,
+            "label": "script order budget frac",
+            "value": 0.06
+        },
+        {
+            "group": "advanced",
+            "name": "CAST_W_MOOD",
+            "min": 0,
+            "max": 0.30000000000000004,
+            "step": 0.003,
+            "kind": "number",
+            "options": null,
+            "label": "w mood",
+            "value": 0.12
+        },
+        {
+            "group": "advanced",
+            "name": "CAST_W_CHARM",
+            "min": 0,
+            "max": 0.2,
+            "step": 0.002,
+            "kind": "number",
+            "options": null,
+            "label": "w charm",
+            "value": 0.08
+        },
+        {
+            "group": "advanced",
+            "name": "CAST_W_FIT",
+            "min": 0,
+            "max": 0.4,
+            "step": 0.004,
+            "kind": "number",
+            "options": null,
+            "label": "w fit",
+            "value": 0.14
+        },
+        {
+            "group": "advanced",
+            "name": "CAST_CHEM_REL",
+            "min": 0,
+            "max": 1.5,
+            "step": 0.01,
+            "kind": "number",
+            "options": null,
+            "label": "chem rel",
+            "value": 0.6
+        },
+        {
+            "group": "advanced",
+            "name": "CAST_CHEM_FILM",
+            "min": 0,
+            "max": 0.2,
+            "step": 0.002,
+            "kind": "number",
+            "options": null,
+            "label": "chem film",
+            "value": 0.08
+        },
+        {
+            "group": "advanced",
+            "name": "CAST_FEE_PER_LEAD",
+            "min": 0,
+            "max": 7000,
+            "step": 70,
+            "kind": "number",
+            "options": null,
+            "label": "fee per lead",
+            "value": 2500
+        },
+        {
+            "group": "advanced",
+            "name": "CAST_AUDITIONS",
+            "min": 0,
+            "max": 20,
+            "step": 0.2,
+            "kind": "number",
+            "options": null,
+            "label": "auditions",
+            "value": 8
+        },
+        {
+            "group": "advanced",
+            "name": "SHOOT_SCENES_PER_WEEK",
+            "min": 0,
+            "max": 5,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "scenes per week",
+            "value": 2
+        },
+        {
+            "group": "advanced",
+            "name": "PROD_PACE_CHEAP_SCENES",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "no"
+                },
+                {
+                    "value": 1,
+                    "label": "yes"
+                }
+            ],
+            "label": "pace cheap scenes",
+            "value": 1
+        },
+        {
+            "group": "advanced",
+            "name": "PROD_PACE_CHEAP_COST",
+            "min": 0,
+            "max": 1.7000000000000002,
+            "step": 0.02,
+            "kind": "number",
+            "options": null,
+            "label": "pace cheap cost",
+            "value": 0.65
+        },
+        {
+            "group": "advanced",
+            "name": "PROD_PACE_CHEAP_Q",
+            "min": -1.5,
+            "max": 1.5,
+            "step": 0.01,
+            "kind": "number",
+            "options": null,
+            "label": "pace cheap q",
+            "value": -0.6
+        },
+        {
+            "group": "advanced",
+            "name": "PROD_PACE_STD_SCENES",
+            "min": 0,
+            "max": 5,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "pace std scenes",
+            "value": 2
+        },
+        {
+            "group": "advanced",
+            "name": "PROD_PACE_STD_COST",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "no"
+                },
+                {
+                    "value": 1,
+                    "label": "yes"
+                }
+            ],
+            "label": "pace std cost",
+            "value": 1
+        },
+        {
+            "group": "advanced",
+            "name": "PROD_PACE_STD_Q",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "no"
+                },
+                {
+                    "value": 1,
+                    "label": "yes"
+                }
+            ],
+            "label": "pace std q",
+            "value": 0
+        },
+        {
+            "group": "advanced",
+            "name": "PROD_PACE_RICH_SCENES",
+            "min": 0,
+            "max": 8,
+            "step": 0.08,
+            "kind": "number",
+            "options": null,
+            "label": "pace rich scenes",
+            "value": 3
+        },
+        {
+            "group": "advanced",
+            "name": "PROD_PACE_RICH_COST",
+            "min": 0,
+            "max": 4,
+            "step": 0.04,
+            "kind": "number",
+            "options": null,
+            "label": "pace rich cost",
+            "value": 1.5
+        },
+        {
+            "group": "advanced",
+            "name": "PROD_INCIDENT_RICH_MUL",
+            "min": 0,
+            "max": 2,
+            "step": 0.02,
+            "kind": "number",
+            "options": null,
+            "label": "incident rich mul",
+            "value": 0.8
+        },
+        {
+            "group": "advanced",
+            "name": "PROD_INCIDENT_CHEAP_MUL",
+            "min": 0,
+            "max": 4,
+            "step": 0.04,
+            "kind": "number",
+            "options": null,
+            "label": "incident cheap mul",
+            "value": 1.35
+        },
+        {
+            "group": "advanced",
+            "name": "PROD_MOOD_Q",
+            "min": 0,
+            "max": 0.05,
+            "step": 0.0005,
+            "kind": "number",
+            "options": null,
+            "label": "mood q",
+            "value": 0.02
+        },
+        {
+            "group": "advanced",
+            "name": "PROD_SET_LEVEL_BONUS",
+            "min": 0,
+            "max": 1.3,
+            "step": 0.01,
+            "kind": "number",
+            "options": null,
+            "label": "set level bonus",
+            "value": 0.5
+        },
+        {
+            "group": "advanced",
+            "name": "PROD_UPGRADE_FRAC",
+            "min": 0,
+            "max": 1.5,
+            "step": 0.01,
+            "kind": "number",
+            "options": null,
+            "label": "upgrade frac",
+            "value": 0.6
+        },
+        {
+            "group": "advanced",
+            "name": "PROD_MAX_LEVEL",
+            "min": 0,
+            "max": 8,
+            "step": 0.08,
+            "kind": "number",
+            "options": null,
+            "label": "max level",
+            "value": 3
+        },
+        {
+            "group": "advanced",
+            "name": "PROD_SCRIPT_WEIGHT",
+            "min": 0,
+            "max": 0.9,
+            "step": 0.009,
+            "kind": "number",
+            "options": null,
+            "label": "script weight",
+            "value": 0.35
+        },
+        {
+            "group": "advanced",
+            "name": "PROD_SHOT_WEIGHT",
+            "min": 0,
+            "max": 1.3,
+            "step": 0.01,
+            "kind": "number",
+            "options": null,
+            "label": "shot weight",
+            "value": 0.5
+        },
+        {
+            "group": "advanced",
+            "name": "PROD_CHEM_WEIGHT",
+            "min": 0,
+            "max": 0.4,
+            "step": 0.004,
+            "kind": "number",
+            "options": null,
+            "label": "chem weight",
+            "value": 0.15
+        },
+        {
+            "group": "advanced",
+            "name": "SHOOT_QUALITY_BASE",
+            "min": 0,
+            "max": 7,
+            "step": 0.07,
+            "kind": "number",
+            "options": null,
+            "label": "quality base",
+            "value": 2.5
+        },
+        {
+            "group": "advanced",
+            "name": "SHOOT_DIRECTOR_BONUS",
+            "min": 0,
+            "max": 0.8,
+            "step": 0.008,
+            "kind": "number",
+            "options": null,
+            "label": "director bonus",
+            "value": 0.3
+        },
+        {
+            "group": "advanced",
+            "name": "SHOOT_SET_BONUS",
+            "min": 0,
+            "max": 3,
+            "step": 0.03,
+            "kind": "number",
+            "options": null,
+            "label": "set bonus",
+            "value": 1.2
+        },
+        {
+            "group": "advanced",
+            "name": "SHOOT_RANDOM_SPREAD",
+            "min": 0,
+            "max": 4,
+            "step": 0.04,
+            "kind": "number",
+            "options": null,
+            "label": "random spread",
+            "value": 1.4
+        },
+        {
+            "group": "advanced",
+            "name": "MOVIE_BUDGET_MIN",
+            "min": 0,
+            "max": 300000,
+            "step": 3000,
+            "kind": "number",
+            "options": null,
+            "label": "movie budget min",
+            "value": 100000
+        },
+        {
+            "group": "advanced",
+            "name": "MOVIE_BUDGET_MAX",
+            "min": 0,
+            "max": 8000000,
+            "step": 80000,
+            "kind": "number",
+            "options": null,
+            "label": "movie budget max",
+            "value": 3000000
+        },
+        {
+            "group": "advanced",
+            "name": "MOVIE_BUDGET_DEFAULT",
+            "min": 0,
+            "max": 1000000,
+            "step": 10000,
+            "kind": "number",
+            "options": null,
+            "label": "movie budget default",
+            "value": 400000
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_RUN_WEEKS",
+            "min": 0,
+            "max": 20,
+            "step": 0.2,
+            "kind": "number",
+            "options": null,
+            "label": "release run weeks",
+            "value": 8
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_OPEN_PER_FAN",
+            "min": 0,
+            "max": 3000,
+            "step": 30,
+            "kind": "number",
+            "options": null,
+            "label": "release open per fan",
+            "value": 1200
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_OPEN_PER_MARKETING",
+            "min": 0,
+            "max": 2.3000000000000003,
+            "step": 0.02,
+            "kind": "number",
+            "options": null,
+            "label": "release open per marketing",
+            "value": 0.9
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_STAR_BONUS",
+            "min": 0,
+            "max": 0.2,
+            "step": 0.002,
+            "kind": "number",
+            "options": null,
+            "label": "release star bonus",
+            "value": 0.08
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_SCREEN_BASE",
+            "min": 0,
+            "max": 400,
+            "step": 4,
+            "kind": "number",
+            "options": null,
+            "label": "release screen base",
+            "value": 150
+        },
+        {
+            "group": "advanced",
+            "name": "MARKETING_MAX_FRAC",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "no"
+                },
+                {
+                    "value": 1,
+                    "label": "yes"
+                }
+            ],
+            "label": "marketing max frac",
+            "value": 1
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_POST_WEEKS",
+            "min": 0,
+            "max": 5,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "release post weeks",
+            "value": 2
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_PROD_VALUE_BASE",
+            "min": 0,
+            "max": 1.8,
+            "step": 0.02,
+            "kind": "number",
+            "options": null,
+            "label": "release prod value base",
+            "value": 0.7
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_PROD_VALUE_SLOPE",
+            "min": 0,
+            "max": 0.8,
+            "step": 0.008,
+            "kind": "number",
+            "options": null,
+            "label": "release prod value slope",
+            "value": 0.3
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_EDIT_MISMATCH",
+            "min": -1.5,
+            "max": 1.5,
+            "step": 0.01,
+            "kind": "number",
+            "options": null,
+            "label": "release edit mismatch",
+            "value": -0.6
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_MUSIC_FIT",
+            "min": 0,
+            "max": 0.8,
+            "step": 0.008,
+            "kind": "number",
+            "options": null,
+            "label": "release music fit",
+            "value": 0.3
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_MUSIC_MISS",
+            "min": -1,
+            "max": 1,
+            "step": 0.01,
+            "kind": "number",
+            "options": null,
+            "label": "release music miss",
+            "value": -0.4
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_CRITIC_NOISE",
+            "min": 0,
+            "max": 2,
+            "step": 0.02,
+            "kind": "number",
+            "options": null,
+            "label": "release critic noise",
+            "value": 0.8
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_AUDIENCE_STAR",
+            "min": 0,
+            "max": 10,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "release audience star",
+            "value": 4
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_HEAT_FACTOR",
+            "min": 0,
+            "max": 0.15,
+            "step": 0.002,
+            "kind": "number",
+            "options": null,
+            "label": "release heat factor",
+            "value": 0.06
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_SEASON_AMP",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "no"
+                },
+                {
+                    "value": 1,
+                    "label": "yes"
+                }
+            ],
+            "label": "release season amp",
+            "value": 1
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_SCREEN_PER_QUALITY",
+            "min": 0,
+            "max": 30,
+            "step": 0.3,
+            "kind": "number",
+            "options": null,
+            "label": "release screen per quality",
+            "value": 12
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_SCREEN_GROSS",
+            "min": 0,
+            "max": 23000,
+            "step": 200,
+            "kind": "number",
+            "options": null,
+            "label": "release screen gross",
+            "value": 9000
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_FANS_PER_QUALITY",
+            "min": 0,
+            "max": 2,
+            "step": 0.02,
+            "kind": "number",
+            "options": null,
+            "label": "release fans per quality",
+            "value": 0.8
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_FANS_LOSS",
+            "min": 0,
+            "max": 1.5,
+            "step": 0.01,
+            "kind": "number",
+            "options": null,
+            "label": "release fans loss",
+            "value": 0.6
+        },
+        {
+            "group": "advanced",
+            "name": "RELEASE_HOLD_BONUS",
+            "min": 0,
+            "max": 0.30000000000000004,
+            "step": 0.003,
+            "kind": "number",
+            "options": null,
+            "label": "release hold bonus",
+            "value": 0.12
+        },
+        {
+            "group": "advanced",
+            "name": "AWARD_REP",
+            "min": 0,
+            "max": 15,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "award rep",
+            "value": 6
+        },
+        {
+            "group": "advanced",
+            "name": "AWARD_FANS",
+            "min": 0,
+            "max": 10,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "award fans",
+            "value": 4
+        },
+        {
+            "group": "advanced",
+            "name": "AWARD_CASH",
+            "min": 0,
+            "max": 70000,
+            "step": 700,
+            "kind": "number",
+            "options": null,
+            "label": "award cash",
+            "value": 25000
+        },
+        {
+            "group": "advanced",
+            "name": "DEAL_PLATFORM_OPEN",
+            "min": 0,
+            "max": 1.2000000000000002,
+            "step": 0.01,
+            "kind": "number",
+            "options": null,
+            "label": "platform open",
+            "value": 0.45
+        },
+        {
+            "group": "advanced",
+            "name": "DEAL_PLATFORM_HOLD",
+            "min": 0,
+            "max": 0.4,
+            "step": 0.004,
+            "kind": "number",
+            "options": null,
+            "label": "platform hold",
+            "value": 0.15
+        },
+        {
+            "group": "advanced",
+            "name": "DEAL_PLATFORM_WEEKS",
+            "min": 0,
+            "max": 10,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "platform weeks",
+            "value": 4
+        },
+        {
+            "group": "advanced",
+            "name": "DEAL_PLATFORM_CRITIC",
+            "min": 0,
+            "max": 0.8,
+            "step": 0.008,
+            "kind": "number",
+            "options": null,
+            "label": "platform critic",
+            "value": 0.3
+        },
+        {
+            "group": "advanced",
+            "name": "DEAL_STREAM_PER_FAN",
+            "min": 0,
+            "max": 13000,
+            "step": 100,
+            "kind": "number",
+            "options": null,
+            "label": "stream per fan",
+            "value": 5000
+        },
+        {
+            "group": "advanced",
+            "name": "DEAL_FESTIVAL_OPEN",
+            "min": 0,
+            "max": 0.7000000000000001,
+            "step": 0.007,
+            "kind": "number",
+            "options": null,
+            "label": "festival open",
+            "value": 0.25
+        },
+        {
+            "group": "advanced",
+            "name": "DEAL_FESTIVAL_REP",
+            "min": 0,
+            "max": 15,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "festival rep",
+            "value": 6
+        },
+        {
+            "group": "advanced",
+            "name": "FOREIGN_WEEKS",
+            "min": 0,
+            "max": 10,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "weeks",
+            "value": 4
+        },
+        {
+            "group": "advanced",
+            "name": "FOREIGN_MULT_EUROPE",
+            "min": 0,
+            "max": 0.9,
+            "step": 0.009,
+            "kind": "number",
+            "options": null,
+            "label": "multiplier europe",
+            "value": 0.35
+        },
+        {
+            "group": "advanced",
+            "name": "FOREIGN_MULT_ASIA",
+            "min": 0,
+            "max": 0.8,
+            "step": 0.008,
+            "kind": "number",
+            "options": null,
+            "label": "multiplier asia",
+            "value": 0.3
+        },
+        {
+            "group": "advanced",
+            "name": "FOREIGN_MULT_LATAM",
+            "min": 0,
+            "max": 0.7000000000000001,
+            "step": 0.007,
+            "kind": "number",
+            "options": null,
+            "label": "multiplier latam",
+            "value": 0.25
+        },
+        {
+            "group": "advanced",
+            "name": "FOREIGN_PIRACY_CHANCE",
+            "min": 0,
+            "max": 0.4,
+            "step": 0.004,
+            "kind": "number",
+            "options": null,
+            "label": "piracy chance",
+            "value": 0.15
+        },
+        {
+            "group": "advanced",
+            "name": "FOREIGN_PIRACY_CUT",
+            "min": 0,
+            "max": 1.3,
+            "step": 0.01,
+            "kind": "number",
+            "options": null,
+            "label": "piracy cut",
+            "value": 0.5
+        },
+        {
+            "group": "advanced",
+            "name": "AGENT_RENEW_RELIEF",
+            "min": 0,
+            "max": 0.5,
+            "step": 0.005,
+            "kind": "number",
+            "options": null,
+            "label": "renew relief",
+            "value": 0.2
+        },
+        {
+            "group": "advanced",
+            "name": "AGENT_POACH_RELIEF",
+            "min": 0,
+            "max": 0.8,
+            "step": 0.008,
+            "kind": "number",
+            "options": null,
+            "label": "poach relief",
+            "value": 0.3
+        },
+        {
+            "group": "advanced",
+            "name": "AGENT_HIRE_RELIEF",
+            "min": 0,
+            "max": 0.30000000000000004,
+            "step": 0.003,
+            "kind": "number",
+            "options": null,
+            "label": "hire relief",
+            "value": 0.1
+        },
+        {
+            "group": "advanced",
+            "name": "AGENT_MAX_POWER",
+            "min": 0,
+            "max": 5,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "max power",
+            "value": 2
+        },
+        {
+            "group": "advanced",
+            "name": "META_SEQUEL_MIN_SCORE",
+            "min": 0,
+            "max": 15,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "meta sequel min score",
+            "value": 6
+        },
+        {
+            "group": "advanced",
+            "name": "META_SEQUEL_MAX",
+            "min": 0,
+            "max": 8,
+            "step": 0.08,
+            "kind": "number",
+            "options": null,
+            "label": "meta sequel max",
+            "value": 3
+        },
+        {
+            "group": "advanced",
+            "name": "META_SEQUEL_RECOGNITION",
+            "min": 0,
+            "max": 0.9,
+            "step": 0.009,
+            "kind": "number",
+            "options": null,
+            "label": "meta sequel recognition",
+            "value": 0.35
+        },
+        {
+            "group": "advanced",
+            "name": "META_SEQUEL_FATIGUE",
+            "min": 0,
+            "max": 0.30000000000000004,
+            "step": 0.003,
+            "kind": "number",
+            "options": null,
+            "label": "meta sequel fatigue",
+            "value": 0.12
+        },
+        {
+            "group": "advanced",
+            "name": "META_GOAL_KADR_YEARS",
+            "min": 0,
+            "max": 30,
+            "step": 0.3,
+            "kind": "number",
+            "options": null,
+            "label": "meta goal kadr years",
+            "value": 10
+        },
+        {
+            "group": "advanced",
+            "name": "META_GOAL_EMPIRE_GROSS",
+            "min": 0,
+            "max": 300000000,
+            "step": 3000000,
+            "kind": "number",
+            "options": null,
+            "label": "meta goal empire gross",
+            "value": 100000000
+        },
+        {
+            "group": "advanced",
+            "name": "MOVIE_TITLE_SEC",
+            "min": 0,
+            "max": 9,
+            "step": 0.09,
+            "kind": "number",
+            "options": null,
+            "label": "movie title sec",
+            "value": 3.5
+        },
+        {
+            "group": "advanced",
+            "name": "MOVIE_CREDITS_SPEED",
+            "min": 0,
+            "max": 120,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "movie credits speed",
+            "value": 46
+        },
+        {
+            "group": "advanced",
+            "name": "SKY_DOME_R",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "color",
+            "options": null,
+            "label": "sky dome r",
+            "value": 6000
+        },
+        {
+            "group": "advanced",
+            "name": "GAME_RUN_SEC",
+            "min": 0,
+            "max": 20,
+            "step": 0.2,
+            "kind": "number",
+            "options": null,
+            "label": "game run sec",
+            "value": 8
+        },
+        {
+            "group": "advanced",
+            "name": "GAME_REST_SEC",
+            "min": 0,
+            "max": 10,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "game rest sec",
+            "value": 4
+        },
+        {
+            "group": "advanced",
+            "name": "GAME_STEP_SEC",
+            "min": 0,
+            "max": 0.9,
+            "step": 0.009,
+            "kind": "number",
+            "options": null,
+            "label": "game step sec",
+            "value": 0.35
+        },
+        {
+            "group": "advanced",
+            "name": "PROFILE_ORTHO_DIST",
+            "min": 0,
+            "max": 8000,
+            "step": 80,
+            "kind": "number",
+            "options": null,
+            "label": "ortho dist",
+            "value": 3000
+        },
+        {
+            "group": "advanced",
+            "name": "PROFILE_ORTHO_HEIGHT",
+            "min": 0,
+            "max": 1400,
+            "step": 10,
+            "kind": "number",
+            "options": null,
+            "label": "ortho height",
+            "value": 540
+        },
+        {
+            "group": "advanced",
+            "name": "PROFILE_TILE_PX",
+            "min": 0,
+            "max": 160,
+            "step": 2,
+            "kind": "number",
+            "options": null,
+            "label": "tile px",
+            "value": 64
+        },
+        {
+            "group": "advanced",
+            "name": "PROFILE_SPRITE_HEIGHT",
+            "min": 0,
+            "max": 240,
+            "step": 2,
+            "kind": "number",
+            "options": null,
+            "label": "sprite height",
+            "value": 96
+        },
+        {
+            "group": "advanced",
+            "name": "PROFILE_SPRITE_ASPECT",
+            "min": 0,
+            "max": 1.9000000000000001,
+            "step": 0.02,
+            "kind": "number",
+            "options": null,
+            "label": "sprite aspect",
+            "value": 0.75
+        },
+        {
+            "group": "advanced",
+            "name": "PROFILE_SIDE_EYE_PX",
+            "min": 0,
+            "max": 230,
+            "step": 2,
+            "kind": "number",
+            "options": null,
+            "label": "side eye px",
+            "value": 90
+        },
+        {
+            "group": "advanced",
+            "name": "PROFILE_MAX_TILES",
+            "min": 0,
+            "max": 4000,
+            "step": 40,
+            "kind": "number",
+            "options": null,
+            "label": "max tiles",
+            "value": 1500
+        },
+        {
+            "group": "advanced",
+            "name": "PROFILE_BUDGET_STRICT",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "no"
+                },
+                {
+                    "value": 1,
+                    "label": "yes"
+                }
+            ],
+            "label": "budget strict",
+            "value": 0
         }
     ],
     "object": {

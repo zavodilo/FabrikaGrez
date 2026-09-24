@@ -1,0 +1,5 @@
+{
+  "env": "headless swiftshader (CI-like)",
+  "frameMs": 3,
+  "note": "regress >1.35x fails the gate; real hardware targets 60 fps"
+}

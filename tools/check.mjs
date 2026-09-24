@@ -31,10 +31,13 @@ const STEPS = [
   { flag: '--tests', title: 'тесты', run: () => spawnSync(process.execPath, ['--test', 'tests/*.test.mjs'], { cwd: ROOT, stdio: 'inherit', shell: true }) },
   { flag: '--skills', title: 'синхронность скиллов', run: () => spawnSync(process.execPath, ['tools/sync-skills.mjs', '--check'], { cwd: ROOT, stdio: 'inherit' }) },
   { flag: '--skills', title: 'манифест сцены', run: () => spawnSync(process.execPath, ['tools/manifest.mjs', '--check'], { cwd: ROOT, stdio: 'inherit' }) },
-  { flag: '--render', title: 'headless render gate', run: () => spawnSync(process.execPath, ['tools/headless-gate.mjs', '--render'], { cwd: ROOT, stdio: 'inherit' }) },
-  { flag: '--visual', title: 'headless visual smoke', run: () => spawnSync(process.execPath, ['tools/headless-gate.mjs', '--visual'], { cwd: ROOT, stdio: 'inherit' }) },
+  // The UVP generation retires the old headless-gate smoke: verify-gameplay drives the whole
+  // player journey in a real browser (render gate), and the golden contact sheets pixel-diff
+  // the picture against docs/golden (visual gate). Both are dev-only (puppeteer).
+  { flag: '--render', title: 'headless render gate (verify-gameplay)', run: () => spawnSync(process.execPath, ['tools/verify-gameplay.mjs'], { cwd: ROOT, stdio: 'inherit' }) },
+  { flag: '--visual', title: 'golden contact sheets (pixel-diff)', run: () => spawnSync(process.execPath, ['tools/capture-stills.mjs', '.stills-gate', 'western', '--compare=docs/golden'], { cwd: ROOT, stdio: 'inherit' }) },
 ];
-// --all: the release gate — every step above (render/visual need puppeteer, dev-only).
+// --all: the release gate — every step above (render/visual gates need puppeteer, dev-only).
 const ALL = process.argv.includes('--all');
 
 const DEFAULT_STEPS = ['--types', '--tests', '--skills'];

@@ -146,6 +146,8 @@ const MovieSequencer = {
             CinePost3D.setDofPlan('wide');     // deep focus: the lot has no rack
             CinePost3D.setStudio();
         }
+        if (typeof CineCam3D !== 'undefined') CineCam3D.swayT = null;
+        if (typeof Sky3D !== 'undefined') Sky3D.movieT = null;
         this._speaker = null;
         this._focusDist = null;
         this._focusSnap = false;
@@ -186,6 +188,9 @@ const MovieSequencer = {
         if (this.paused) return;
         const t = dt * this.speed;
         this.t += t;
+        // The handheld sway and the cloud drift ride the playback clock: deterministic rewatch.
+        if (typeof CineCam3D !== 'undefined') CineCam3D.swayT = this.t;
+        if (typeof Sky3D !== 'undefined') Sky3D.movieT = this.t;
 
         this._stepFade(t);
         this._stepBirds(t);

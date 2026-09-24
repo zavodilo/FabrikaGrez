@@ -26,6 +26,8 @@ const CineCam3D = {
     speedMul: 1,           // playback speed scales the glide too
     _shakeUntil: 0,
     _shakeAmp: 0,
+    /** Playback seconds for the handheld sway while a film runs (null — wall clock). */
+    swayT: null,
 
     isActive() { return this.active; },
 
@@ -125,7 +127,9 @@ const CineCam3D = {
         // Handheld sway: the operator breathes, so the picture is never a locked-off still.
         const U2 = 'undefined';
         const sway = typeof CINEMA_HANDHELD !== U2 ? CINEMA_HANDHELD : 0.12;
-        const nowT = (typeof performance !== U2 ? performance.now() : Date.now()) / 1000;
+        // During a film the sway rides the PLAYBACK clock (MovieSequencer.t), so a rewatch —
+        // and a golden contact sheet — sways identically; the lot keeps the wall clock.
+        const nowT = this.swayT != null ? this.swayT : ((typeof performance !== U2 ? performance.now() : Date.now()) / 1000);
         const dAz = sway > 0 ? (Math.sin(nowT * 0.9) + Math.sin(nowT * 2.3 + 1.7) * 0.4) * sway * this.DEG : 0;
         const dPitch = sway > 0 ? Math.sin(nowT * 1.3 + 0.5) * sway * 0.6 * this.DEG : 0;
         const az = c.az * this.DEG + dAz, pitch = c.pitch * this.DEG + dPitch;
