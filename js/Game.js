@@ -25,6 +25,10 @@ class Game {
 
         // The lot: buildings, plaza, gate — one static build.
         this.lot = SetPieces3D.buildLot(this.view, LX, LY);
+        // Dress the lot with the studio's own history: posters, the star alley, the marquee.
+        if (typeof SetPieces3D !== 'undefined' && SetPieces3D.lotDecor) {
+            SetPieces3D.lotDecor(this.view, this.lot, typeof StudioManager !== 'undefined' ? StudioManager.state : null);
+        }
 
         // A welcoming frame: the gate and the plaza from the south.
         app.camera.lookAt(LX, LY + 120);

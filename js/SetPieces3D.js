@@ -448,6 +448,305 @@ const SetPieces3D = {
         return { root: root, anchors: anchors, view: view, groundH: gh, id: '', shell: b.shell.slice(), lights: lights, floors: floors.filter((f) => f.mi) };
     },
 
+    // --- backdrops: the painted cyclorama behind every set -----------------------------------
+    // A soundstage ring (interiors) or a painted horizon strip (exteriors) so a scene reads as
+    // a shot ON A LOT, not as boxes floating over the terrain ring. Unlit mural textures,
+    // baked procedurally per family; the ring is a child of the set root (rides dispose).
+    BACKDROPS: {
+        saloon: ['cyc', 560, 380], space: ['cyc', 620, 400], mansion: ['cyc', 620, 400],
+        diner: ['cyc', 620, 380], office: ['cyc', 580, 360], stage: ['cyc', 620, 420],
+        nightclub: ['cyc', 620, 400], lab: ['cyc', 620, 380],
+        city: ['skyline', 1400, 300], rooftop: ['skyline', 1500, 260], train: ['skyline', 1300, 240],
+        western: ['mesa', 1500, 260],
+        forest: ['treeline', 1200, 220], jungle: ['treeline', 1250, 240], camp: ['treeline', 1300, 200],
+    },
+
+    _muralTex(view, family) {
+        if (this._murals && this._murals[family]) return this._murals[family];
+        if (typeof document === 'undefined') return null;
+        const W = 512, H = 128;
+        const cv = document.createElement('canvas');
+        cv.width = W; cv.height = H;
+        const g = cv.getContext('2d');
+        if (!g) return null;
+        const grad = (stops) => {
+            const gr = g.createLinearGradient(0, 0, 0, H);
+            for (const [k, c] of stops) gr.addColorStop(k, c);
+            g.fillStyle = gr; g.fillRect(0, 0, W, H);
+        };
+        const r = (typeof Rng !== 'undefined' && Rng.create) ? Rng.create('mural-' + family) : null;
+        const rnd = r ? () => r.float(0, 1) : Math.random;
+        if (family === 'cyc') {
+            grad([[0, '#c2ccd6'], [0.55, '#98a2ac'], [0.82, '#6d747c'], [1, '#4d5259']]);
+            const rg = g.createRadialGradient(W / 2, H * 0.42, 10, W / 2, H * 0.42, W * 0.42);
+            rg.addColorStop(0, 'rgba(255,255,255,0.20)');
+            rg.addColorStop(1, 'rgba(255,255,255,0)');
+            g.fillStyle = rg; g.fillRect(0, 0, W, H);
+        } else if (family === 'skyline') {
+            grad([[0, '#a8c4dc'], [0.62, '#d8c8a8'], [0.75, '#b09878'], [1, '#786858']]);
+            g.fillStyle = '#3a4450';
+            for (let i = 0; i < 26; i++) {
+                const bw = 12 + rnd() * 30, bh = 18 + rnd() * 44, bx = rnd() * W;
+                g.fillRect(bx, H * 0.75 - bh, bw, bh + 4);
+                g.fillStyle = 'rgba(255,210,140,0.5)';
+                for (let w = 0; w < 4; w++) if (rnd() < 0.5) g.fillRect(bx + 3 + w * 6, H * 0.75 - bh + 5 + (w % 2) * 9, 2, 3);
+                g.fillStyle = '#3a4450';
+            }
+        } else if (family === 'mesa') {
+            grad([[0, '#e8cf9a'], [0.6, '#d8a86a'], [0.8, '#a87848'], [1, '#886040']]);
+            g.fillStyle = '#7a5a44';
+            for (let i = 0; i < 5; i++) {
+                const mw = 60 + rnd() * 90, mh = 22 + rnd() * 26, mx = rnd() * W;
+                g.beginPath();
+                g.moveTo(mx, H * 0.8); g.lineTo(mx + mw * 0.18, H * 0.8 - mh);
+                g.lineTo(mx + mw * 0.82, H * 0.8 - mh); g.lineTo(mx + mw, H * 0.8);
+                g.closePath(); g.fill();
+            }
+        } else {
+            grad([[0, '#c8d8e0'], [0.6, '#b8ccb8'], [0.78, '#78907a'], [1, '#54645a']]);
+            for (let row = 0; row < 2; row++) {
+                g.fillStyle = row ? '#2e4434' : '#40584a';
+                for (let i = 0; i < 30; i++) {
+                    const tx = rnd() * W, th = 16 + rnd() * (row ? 26 : 18), tw = 8 + rnd() * 10;
+                    const by = H * (row ? 0.82 : 0.74);
+                    g.beginPath(); g.moveTo(tx - tw, by); g.lineTo(tx, by - th); g.lineTo(tx + tw, by); g.closePath(); g.fill();
+                }
+            }
+        }
+        const tex = new pc.Texture(view.app.graphicsDevice, {
+            name: 'mural-' + family, width: W, height: H, format: pc.PIXELFORMAT_RGBA8,
+            mipmaps: true, minFilter: pc.FILTER_LINEAR_MIPMAP_LINEAR, magFilter: pc.FILTER_LINEAR,
+            addressU: pc.ADDRESS_REPEAT, addressV: pc.ADDRESS_CLAMP_TO_EDGE,
+        });
+        tex.setSource(cv);
+        if (!this._murals) this._murals = {};
+        this._murals[family] = tex;
+        return tex;
+    },
+
+    _ringMesh(view, radius, height, segs) {
+        const pos = [], nor = [], uv = [], idx = [];
+        for (let i = 0; i <= segs; i++) {
+            const a = (i / segs) * Math.PI * 2;
+            const x = Math.cos(a) * radius, z = Math.sin(a) * radius;
+            pos.push(x, 0, z, x, height, z);
+            nor.push(-Math.cos(a), 0, -Math.sin(a), -Math.cos(a), 0, -Math.sin(a));
+            const u = (i / segs) * 4;
+            uv.push(u, 0, u, 1);
+        }
+        for (let i = 0; i < segs; i++) {
+            const b = i * 2;
+            idx.push(b, b + 1, b + 3, b, b + 3, b + 2);
+        }
+        const m = new pc.Mesh(view.app.graphicsDevice);
+        m.setPositions(pos); m.setNormals(nor); m.setUvs(0, uv); m.setIndices(idx);
+        m.update(pc.PRIMITIVE_TRIANGLES);
+        return m;
+    },
+
+    _addBackdrop(view, handle, setId) {
+        const fam = this.BACKDROPS[setId];
+        if (!fam) return;
+        const tex = this._muralTex(view, fam[0]);
+        if (!tex) return;
+        const mat = new pc.StandardMaterial();
+        mat.name = 'backdrop-' + setId;
+        mat.useLighting = false;
+        mat.emissive = new pc.Color(1, 1, 1);
+        mat.emissiveMap = tex;
+        mat.cull = pc.CULLFACE_NONE;
+        mat.depthWrite = true;
+        mat.update();
+        const e = new pc.Entity('backdrop');
+        handle.root.addChild(e);
+        e.addComponent('render', { layers: [pc.LAYERID_WORLD] });
+        e.render.meshInstances = [new pc.MeshInstance(this._ringMesh(view, fam[1], fam[2], 28), mat, e)];
+        e.render.meshInstances[0].castShadow = false;
+        e.render.meshInstances[0].receiveShadow = false;
+    },
+
+    // --- lot decor: posters of YOUR films, the star alley, the marquee, set dressing ----------
+    _lot: null,
+
+    _posterCanvas(m, title) {
+        if (typeof document === 'undefined') return null;
+        const W = 128, H = 176;
+        const cv = document.createElement('canvas');
+        cv.width = W; cv.height = H;
+        const g = cv.getContext('2d');
+        if (!g) return null;
+        const cast = (m && m.timeline && m.timeline.cast) || [];
+        const leads = cast.filter((c2) => /^a/.test(c2.id)).slice(0, 3);
+        const look = (i) => (leads[i] && leads[i].look) || {};
+        const c1 = look(0).shirt || '#3a4458', c2 = look(1).shirt || '#58443a', c3 = look(2).shirt || '#2e3a34';
+        const hair = look(0).hair || '#1a120c';
+        const lg = g.createLinearGradient(0, 0, 0, H);
+        lg.addColorStop(0, hair); lg.addColorStop(1, '#0b0e15');
+        g.fillStyle = lg; g.fillRect(0, 0, W, H);
+        const blob = (x, y, rr, col, a) => {
+            const rg = g.createRadialGradient(x, y, 0, x, y, rr);
+            rg.addColorStop(0, col); rg.addColorStop(1, 'rgba(0,0,0,0)');
+            g.globalAlpha = a; g.fillStyle = rg; g.fillRect(x - rr, y - rr, rr * 2, rr * 2);
+            g.globalAlpha = 1;
+        };
+        blob(W * 0.18, H, W * 0.8, c1, 0.8);
+        blob(W * 0.82, H, W * 0.8, c2, 0.72);
+        blob(W * 0.5, H * 0.78, W * 0.5, c3, 0.6);
+        blob(W * 0.5, 0, W * 0.9, '#ffffff', 0.15);
+        g.fillStyle = '#f4e9c8';
+        g.font = 'bold 15px Georgia, serif';
+        g.textAlign = 'center';
+        const words = String(title || 'БЕЗ НАЗВАНИЯ').split(' ');
+        let line = '', yy = H * 0.34;
+        for (const w of words) {
+            if ((line + ' ' + w).length > 12) { g.fillText(line, W / 2, yy); yy += 17; line = w; }
+            else line = line ? line + ' ' + w : w;
+        }
+        if (line) g.fillText(line, W / 2, yy);
+        g.strokeStyle = '#caa13a'; g.lineWidth = 3; g.strokeRect(4, 4, W - 8, H - 8);
+        return cv;
+    },
+
+    _textCanvas(text, sub, bg, fg) {
+        if (typeof document === 'undefined') return null;
+        const W = 256, H = 64;
+        const cv = document.createElement('canvas');
+        cv.width = W; cv.height = H;
+        const g = cv.getContext('2d');
+        if (!g) return null;
+        g.fillStyle = bg || '#141018'; g.fillRect(0, 0, W, H);
+        g.fillStyle = fg || '#ffd76a';
+        g.font = 'bold 22px Georgia, serif'; g.textAlign = 'center';
+        g.fillText(String(text || '').slice(0, 18), W / 2, 30);
+        if (sub) { g.font = '13px Georgia, serif'; g.fillStyle = '#e8d8b0'; g.fillText(String(sub).slice(0, 26), W / 2, 50); }
+        g.strokeStyle = '#caa13a'; g.lineWidth = 2; g.strokeRect(2, 2, W - 4, H - 4);
+        return cv;
+    },
+
+    _canvasTex(view, cv, name) {
+        if (!cv) return null;
+        const tex = new pc.Texture(view.app.graphicsDevice, {
+            name: name, width: cv.width, height: cv.height, format: pc.PIXELFORMAT_RGBA8,
+            mipmaps: true, minFilter: pc.FILTER_LINEAR_MIPMAP_LINEAR, magFilter: pc.FILTER_LINEAR,
+            addressU: pc.ADDRESS_CLAMP_TO_EDGE, addressV: pc.ADDRESS_CLAMP_TO_EDGE,
+        });
+        tex.setSource(cv);
+        return tex;
+    },
+
+    _billboard(view, root, x, y, h, w, hh, tex, headingDeg) {
+        const e = new pc.Entity('billboard');
+        root.addChild(e);
+        e.setPosition(-x, h, y);
+        e.setEulerAngles(0, -(headingDeg || 0) * this.DEG, 0);
+        const mat = new pc.StandardMaterial();
+        mat.name = 'billboard';
+        mat.useLighting = false;
+        mat.emissive = new pc.Color(1, 1, 1);
+        if (tex) mat.emissiveMap = tex;
+        mat.cull = pc.CULLFACE_NONE;
+        mat.update();
+        const mesh = this._quadMesh ? this._quadMesh(view) : null;
+        const q = mesh || (() => {
+            const pos = [-0.5, -0.5, 0, 0.5, -0.5, 0, 0.5, 0.5, 0, -0.5, 0.5, 0];
+            const nor = [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1];
+            const uv = [0, 1, 1, 1, 1, 0, 0, 0];
+            const idx = [0, 1, 2, 0, 2, 3];
+            const mm = new pc.Mesh(view.app.graphicsDevice);
+            mm.setPositions(pos); mm.setNormals(nor); mm.setUvs(0, uv); mm.setIndices(idx);
+            mm.update(pc.PRIMITIVE_TRIANGLES);
+            return mm;
+        })();
+        e.addComponent('render', { layers: [pc.LAYERID_WORLD] });
+        e.render.meshInstances = [new pc.MeshInstance(q, mat, e)];
+        e.render.meshInstances[0].castShadow = false;
+        e.setLocalScale(w, hh, 1);
+        // posts
+        for (const px of [-w * 0.35, w * 0.35]) {
+            const pe = new pc.Entity('post');
+            e.addChild(pe);
+            pe.setLocalPosition(px / 1, -hh / 2 - (h - 6) / 2 / 1, -1);
+            void pe;
+        }
+        return e;
+    },
+
+    /**
+     * Dress the lot with the studio's own history: billboards of the latest releases, the star
+     * alley of the troupe's legends, the cinema marquee and a little set dressing. Called once
+     * from Game after buildLot and again (refreshLotDecor) whenever the filmography grows.
+     */
+    lotDecor(view, lotHandle, state) {
+        if (this._lot) this._disposeLotDecor();
+        const cx = lotHandle && lotHandle.cx != null ? lotHandle.cx : 1000;
+        const cy = lotHandle && lotHandle.cy != null ? lotHandle.cy : 1100;
+        const root = new pc.Entity('lot-decor');
+        view.root.addChild(root);
+        this._lot = { view: view, root: root, cx: cx, cy: cy, car: null, films: -1, stars: -1 };
+        const s = state || null;
+        const released = (s && s.released) || [];
+        // Two billboards facing the gate road with the studio's latest pictures.
+        const spots = [[cx - 80, cy + 330, 0], [cx + 120, cy + 336, 0]];
+        for (let i = 0; i < spots.length; i++) {
+            const m = released[released.length - 1 - i];
+            const cv = this._posterCanvas(m, m ? m.title : 'ФАБРИКА ГРЁЗ');
+            const tex = this._canvasTex(view, cv, 'lot-poster' + i);
+            this._billboard(view, root, spots[i][0], spots[i][1], 96, 96, 132, tex, 90);
+        }
+        // The star alley: plaques of the troupe's legends in front of the cinema.
+        const roster = ((s && s.roster) || []).slice().sort((a, b) => (b.star || 0) - (a.star || 0)).slice(0, 5);
+        for (let i = 0; i < roster.length; i++) {
+            const p = roster[i];
+            const cv = this._textCanvas(p.name, '★'.repeat(Math.max(1, p.star || 1)), '#1c1420', '#ffd76a');
+            const tex = this._canvasTex(view, cv, 'star' + i);
+            const e = this._billboard(view, root, cx + 150 + i * 34, cy + 250, 26, 30, 30, tex, 0);
+            e.setLocalEulerAngles(-70 * this.DEG, 0, 0);   // lie the plaque toward the walker
+        }
+        // The marquee over the cinema door: what plays today.
+        const now = released[released.length - 1];
+        const mcv = this._textCanvas(now ? now.title : 'СЕГОДНЯ', now ? 'в прокате' : 'скоро', '#200a10', '#ffe08a');
+        this._billboard(view, root, cx + 240, cy + 66, 118, 150, 26, this._canvasTex(view, mcv, 'marquee'), 90);
+        // Dressing: two light stands by the pavilion, a craft table, a parked car.
+        for (const [lx, ly] of [[cx - 320, cy - 60], [cx - 180, cy - 30]]) {
+            this.begin();
+            this.C(lx, ly, 0, 3, 120, '#2e2e34', { rt: 3 });
+            this.G(lx, ly, 126, 10, 8, 10, '#ffe8a0', { glow: true });
+            const hnd = this.finish(view, 0, 0, 0);
+            root.addChild(hnd.root);
+        }
+        this.begin();
+        this.B(cx - 120, cy - 130, 0, 60, 34, 26, '#5a4630');
+        this.C(cx - 120, cy - 130, 26, 3, 60, '#3a3a3a', { rt: 3 });
+        this.G(cx - 120, cy - 130, 92, 40, 10, 40, '#c84a3a');
+        const table = this.finish(view, 0, 0, 0);
+        root.addChild(table.root);
+        const car = this.buildProp(view, 'car', cx + 40, cy + 300, 90, 0);
+        if (car) { root.addChild(car.root); this._lot.car = car; }
+        this._lot.films = released.length;
+        this._lot.stars = roster.length;
+        return root;
+    },
+
+    /** Re-dress the lot when the filmography or the troupe's legends change. */
+    refreshLotDecor(state) {
+        const lot = this._lot;
+        if (!lot || !state) return;
+        const released = (state.released || []).length;
+        const stars = ((state.roster || []).filter((p) => (p.star || 0) > 0)).length;
+        if (released === lot.films && stars === lot.stars) return;
+        const view = lot.view;
+        const handle = { cx: lot.cx, cy: lot.cy };
+        this.lotDecor(view, handle, state);
+    },
+
+    _disposeLotDecor() {
+        const lot = this._lot;
+        if (!lot) return;
+        if (lot.car) { try { this.dispose(lot.car); } catch (e) { /* gone */ } }
+        try { lot.root.destroy(); } catch (e) { /* gone */ }
+        this._lot = null;
+    },
+
     /** sRGB hex -> linear pc.Color, the same space the glow materials paint in. */
     _linColor(hex) {
         const key = String(hex || '#ffd27a').toLowerCase();
@@ -606,6 +905,7 @@ const SetPieces3D = {
         SetPieces3D._deflicker(SetPieces3D._b.parts);
         const h = SetPieces3D.finish(view, baseX, baseY, groundH);
         h.id = id;
+        SetPieces3D._addBackdrop(view, h, id);
         return h;
     },
 
@@ -1277,6 +1577,8 @@ SetPieces3D.buildLot = function (view, cx, cy) {
     S.A('editing_door', cx - 250, cy + 128, 90).A('tower', cx + 50, cy - 180, 90);
     const h = S.finish(view, 0, 0, 0);
     h.id = 'lot';
+    h.cx = cx;
+    h.cy = cy;
     h.waypoints = [
         { x: cx, y: cy + 300 }, { x: cx - 250, y: cy + 40 }, { x: cx + 230, y: cy + 40 },
         { x: cx - 60, y: cy + 100 }, { x: cx + 140, y: cy + 220 }, { x: cx - 300, y: cy + 260 },

@@ -26,3 +26,7 @@ reference for the agent-skills packaging (Phase A of `ROADMAP.md`).
 
 `libs/simplex-noise.js` — https://github.com/jwagner/simplex-noise.js
 Copyright (c) 2022 Jonas Wagner, MIT License.
+
+Antique Camera glTF model (assets/models/antique-camera.glb)
+    (c) 2017-2018 UX3D, via KhronosGroup/glTF-Sample-Assets, license CC0-1.0
+    (public domain). Texture copies downscaled at dev time; no other changes.

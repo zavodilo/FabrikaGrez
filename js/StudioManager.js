@@ -176,6 +176,8 @@ const StudioManager = {
                 this.game.modal(StudioUI_modalGameOver(s));
             }
         }
+        // The lot re-dresses itself when the filmography or the legends grow.
+        if (typeof SetPieces3D !== 'undefined' && SetPieces3D.refreshLotDecor) SetPieces3D.refreshLotDecor(s);
         if (typeof SaveSystem !== 'undefined' && SaveSystem.autosave) SaveSystem.autosave(s);
         return { toasts: toasts };
     },
