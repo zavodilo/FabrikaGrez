@@ -122,7 +122,7 @@ const SetPieces3D = {
     // --- builder ----------------------------------------------------------------------
 
     begin() {
-        this._b = { parts: [], anchors: {}, shell: [] };
+        this._b = { parts: [], anchors: {}, shell: [], lights: [] };
         return this;
     },
 
@@ -151,6 +151,28 @@ const SetPieces3D = {
     /** A named placement point for actors (absolute map coords after finish). */
     A(name, lx, ly, headingDeg, h) {
         this._b.anchors[name] = { lx: lx, ly: ly, heading: headingDeg || 0, h: h || 0 };
+        return this;
+    },
+
+    /**
+     * A PRACTICAL light: a shadowless local source where the set already paints a glow —
+     * a hanging lamp, a neon frame, a campfire, headlights. opts: { kind: 'omni'|'spot',
+     * color: '#rrggbb', range, intensity, flicker: 'fire'|'neon'|'ball'|null,
+     * mode: 'night'|'always' } — 'night' sources sleep through day exteriors, 'always'
+     * ones (fire, indoor neon) burn in every scene. finish() spawns them as children of
+     * the set root, so they ride moveTo/dispose with the set; the handle carries `lights`.
+     */
+    L(lx, ly, h, opts) {
+        const o = opts || {};
+        this._b.lights.push({
+            lx: lx, ly: ly, lh: h || 100,
+            kind: o.kind === 'spot' ? 'spot' : 'omni',
+            color: o.color || '#ffd27a',
+            range: o.range != null ? o.range : 300,
+            intensity: o.intensity != null ? o.intensity : 1.5,
+            flicker: o.flicker || null,
+            mode: o.mode === 'always' ? 'always' : 'night',
+        });
         return this;
     },
 
@@ -188,7 +210,84 @@ const SetPieces3D = {
             const a = b.anchors[name];
             anchors[name] = { x: baseX + a.lx, y: baseY + a.ly, heading: a.heading, h: a.h };
         }
-        return { root: root, anchors: anchors, view: view, groundH: gh, id: '', shell: b.shell.slice() };
+        // Practical sources: children of the set root, off until setPracticals wakes them.
+        /** @type {any[]} */
+        const lights = [];
+        for (const rec of b.lights || []) {
+            const e = new pc.Entity('practical');
+            root.addChild(e);
+            e.setLocalPosition(-rec.lx, rec.lh, rec.ly);
+            e.addComponent('light', { type: rec.kind, castShadows: false });
+            const lt = e.light;
+            lt.range = Math.max(20, rec.range);
+            lt.color = this._linColor(rec.color);
+            lt.intensity = 0;
+            lights.push({ e: e, light: lt, base: Math.max(0, rec.intensity), flicker: rec.flicker, mode: rec.mode, gate: 0, phase: (lights.length * 1.7 + rec.lx * 0.013) % 6.283 });
+        }
+        return { root: root, anchors: anchors, view: view, groundH: gh, id: '', shell: b.shell.slice(), lights: lights };
+    },
+
+    /** sRGB hex -> linear pc.Color, the same space the glow materials paint in. */
+    _linColor(hex) {
+        const key = String(hex || '#ffd27a').toLowerCase();
+        const v = parseInt(key.slice(1), 16);
+        const lin = (/** @type {number} */ c) => {
+            const s = c / 255;
+            return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+        };
+        return new pc.Color(lin((v >> 16) & 255), lin((v >> 8) & 255), lin(v & 255));
+    },
+
+    /**
+     * Wake (or sleep) a handle's practical sources for the scene's hour: 'always' lights burn
+     * in every scene (half strength when the sun talks over them), 'night' lights only when
+     * the scene is not a day exterior. level multiplies everything (0 — all off).
+     */
+    setPracticals(handle, tod, indoor, level) {
+        const lights = handle && handle.lights;
+        if (!lights || !lights.length) return;
+        const U = 'undefined';
+        const master = typeof SETLIGHT !== U ? SETLIGHT : 1;
+        const mul = (level != null ? level : 1) * master;
+        const nightK = typeof SETLIGHT_NIGHT !== U ? SETLIGHT_NIGHT : 1;
+        const dayK = typeof SETLIGHT_DAY !== U ? SETLIGHT_DAY : 0.5;
+        const day = tod !== 'night' && tod !== 'sunset';
+        for (const l of lights) {
+            let gate = 0;
+            if (mul > 0) {
+                if (l.mode === 'always') gate = (day && !indoor) ? dayK : (day ? Math.max(dayK, 0.75) : nightK);
+                else gate = day && !indoor ? 0 : (day ? 0.6 : nightK);   // headlights in a day exterior: off
+            }
+            l.gate = gate;
+            l.light.intensity = l.base * gate;
+        }
+    },
+
+    /**
+     * The flicker clock of the practicals: fires breathe on three sines, neon buzzes and
+     * drops out, the mirror ball pulses. Deterministic in the playback time — a rewatch
+     * flickers identically.
+     */
+    tickPracticals(handle, t) {
+        const lights = handle && handle.lights;
+        if (!lights || !lights.length) return;
+        const U = 'undefined';
+        const flick = typeof SETLIGHT_FLICKER !== U ? SETLIGHT_FLICKER : 1;
+        for (const l of lights) {
+            if (!l.gate) { if (l.light.intensity !== 0) l.light.intensity = 0; continue; }
+            let m = 1;
+            if (flick && l.flicker === 'fire') {
+                const p = l.phase;
+                m = 0.74 + 0.16 * Math.sin(t * 11 + p) + 0.08 * Math.sin(t * 23 + 2 * p) + 0.05 * Math.sin(t * 47 + 3 * p);
+            } else if (flick && l.flicker === 'neon') {
+                const p = l.phase;
+                m = 0.92 + 0.06 * Math.sin(t * 31 + p) + 0.02 * Math.sin(t * 57 + 2 * p);
+                if (Math.sin(t * 0.9 + p) > 0.995) m *= 0.35;      // the tube loses its grip for a frame
+            } else if (flick && l.flicker === 'ball') {
+                m = 0.8 + 0.2 * Math.sin(t * 3 + l.phase);
+            }
+            l.light.intensity = l.base * l.gate * m;
+        }
     },
 
     // --- de-flicker: no two visible surfaces may share a plane ----------------------------------
@@ -254,6 +353,7 @@ const SetPieces3D = {
             C: (lx, ly, h0, r, hh) => { box('cyl', lx, ly, h0 + hh / 2, r, r, hh / 2); return S; },
             G: (lx, ly, hc, rx, ry, rz) => { box('gem', lx, ly, hc, rx, ry, rz); return S; },
             A: (name, lx, ly, heading, h) => { anchors[name] = { x: lx, y: ly, heading: heading || 0, h: h || 0 }; return S; },
+            L: () => S,      // practicals are lights, not geometry: the anti-glare audit ignores them
         };
         const fn = this.SETS[setId];
         if (fn) fn(S);
@@ -371,6 +471,7 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
         // Hanging lamps
         S.C(0, -40, 150, 2, 26, '#3a3a3a', { rt: 2 }).G(0, -40, 142, 12, 8, 12, '#ffd27a', { glow: true });
         S.C(0, 120, 150, 2, 26, '#3a3a3a', { rt: 2 }).G(0, 120, 142, 12, 8, 12, '#ffd27a', { glow: true });
+        S.L(0, -40, 142, { range: 260, intensity: 1.5, mode: 'always' }).L(0, 120, 142, { range: 260, intensity: 1.5, mode: 'always' });
         S.A('bar_in', -100, -152, 90).A('bar_out', -100, -84, -90).A('piano', 170, 108, -90);
         S.A('table1', -40, 140, -90).A('table2', 100, 100, 90).A('door', 0, 168, -90);
         S.A('center', 0, 20, 90).A('corner_l', -210, 150, 0).A('corner_r', 210, -60, 180);
@@ -387,6 +488,7 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
         // Console arc + screens
         S.B(0, -150, 6, 130, 44, 54, '#39404e', {}).B(-120, -134, 6, 110, 40, 54, '#39404e', { yaw: 28 }).B(120, -134, 6, 110, 40, 54, '#39404e', { yaw: -28 });
         S.B(0, -158, 62, 110, 8, 34, '#2ad0c8', { glow: true });
+        S.L(0, -150, 80, { color: '#2ad0c8', range: 280, intensity: 1.2, mode: 'always' });
         S.B(-118, -146, 62, 88, 8, 30, '#7aa0ff', { glow: true, yaw: 28 }).B(118, -146, 62, 88, 8, 30, '#ff9a5a', { glow: true, yaw: -28 });
         // Captain chair + floor light strips + wall pipes
         S.B(0, -40, 6, 44, 44, 12, '#4a5262').B(0, -58, 18, 44, 12, 56, '#5a6272');
@@ -426,6 +528,7 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
             S.G(lx + 18, -108, 126, 7, 5, 7, '#ffe8a0', { glow: true });
         }
         S.C(-120, 108, 10, 9, 26, '#c83a2a', { rt: 7 });
+        S.L(-240, -108, 126, { range: 300, intensity: 1.5, mode: 'night' }).L(0, -108, 126, { range: 300, intensity: 1.5, mode: 'night' }).L(240, -108, 126, { range: 300, intensity: 1.5, mode: 'night' });
         S.B(200, 112, 10, 76, 44, 44, '#3a6a3a').B(200, 108, 54, 80, 48, 5, '#2e5a2e');
         S.C(-320, 60, 10, 14, 30, '#c8c8c0', { rt: 14 }).B(-320, 60, 40, 20, 4, 6, '#8a8a80');  // hydrant-ish
         S.A('road_w', -260, 40, 0).A('road_e', 260, -40, 180).A('walk_n', -60, -120, 90);
@@ -441,6 +544,7 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
         // Fireplace (west)
         S.B(-240, -60, 0, 60, 150, 160, '#7a7a72').B(-216, -60, 20, 20, 90, 90, '#1a1410');
         S.G(-212, -60, 44, 16, 12, 22, '#ff7a2a', { glow: true });
+        S.L(-212, -60, 44, { color: '#ff7a2a', range: 260, intensity: 2.2, flicker: 'fire', mode: 'always' }).L(40, -40, 142, { color: '#ffe8a0', range: 300, intensity: 1.4, mode: 'always' });
         S.B(-240, -60, 160, 80, 170, 10, '#5a4a3a');
         S.B(-238, -60, 172, 30, 20, 26, '#caa13a');                             // mantel clock
         // Sofa + table (east)
@@ -476,6 +580,7 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
         S.C(0, 0, 2, 30, 5, '#5a4a3a', { rt: 34 });
         S.B(-16, 6, 4, 44, 10, 10, '#4a3220', { yaw: 24 }).B(16, -6, 4, 44, 10, 10, '#4a3220', { yaw: -24 });
         S.G(0, 0, 22, 15, 17, 15, '#ff8a30', { glow: true }).G(0, 0, 40, 8, 12, 8, '#ffb050', { glow: true });
+        S.L(0, 0, 26, { color: '#ff8a30', range: 320, intensity: 2.2, flicker: 'fire', mode: 'always' });
         S.B(0, 96, 0, 130, 26, 22, '#5a3a20').C(-52, 96, 0, 9, 22, '#4a3018', { rt: 9 }).C(52, 96, 0, 9, 22, '#4a3018', { rt: 9 });
         S.B(-300, 240, 0, 90, 90, 8, '#3a6a30');                                // mossy patch
         S.A('fire_a', -70, 26, 0).A('fire_b', 70, 26, 180).A('fire_c', 0, -60, 90);
@@ -521,6 +626,7 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
         for (let i = 0; i < 4; i++) S.B(-150 + i * 100, -190, 5, 80, 40, 110, '#39454f');
         for (let i = 0; i < 4; i++) S.B(-150 + i * 100, -172, 40, 60, 4, 5, '#5a6a7a');
         S.B(-80, 0, 186, 140, 8, 4, '#dfe8ff', { glow: true }).B(120, -60, 186, 140, 8, 4, '#dfe8ff', { glow: true });
+        S.L(190, -110, 124, { color: '#9ad0ff', range: 240, intensity: 1.1, mode: 'always' }).L(-80, 0, 180, { color: '#dfe8ff', range: 300, intensity: 1.0, mode: 'always' });
         S.B(40, 160, 2, 200, 8, 2, '#141a20');                                  // cable
         S.A('table', 0, 130, -90).A('table2', -60, 130, -90).A('coil', 150, -40, -135);
         S.A('desk', -190, -20, 90).A('center', 0, 20, 90).A('door', 220, 190, 180);
@@ -547,6 +653,7 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
         }
         // Jukebox + windows + floor strips
         S.B(238, -150, 0, 54, 40, 84, '#caa13a').G(238, -150, 96, 26, 16, 18, '#ff9a3a', { glow: true });
+        S.L(0, -150, 110, { range: 280, intensity: 1.3, mode: 'always' }).L(238, -150, 100, { color: '#ff9a3a', range: 220, intensity: 1.0, flicker: 'neon', mode: 'always' });
         for (let i = 0; i < 3; i++) S.B(-180 + i * 180, -210, 60, 70, 6, 60, '#9ac8e8');
         for (let i = 0; i < 6; i++) S.B(-250 + i * 100, 190, 5, 46, 60, 2, i % 2 ? '#c85a4a' : '#d8d0c0');
         S.A('counter', -35, -30, -90).A('counter2', 35, -30, -90).A('booth_l', -170, 78, 90);
@@ -562,6 +669,7 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
         // Desk (boss behind it, facing south)
         S.B(0, -80, 0, 190, 76, 58, '#5a4630').B(0, -80, 58, 200, 84, 8, '#6a5238');
         S.B(-60, -100, 66, 54, 10, 38, '#1a2028').B(-60, -100, 70, 48, 5, 32, '#7aa0ff', { glow: true });
+        S.L(-60, -100, 84, { color: '#7aa0ff', range: 200, intensity: 0.9, mode: 'always' }).L(0, 40, 170, { color: '#ffe8c0', range: 320, intensity: 1.2, mode: 'always' });
         S.B(50, -90, 66, 40, 28, 3, '#e8e0d0').B(74, -70, 66, 14, 14, 20, '#caa13a');  // papers + trophy
         S.B(0, -20, 0, 50, 50, 8, '#3a3a42').C(0, -20, 8, 7, 24, '#5a5a62', { rt: 7 });
         S.B(0, -6, 32, 46, 46, 8, '#4a4a52').B(0, 16, 40, 46, 10, 52, '#4a4a52');    // swivel chair
@@ -587,6 +695,7 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
         S.G(-270, 150, 196, 12, 8, 12, '#ffe8a0', { glow: true });
         S.C(270, 180, 0, 6, 210, '#3a3a42', { rt: 6 }).B(270, 150, 200, 30, 40, 26, '#4a4a52');
         S.G(270, 150, 196, 12, 8, 12, '#ffe8a0', { glow: true });
+        S.L(-270, 150, 190, { range: 340, intensity: 1.3, mode: 'always' }).L(270, 150, 190, { range: 340, intensity: 1.3, mode: 'always' });
         S.C(0, 30, 40, 4, 96, '#2e2e36', { rt: 4 }).G(0, 30, 140, 8, 7, 8, '#c8c8d0');   // mic
         S.B(-150, -110, 40, 96, 34, 66, '#241a12').B(-150, -128, 84, 88, 16, 6, '#e8e0c8');  // piano
         S.C(-150, -80, 40, 12, 26, '#3a2a1a', { rt: 12 });
@@ -614,6 +723,7 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
         S.B(120, -170, 0, 84, 84, 120, '#3e4650').B(120, -128, 6, 44, 6, 76, '#2a3138');   // door hut
         S.C(-40, -200, 0, 4, 190, '#8a8a90', { rt: 4 }).B(-40, -200, 150, 50, 4, 4, '#8a8a90').B(-40, -200, 176, 34, 4, 4, '#8a8a90');
         S.G(-40, -200, 196, 6, 6, 6, '#ff5a5a', { glow: true });
+        S.L(-40, -200, 196, { color: '#ff5a5a', range: 200, intensity: 0.8, flicker: 'neon', mode: 'night' });
         // Skyline backdrop (north/east, far)
         const sky = [[-420, -420, 120, 260], [-260, -460, 150, 340], [-80, -430, 110, 220], [100, -470, 170, 380], [280, -440, 130, 280], [430, -420, 100, 200], [460, -100, 120, 240], [470, 120, 90, 180]];
         for (const b of sky) {
@@ -651,6 +761,9 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
         // Door (south) with a neon frame.
         S.B(0, 210, 0, 90, 14, 90, '#1c1418');
         S.B(-52, 210, 40, 6, 6, 60, '#ff5a8a', { glow: true }).B(52, 210, 40, 6, 6, 60, '#ff5a8a', { glow: true });
+        S.L(-52, 210, 70, { color: '#ff5a8a', range: 240, intensity: 1.5, flicker: 'neon', mode: 'always' }).L(52, 210, 70, { color: '#ff5a8a', range: 240, intensity: 1.5, flicker: 'neon', mode: 'always' });
+        S.L(-220, 40, 142, { range: 240, intensity: 1.3, mode: 'always' }).L(200, 0, 142, { color: '#ff9ac8', range: 240, intensity: 1.2, mode: 'always' });
+        S.L(0, 60, 140, { color: '#c8d0e0', range: 320, intensity: 1.1, flicker: 'ball', mode: 'always' });
         S.A('stage_l', -90, -140, 90).A('stage_r', 60, -140, -90).A('bar', -160, 40, 0);
         S.A('booth', 200, 0, 180).A('floor', 0, 60, -90).A('door', 0, 190, -90).A('center', 0, -20, 90);
     },
@@ -670,6 +783,7 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
         S.B(60, -20, 6, 90, 26, 24, '#5a4630').B(60, -34, 30, 90, 6, 30, '#5a4630');
         S.B(220, -80, 6, 70, 60, 70, '#3a4a5a').B(220, -80, 76, 78, 68, 8, '#2e3a48');
         S.C(220, -80, 84, 3, 26, '#3a3a3a', { rt: 3 }).G(220, -80, 112, 9, 8, 9, '#ffd27a', { glow: true });
+        S.L(220, -80, 112, { range: 260, intensity: 1.4, mode: 'night' });
         S.B(-220, -90, 6, 30, 20, 22, '#6a4a2a').B(-200, -70, 6, 24, 16, 18, '#4a3a20').B(-230, -60, 6, 20, 14, 16, '#5a4a30');
         S.C(0, -110, 6, 5, 90, '#3a3a42', { rt: 5 }).C(0, -110, 96, 22, 22, '#e8e0c8', { rt: 22 });
         // A waiting wagon silhouette on the tracks.
@@ -697,6 +811,7 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
         S.C(220, 60, 4, 26, 10, '#3a3a3a', { rt: 26 });
         S.B(200, 80, 10, 60, 12, 12, '#5a4630', { yaw: 20 }).B(240, 44, 10, 60, 12, 12, '#5a4630', { yaw: -25 });
         S.G(220, 60, 26, 12, 14, 12, '#ff8a30', { glow: true });
+        S.L(220, 60, 30, { color: '#ff8a30', range: 340, intensity: 2.4, flicker: 'fire', mode: 'always' });
         S.A('tent_l', -160, -40, 90).A('tent_r', 140, -50, -90).A('flag', -20, 0, 0);
         S.A('radio', 60, 70, -90).A('crate_stack', -90, 90, 90).A('fire', 220, 90, 180);
         S.A('center', 0, 20, 90).A('gate', 0, 130, -90);
@@ -739,6 +854,7 @@ SetPieces3D.PROPS = /** @type {Record<string, (S: any) => void>} */ ({
             S.C(w[0], w[1], 14, 8, 6, '#8a8a90', { rt: 8, tilt: 90 });
         }
         S.B(86, -22, 40, 6, 14, 10, '#ffe8a0', { glow: true }).B(86, 22, 40, 6, 14, 10, '#ffe8a0', { glow: true });
+        S.L(92, 0, 48, { color: '#ffe8a0', range: 260, intensity: 1.8, mode: 'night' });
         S.B(-88, -24, 44, 5, 12, 8, '#ff5a4a', { glow: true }).B(-88, 24, 44, 5, 12, 8, '#ff5a4a', { glow: true });
         S.B(88, 0, 30, 8, 60, 10, '#8a8a90');
     },
@@ -800,6 +916,7 @@ SetPieces3D.PROPS = /** @type {Record<string, (S: any) => void>} */ ({
         S.C(0, 0, 0, 7, 130, '#2e3a2e', { rt: 5 });
         S.B(10, 0, 124, 26, 10, 8, '#2e3a2e');
         S.G(20, 0, 126, 9, 7, 9, '#ffe8a0', { glow: true });
+        S.L(20, 0, 126, { range: 300, intensity: 1.6, mode: 'night' });
     },
 
     cactus(S) {

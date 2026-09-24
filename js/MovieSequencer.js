@@ -138,6 +138,8 @@ const MovieSequencer = {
         this._killBirds();
         const v = this._app && this._app.location && this._app.location.view;
         if (v && v.applyLighting && typeof World3D !== 'undefined') v.applyLighting(World3D.cfg());
+        if (v && v.setCinemaRim) v.setCinemaRim(false);      // the rig leaves with the crew
+        if (typeof Sky3D !== 'undefined' && Sky3D.attached) Sky3D.setLot();
         if (typeof CinePost3D !== 'undefined') {
             CinePost3D.setDofPlan('wide');     // deep focus: the lot has no rack
             CinePost3D.setStudio();
@@ -187,6 +189,7 @@ const MovieSequencer = {
         this._stepProps(t);
         this._stepRides();
         this._stepFocus(t);
+        this._stepPracticals();
         this._stepFlash();
 
         if (this.state === 'intro') {
@@ -319,6 +322,18 @@ const MovieSequencer = {
         if (typeof CinePost3D !== 'undefined') {
             CinePost3D.setCinema(this.tl.genre, this.eraClass(this.tl.year), sc.timeOfDay);
         }
+        // Set lighting: the practicals wake for the scene's hour (fires and indoor neon burn
+        // always, headlights sleep through a day exterior), and the procedural sky dresses
+        // exteriors — a dollhouse interior has no horizon, so it hides the dome.
+        const indoorSet = !!(MovieData.SET_INFO[sc.set] || {}).indoor;
+        if (typeof SetPieces3D !== 'undefined' && SetPieces3D.setPracticals) {
+            SetPieces3D.setPracticals(this.set, sc.timeOfDay, indoorSet, 1);
+            for (const id of Object.keys(this.props)) SetPieces3D.setPracticals(this.props[id], sc.timeOfDay, indoorSet, 1);
+        }
+        if (typeof Sky3D !== 'undefined' && Sky3D.attached) {
+            if (indoorSet) Sky3D.hide();
+            else { Sky3D.show(); Sky3D.setLook(sc.timeOfDay, grade); }
+        }
         this._spawnBirds(sc);
         const genre = MovieData.GENRES[this.tl.genre] || {};
         Sound3D.music(MovieData.MUSIC[sc.music || genre.music || 'studio'] || null);
@@ -371,6 +386,7 @@ const MovieSequencer = {
         this._focusSnap = sh.trans === 'cut' || !!snap;
         if (typeof CinePost3D !== 'undefined') CinePost3D.setDofPlan(tag);
         this._shadowsFor(tag);
+        this._lightRig(tag);
         const cs = UI.get('cineScene');
         if (cs && this.tl.scenes[this.si]) cs.setText(this.tl.scenes[this.si].label || '');
     },
@@ -404,6 +420,53 @@ const MovieSequencer = {
         const blockers = typeof CINE_SHADOW_BLOCKERS !== U ? CINE_SHADOW_BLOCKERS : 8;
         const penumbra = typeof CINE_SHADOW_PENUMBRA !== U ? CINE_SHADOW_PENUMBRA : 10;
         view.setCinemaShadows(plan.map, plan.pcss, { samples: samples, blockers: blockers, penumbra: penumbra });
+    },
+
+    /**
+     * The shot's three-point rig (pure numbers — tests hold them in their hands): the key
+     * stands CINE_KEY_OFFSET_DEG off the lens axis on the scene's side (the 180° rule holds
+     * for light too), its elevation follows the hour and the plan; the rim peeks around the
+     * subject from the opposite side. The fill rides the lens (CineCam3D._syncFill).
+     */
+    lightRigFor(tag, tod, side) {
+        const U = 'undefined';
+        const off = typeof CINE_KEY_OFFSET_DEG !== U ? CINE_KEY_OFFSET_DEG : 42;
+        const elDay = typeof CINE_KEY_EL_DAY !== U ? CINE_KEY_EL_DAY : 48;
+        const elSet = typeof CINE_KEY_EL_SET !== U ? CINE_KEY_EL_SET : 14;
+        const elNight = typeof CINE_KEY_EL_NIGHT !== U ? CINE_KEY_EL_NIGHT : 38;
+        const rDay = typeof CINE_RIM_DAY !== U ? CINE_RIM_DAY : 0.25;
+        const rSet = typeof CINE_RIM_SET !== U ? CINE_RIM_SET : 0.5;
+        const rNight = typeof CINE_RIM_NIGHT !== U ? CINE_RIM_NIGHT : 0.8;
+        const rOff = typeof CINE_RIM_OFFSET_DEG !== U ? CINE_RIM_OFFSET_DEG : 18;
+        const rEl = typeof CINE_RIM_EL_DEG !== U ? CINE_RIM_EL_DEG : 30;
+        const rCol = typeof CINE_RIM_COLOR !== U ? CINE_RIM_COLOR : 0xbcd4ff;
+        const s = side < 0 ? -1 : 1;
+        const plan = (typeof MovieData !== 'undefined' && MovieData.planSize) ? MovieData.planSize(tag) : 'mid';
+        // A close-up gets a lower, sculpting key; a wide master keeps the hour's elevation high.
+        const base = tod === 'night' ? elNight : (tod === 'sunset' ? elSet : elDay);
+        const keyEl = plan === 'close' ? Math.max(8, base - 8) : (plan === 'wide' ? Math.min(70, base + 8) : base);
+        const rimI = tod === 'night' ? rNight : (tod === 'sunset' ? rSet : rDay);
+        return { side: s, keyOff: s * off, keyEl: keyEl, rimI: rimI, rimOff: rOff, rimEl: rEl, rimColor: rCol };
+    },
+
+    /** Aim the shot's key (the sun) and rim from the live pose; the sky disc follows the key. */
+    _lightRig(tag) {
+        const view = this._app && this._app.location && this._app.location.view;
+        if (!view || typeof CineCam3D === 'undefined' || !CineCam3D.tgt) return;
+        const sc = this.tl && this.tl.scenes ? this.tl.scenes[this.si] : null;
+        const tod = (sc && sc.timeOfDay) || 'day';
+        const plan = this.lightRigFor(tag, tod, this.si % 2 ? -1 : 1);
+        const pose = CineCam3D.tgt;
+        if (view.aimSun) view.aimSun(pose.az + plan.keyOff, plan.keyEl);
+        if (view.setCinemaRim) view.setCinemaRim(plan.rimI > 0, pose.az + 180 - plan.side * plan.rimOff, plan.rimEl, plan.rimI, plan.rimColor);
+        if (typeof Sky3D !== 'undefined' && Sky3D.attached && Sky3D.visible) Sky3D.setSun(pose.az + plan.keyOff, plan.keyEl);
+    },
+
+    /** Fires breathe and neon buzzes on the playback clock (deterministic rewatch). */
+    _stepPracticals() {
+        if (typeof SetPieces3D === 'undefined' || !SetPieces3D.tickPracticals) return;
+        if (this.set) SetPieces3D.tickPracticals(this.set, this.t);
+        for (const id of Object.keys(this.props)) SetPieces3D.tickPracticals(this.props[id], this.t);
     },
 
     _camera(sh, forceSnap) {

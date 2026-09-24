@@ -261,6 +261,37 @@ const CINE_SHADOW_PENUMBRA = 10;        // PCSS light area size in world px: big
 // procedurally from the film's seed — every picture scratches its own copy of the glass. ---
 const CINE_FLARE = 0.5;                 // 0..1 anamorphic flare strength (0 — clean glass)
 const CINE_DIRT = 0.55;                 // 0..1 lens dirt: specks and hairs (old stocks add more)
+
+// --- Set lighting (MovieSequencer._lightRig): a three-point scheme PER SHOT, the way a real
+// gaffer rigs it: the key (the sun, re-aimed off the lens axis), the fill (rides the lens,
+// WORLD3D_CINEMA_FILL) and a shadowless rim from behind the subject. AAA games light a level
+// once; we light the take — the sequencer knows the plan, so the rig follows the plan. ---
+const CINE_KEY_OFFSET_DEG = 42;         // the key stands this many degrees off the lens axis
+const CINE_KEY_EL_DAY = 48;             // key elevation by the hour: high noon…
+const CINE_KEY_EL_SET = 14;             // …a low golden sunset…
+const CINE_KEY_EL_NIGHT = 38;           // …a cold high moon
+const CINE_RIM_DAY = 0.25;              // rim strength by the hour: a whisper by day…
+const CINE_RIM_SET = 0.5;               // …a warm kicker at sunset…
+const CINE_RIM_NIGHT = 0.8;             // …at night the rim cuts the figure out of the dark
+const CINE_RIM_OFFSET_DEG = 18;         // the rim peeks this far around the subject, off-axis
+const CINE_RIM_EL_DEG = 30;             // rim elevation: above the shoulder line
+const CINE_RIM_COLOR = 0xbcd4ff;        // a cool rim against a warm key — the classic split
+
+// --- Practical sources (SetPieces3D): neon, lamps, headlights, campfires and the mirror ball
+// light the set for real (shadowless local lights, clustered by the engine). Fires flicker,
+// neon breathes — deterministically, from the playback clock. ---
+const SETLIGHT = 1;                     // 1 — practicals shine; 0 — emissive paint only
+const SETLIGHT_NIGHT = 1.0;             // their strength in a night scene
+const SETLIGHT_DAY = 0.5;               // by day the sun talks over them: half strength indoors
+const SETLIGHT_FLICKER = 1;             // 1 — fire flickers and neon buzzes
+
+// --- Procedural sky (Sky3D.js): a gradient dome with the sun disc, stars at night and a ring
+// of billboard clouds drifting around the camera. The lot and every exterior share it. ---
+const SKY_PROCEDURAL = 1;               // 1 — the dome replaces the flat clear color
+const SKY_DOME_R = 6000;                // dome radius, px (inside the 9000 far clip)
+const SKY_CLOUDS = 9;                   // cloud density in the dome shader (0 — a cloudless world)
+const SKY_SUN_SIZE = 0.9975;            // cos of the disc's half-angle: bigger = a tighter sun
+const SKY_STARS = 1;                    // 1 — stars fade in with the night
 // Cinema color science: the sun, the sky and the ambient follow the scene's time of day, so a
 // night scene is lit by a cold moon and a sunset by a low golden key, not by the studio noon.
 const CINEMA_SUN_DAY = 0xffedc7;        // day key color

@@ -1539,6 +1539,240 @@ const SCENE_SCHEMA = {
             "value": 16771535
         },
         {
+            "group": "setlight",
+            "name": "CINE_KEY_OFFSET_DEG",
+            "min": 10,
+            "max": 80,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "Key off-axis (°)",
+            "value": 42
+        },
+        {
+            "group": "setlight",
+            "name": "CINE_KEY_EL_DAY",
+            "min": 10,
+            "max": 80,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "Key elevation, day (°)",
+            "value": 48
+        },
+        {
+            "group": "setlight",
+            "name": "CINE_KEY_EL_SET",
+            "min": 4,
+            "max": 40,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "Key elevation, sunset (°)",
+            "value": 14
+        },
+        {
+            "group": "setlight",
+            "name": "CINE_KEY_EL_NIGHT",
+            "min": 10,
+            "max": 70,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "Key elevation, night (°)",
+            "value": 38
+        },
+        {
+            "group": "setlight",
+            "name": "CINE_RIM_DAY",
+            "min": 0,
+            "max": 1.5,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Rim strength, day",
+            "value": 0.25
+        },
+        {
+            "group": "setlight",
+            "name": "CINE_RIM_SET",
+            "min": 0,
+            "max": 1.5,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Rim strength, sunset",
+            "value": 0.5
+        },
+        {
+            "group": "setlight",
+            "name": "CINE_RIM_NIGHT",
+            "min": 0,
+            "max": 2,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Rim strength, night",
+            "value": 0.8
+        },
+        {
+            "group": "setlight",
+            "name": "CINE_RIM_OFFSET_DEG",
+            "min": 5,
+            "max": 60,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "Rim off-axis (°)",
+            "value": 18
+        },
+        {
+            "group": "setlight",
+            "name": "CINE_RIM_EL_DEG",
+            "min": 10,
+            "max": 60,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "Rim elevation (°)",
+            "value": 30
+        },
+        {
+            "group": "setlight",
+            "name": "CINE_RIM_COLOR",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "color",
+            "options": null,
+            "label": "Rim color",
+            "value": 12375295
+        },
+        {
+            "group": "setlight",
+            "name": "SETLIGHT",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "no"
+                },
+                {
+                    "value": 1,
+                    "label": "yes"
+                }
+            ],
+            "label": "Practical sources",
+            "value": 1
+        },
+        {
+            "group": "setlight",
+            "name": "SETLIGHT_NIGHT",
+            "min": 0,
+            "max": 2,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Practicals at night",
+            "value": 1
+        },
+        {
+            "group": "setlight",
+            "name": "SETLIGHT_DAY",
+            "min": 0,
+            "max": 1,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Practicals by day",
+            "value": 0.5
+        },
+        {
+            "group": "setlight",
+            "name": "SETLIGHT_FLICKER",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "no"
+                },
+                {
+                    "value": 1,
+                    "label": "yes"
+                }
+            ],
+            "label": "Flicker",
+            "value": 1
+        },
+        {
+            "group": "setlight",
+            "name": "SKY_PROCEDURAL",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "no"
+                },
+                {
+                    "value": 1,
+                    "label": "yes"
+                }
+            ],
+            "label": "Procedural sky",
+            "value": 1
+        },
+        {
+            "group": "setlight",
+            "name": "SKY_CLOUDS",
+            "min": 0,
+            "max": 18,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "Clouds",
+            "value": 9
+        },
+        {
+            "group": "setlight",
+            "name": "SKY_SUN_SIZE",
+            "min": 0.99,
+            "max": 0.9995,
+            "step": 0.0005,
+            "kind": "number",
+            "options": null,
+            "label": "Sun disc size",
+            "value": 0.9975
+        },
+        {
+            "group": "setlight",
+            "name": "SKY_STARS",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "no"
+                },
+                {
+                    "value": 1,
+                    "label": "yes"
+                }
+            ],
+            "label": "Stars at night",
+            "value": 1
+        },
+        {
             "group": "postfx",
             "name": "GFX_QUALITY_DEFAULT",
             "min": null,

@@ -100,7 +100,7 @@ try {
     // the logic tests cannot see that, so the builders are exercised here for real.
     const built = await st(() => {
         const view = app.location.view;
-        const sets = [], props = [];
+        const sets = [], props = [], lit = {};
         for (const id of Object.keys(SetPieces3D.SETS)) {
             try {
                 const h = SetPieces3D.buildSet(view, id, 3200, 3200, 0);
@@ -108,6 +108,15 @@ try {
                 else {
                     const n = Object.keys(h.anchors || {}).length;
                     if (n < 2) sets.push(id + ': только ' + n + ' якорей');
+                    // Practical sources: the set carries them, the night wakes them, day sleeps them.
+                    const lights = h.lights || [];
+                    lit[id] = lights.length;
+                    if (lights.length) {
+                        SetPieces3D.setPracticals(h, 'night', false, 1);
+                        if (!lights.some((l) => l.light.intensity > 0)) sets.push(id + ': практические не зажглись ночью');
+                        SetPieces3D.setPracticals(h, 'day', false, 1);
+                        if (lights.filter((l) => l.mode === 'night').some((l) => l.light.intensity !== 0)) sets.push(id + ': night-источники не спят днём');
+                    }
                     SetPieces3D.dispose(h);
                 }
             } catch (e) { sets.push(id + ': ' + String(e.message).slice(0, 70)); }
@@ -115,13 +124,17 @@ try {
         for (const id of Object.keys(SetPieces3D.PROPS)) {
             try {
                 const h = SetPieces3D.buildProp(view, id, 3200, 3400, 0, 0);
-                if (!h) props.push(id + ': null'); else SetPieces3D.dispose(h);
+                if (!h) props.push(id + ': null');
+                else { lit[id] = (h.lights || []).length; SetPieces3D.dispose(h); }
             } catch (e) { props.push(id + ': ' + String(e.message).slice(0, 70)); }
         }
-        return { sets: sets, props: props, nSets: Object.keys(SetPieces3D.SETS).length, nProps: Object.keys(SetPieces3D.PROPS).length };
+        return { sets: sets, props: props, nSets: Object.keys(SetPieces3D.SETS).length, nProps: Object.keys(SetPieces3D.PROPS).length, lit: lit };
     });
     check('строятся все декорации', built.sets.length === 0, built.nSets + ' шт.' + (built.sets.length ? ' → ' + built.sets.join('; ') : ''));
     check('строится весь реквизит', built.props.length === 0, built.nProps + ' шт.' + (built.props.length ? ' → ' + built.props.join('; ') : ''));
+    check('свет: практические источники несут неон, лампы и костры', (built.lit.nightclub || 0) >= 5 && (built.lit.camp || 0) >= 1 && (built.lit.car || 0) >= 1,
+        'клуб ' + (built.lit.nightclub || 0) + ', лагерь ' + (built.lit.camp || 0) + ', машина ' + (built.lit.car || 0));
+    check('свет: процедурное небо прикреплено к виду двора', await st(() => typeof Sky3D !== 'undefined' && Sky3D.attached && Sky3D.visible && !!Sky3D.dome));
 
     // --- 1. the main menu boots clean -----------------------------------------------------
     await shot('01-menu');
@@ -351,6 +364,11 @@ try {
                 speakerDist: a ? CineCam3D.distTo(a.x, a.y, a.h + 150) : -1,
                 pcss: view.sun.shadowType === pc.SHADOW_PCSS_32F,
                 shadowMap: view.sun.shadowResolution,
+                rimOn: view.rim ? view.rim.intensity > 0 : false,
+                skyUp: typeof Sky3D !== 'undefined' && Sky3D.attached && Sky3D.visible && !!Sky3D.dome && Sky3D.dome.enabled,
+                indoorSet: !!(MovieData.SET_INFO[(sc && sc.set) || ''] || {}).indoor,
+                practicals: ((MovieSequencer.set && MovieSequencer.set.lights) || []).filter((l) => l.light.intensity > 0).length,
+                setLights: ((MovieSequencer.set && MovieSequencer.set.lights) || []).length,
                 flare: !!document.querySelector('.cine-flare'),
                 dirt: !!document.querySelector('.cine-dirt'),
                 flicker: !!document.querySelector('.cine-flicker'),
@@ -372,6 +390,15 @@ try {
             'pcss ' + optics.pcss + ', карта ' + optics.shadowMap);
         check('оптика: стекло объектива — flare и плёночные слои эпохи', optics.flare && (optics.era === 'era-clean' || (optics.dirt && optics.flicker)),
             'эпоха ' + optics.era + ', flare ' + optics.flare + ', dirt ' + optics.dirt + ', flicker ' + optics.flicker);
+        check('свет: трёхточечная схема per-shot — контровой работает', optics.rimOn,
+            'rim on ' + optics.rimOn + ', план ' + optics.tag);
+        check('свет: процедурное небо по декорации — экстерьер с куполом, интерьер без',
+            optics.indoorSet ? !optics.skyUp : optics.skyUp,
+            'интерьер ' + optics.indoorSet + ', небо ' + optics.skyUp);
+        if (optics.setLights > 0) {
+            check('свет: практические источники декорации проснулись', optics.practicals > 0,
+                'горят ' + optics.practicals + ' из ' + optics.setLights);
+        }
     }
 
     // Run the WHOLE picture deterministically: main.js clamps dt to 0.1 s and swiftshader gives a
@@ -425,11 +452,15 @@ try {
             flare: !!document.querySelector('.cine-flare'),
             pcss: view.sun.shadowType === pc.SHADOW_PCSS_32F,
             map: view.sun.shadowResolution,
+            rimOn: view.rim ? view.rim.intensity > 0 : false,
+            skyUp: typeof Sky3D !== 'undefined' && Sky3D.attached && Sky3D.visible,
         };
     });
     check('оптика: после кино DoF выключен, стекло снято, тени вернулись к дефолту',
         !opticsAfter.dofOn && !opticsAfter.flare && !opticsAfter.pcss && opticsAfter.map <= 2048,
         'dof ' + opticsAfter.dofOn + ', flare ' + opticsAfter.flare + ', pcss ' + opticsAfter.pcss + ', карта ' + opticsAfter.map);
+    check('свет: после кино риг снят, небо двора вернулось', !opticsAfter.rimOn && opticsAfter.skyUp,
+        'rim ' + opticsAfter.rimOn + ', небо ' + opticsAfter.skyUp);
 
     // --- 11. dailies: watch a single scene straight from the script ---------------------------------------------
     await st(() => { if (MovieSequencer.playing) MovieSequencer.stop(true); });

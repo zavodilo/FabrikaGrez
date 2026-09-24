@@ -40,6 +40,9 @@ function startGame() {
     // The post-processing frame (ACES, bloom, SSAO, vignette, genre LUTs) hangs on the view's
     // camera; the stored preset is restored inside attach.
     if (typeof CinePost3D !== 'undefined') CinePost3D.attach(location.view);
+    // The procedural sky (gradient dome, sun disc, stars, drifting cloud billboards) hangs on
+    // the same view; the lot wears its neutral day until a scene dresses it otherwise.
+    if (typeof Sky3D !== 'undefined' && Sky3D.attach(location.view)) Sky3D.setLot();
     const game = window.app.game = new Game(window.app);
     console.log('ArcEngine: локация запущена, объектов ' + location.objects.length + '.');
     updateLoadingProgress(70);

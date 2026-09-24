@@ -898,6 +898,15 @@ class View3D {
         this.fill = this.fillEntity.light;
         this.fill.intensity = 0;
         this.fill.castShadows = false;
+        // The cinema rim: a third shadowless directional from BEHIND the subject — the classic
+        // three-point kicker that cuts the figure out of the background. The sun stays the one
+        // and only shadow caster (render-conventions), the rig re-aims it per shot as the key.
+        this.rimEntity = new pc.Entity('cinema-rim');
+        this.root.addChild(this.rimEntity);
+        this.rimEntity.addComponent('light', { type: 'directional' });
+        this.rim = this.rimEntity.light;
+        this.rim.intensity = 0;
+        this.rim.castShadows = false;
         this._shadowRadius = opts.shadowRadius || (IS_MOBILE ? Math.min(520, c.shadowRadius) : c.shadowRadius);
         this._mapSize = IS_MOBILE ? Math.max(512, c.shadowMap / 2) : c.shadowMap;
 
@@ -959,6 +968,34 @@ class View3D {
             sg.shadowBlockerSamples = Math.max(0, Math.round(o.blockers != null ? o.blockers : 8));
             sg.penumbraSize = Math.max(0.01, Number(o.penumbra != null ? o.penumbra : 10));
         }
+    }
+
+    /**
+     * Re-aim the sun (the shot's KEY) without touching its color, intensity or shadow setup:
+     * the per-shot three-point rig moves the key off the lens axis while the scene's hour
+     * keeps owning the light's warmth. az/el are the same map-space degrees applyLighting uses.
+     */
+    aimSun(azDeg, elDeg) {
+        const sg = this.sun;
+        if (!sg || typeof pc === 'undefined') return;
+        const dir = World3D.sunDirection({ sunAz: azDeg, sunEl: Math.max(4, Math.min(88, elDeg)), sunIntensity: 1, sunColor: 0xffffff });
+        this.sunEntity.setPosition(0, 0, 0);
+        this.sunEntity.lookAt(new pc.Vec3(dir.x, dir.y, dir.z).add(this.sunEntity.getPosition()), pc.Vec3.UP);
+    }
+
+    /**
+     * Aim (or kill) the cinema rim: a shadowless directional from behind the subject, opposite
+     * the key, so shoulders and hair catch an edge of light. intensity 0 hides it.
+     */
+    setCinemaRim(on, azDeg, elDeg, intensity, colorHex) {
+        if (!this.rim) return;
+        if (!on || !intensity) { this.rim.intensity = 0; return; }
+        const dir = World3D.sunDirection({ sunAz: azDeg, sunEl: Math.max(6, Math.min(60, elDeg)), sunIntensity: 1, sunColor: 0xffffff });
+        this.rimEntity.setPosition(0, 0, 0);
+        this.rimEntity.lookAt(new pc.Vec3(dir.x, dir.y, dir.z).add(this.rimEntity.getPosition()), pc.Vec3.UP);
+        const col = World3D.hexColor3(colorHex != null ? colorHex : 0xbcd4ff);
+        this.rim.color = new pc.Color(col.r * intensity, col.g * intensity, col.b * intensity);
+        this.rim.intensity = 1;
     }
 
     applyLighting(c) {
