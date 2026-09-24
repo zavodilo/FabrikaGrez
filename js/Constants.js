@@ -302,6 +302,17 @@ const PART_SPARKS_N = 36;               // sparks of a fire or a gunshot
 const PART_SMOKE_N = 18;                // smoke puffs (they grow as they rise)
 const PART_FIRE_N = 22;                 // fire tongues (they shrink and die)
 const ACTOR_SECONDARY = 1;              // 1 — hair and cloth lag the body on a spring
+
+// --- Frame composition (MovieSequencer compPlan/_foreground, CinePost3D accent LUTs):
+// one dominant palette per scene kind, a contrasty key on close plans, aerial perspective
+// by the plan's depth, a foreground frame on the right shots and the rule of thirds. ---
+const CINE_COLORSCRIPT = 1;             // 1 — the scene kind tints its LUT (color script)
+const CINE_KEY_BOOST_CLOSE = 1.18;      // close plans: the key rides the subject up
+const CINE_VIGNETTE_CLOSE = 1.18;       // …and the edges sink a little deeper
+const CINE_HAZE_WIDE = 1.3;             // wide masters breathe aerial perspective
+const CINE_HAZE_CLOSE = 0.75;           // close plans keep the air clear
+const CINE_FRAME_ASPECT = 1.78;         // the gate's width over height (16:9)
+const CINE_FOREGROUND = 0.5;            // chance a shot gets a foreground frame (0 — never)
 // Cinema color science: the sun, the sky and the ambient follow the scene's time of day, so a
 // night scene is lit by a cold moon and a sunset by a low golden key, not by the studio noon.
 const CINEMA_SUN_DAY = 0xffedc7;        // day key color

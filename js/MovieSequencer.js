@@ -150,6 +150,8 @@ const MovieSequencer = {
         this._focusDist = null;
         this._focusSnap = false;
         this._glass = null;
+        if (this._fg) { SetPieces3D.dispose(this._fg); this._fg = null; }
+        if (typeof CinePost3D !== 'undefined' && CinePost3D.setPlanVignette) CinePost3D.setPlanVignette(1);
         Sound3D.music(null);
         if (this._proj) { this._proj.stop(); this._proj = null; }
         for (const id of Object.keys(this.props)) SetPieces3D.dispose(this.props[id]);
@@ -323,7 +325,8 @@ const MovieSequencer = {
             view0.applyLighting(Object.assign({}, World3D.cfg(), grade));
         }
         if (typeof CinePost3D !== 'undefined') {
-            CinePost3D.setCinema(this.tl.genre, this.eraClass(this.tl.year), sc.timeOfDay);
+            CinePost3D.setCinema(this.tl.genre, this.eraClass(this.tl.year), sc.timeOfDay,
+                (typeof MovieData !== 'undefined' && MovieData.accentFor) ? MovieData.accentFor(sc.kind) : null);
         }
         // Set lighting: the practicals wake for the scene's hour (fires and indoor neon burn
         // always, headlights sleep through a day exterior), and the procedural sky dresses
@@ -395,6 +398,8 @@ const MovieSequencer = {
         if (typeof CinePost3D !== 'undefined') CinePost3D.setDofPlan(tag);
         this._shadowsFor(tag);
         this._lightRig(tag);
+        this._compPlan(tag);
+        this._foreground(sh, tag);
         const cs = UI.get('cineScene');
         if (cs && this.tl.scenes[this.si]) cs.setText(this.tl.scenes[this.si].label || '');
     },
@@ -455,6 +460,65 @@ const MovieSequencer = {
         const keyEl = plan === 'close' ? Math.max(8, base - 8) : (plan === 'wide' ? Math.min(70, base + 8) : base);
         const rimI = tod === 'night' ? rNight : (tod === 'sunset' ? rSet : rDay);
         return { side: s, keyOff: s * off, keyEl: keyEl, rimI: rimI, rimOff: rOff, rimEl: rEl, rimColor: rCol };
+    },
+
+    /**
+     * The composition plan of a shot (pure numbers — tests hold them): a close-up lifts its
+     * key and sinks its vignette so the subject reads against the scene; a wide master lets
+     * the air stack (aerial perspective). { keyBoost, vignette, haze }.
+     */
+    compPlanFor(tag) {
+        const U = 'undefined';
+        const kb = typeof CINE_KEY_BOOST_CLOSE !== U ? CINE_KEY_BOOST_CLOSE : 1.18;
+        const vg = typeof CINE_VIGNETTE_CLOSE !== U ? CINE_VIGNETTE_CLOSE : 1.18;
+        const hw = typeof CINE_HAZE_WIDE !== U ? CINE_HAZE_WIDE : 1.3;
+        const hc = typeof CINE_HAZE_CLOSE !== U ? CINE_HAZE_CLOSE : 0.75;
+        const plan = (typeof MovieData !== 'undefined' && MovieData.planSize) ? MovieData.planSize(tag) : 'mid';
+        if (plan === 'close') return { keyBoost: kb, vignette: vg, haze: hc };
+        if (plan === 'wide') return { keyBoost: 1, vignette: 0.92, haze: hw };
+        return { keyBoost: 1 + (kb - 1) * 0.4, vignette: 1, haze: 1 };
+    },
+
+    /** Write the composition plan onto the view and the post frame. */
+    _compPlan(tag) {
+        const plan = this.compPlanFor(tag);
+        const view = this._app && this._app.location && this._app.location.view;
+        if (view) {
+            if (view.setKeyBoost) view.setKeyBoost(plan.keyBoost);
+            if (view.setHaze) view.setHaze(plan.haze);
+        }
+        if (typeof CinePost3D !== 'undefined' && CinePost3D.setPlanVignette) CinePost3D.setPlanVignette(plan.vignette);
+    },
+
+    /**
+     * The foreground frame: on over-shoulders and interior close/medium shots a dark silhouette
+     * (a door jamb, a leaf cluster) edges the frame from the camera's own corner — the cheapest
+     * depth cue in cinema. Parented to the camera entity, so it rides every glide.
+     */
+    _foreground(sh, tag) {
+        if (this._fg) { SetPieces3D.dispose(this._fg); this._fg = null; }
+        const U = 'undefined';
+        const chance = typeof CINE_FOREGROUND !== U ? CINE_FOREGROUND : 0.5;
+        if (!chance) return;
+        const sc = this.tl && this.tl.scenes ? this.tl.scenes[this.si] : null;
+        const indoor = !!(sc && (MovieData.SET_INFO[sc.set] || {}).indoor);
+        const plan = (typeof MovieData !== 'undefined' && MovieData.planSize) ? MovieData.planSize(tag) : 'mid';
+        const want = tag === 'over' || ((plan === 'close' || plan === 'mid') && indoor);
+        if (!want) return;
+        const seed = ((this.tl && this.tl.seed) || 0) + this.si * 31 + this.shot * 7;
+        const roll = (typeof Rng !== 'undefined' && Rng.create) ? Rng.create('fg-' + seed).float(0, 1) : 0.5;
+        if (roll > chance) return;
+        const view = this._app && this._app.location && this._app.location.view;
+        if (!view || typeof CineCam3D === 'undefined' || !CineCam3D.view) return;
+        const h = SetPieces3D.buildProp(view, indoor ? 'fdoor' : 'ffoliage', this.base.x + 4000, this.base.y + 4000, 0, 0);
+        if (!h) return;
+        const cam = CineCam3D.view.camEntity;
+        cam.addChild(h.root);
+        const side = roll > chance / 2 ? 1 : -1;
+        h.root.setLocalPosition(side * 62, -34, -95);     // camera-local: ahead, aside, below center
+        h.root.setLocalEulerAngles(0, side * -14, 0);
+        h.root.setLocalScale(1.25, 1.25, 1.25);
+        this._fg = h;
     },
 
     /** Aim the shot's key (the sun) and rim from the live pose; the sky disc follows the key. */
@@ -593,6 +657,13 @@ const MovieSequencer = {
         if (cam.roll != null) p.roll = cam.roll;
         if (cam.fov != null) p.fov = cam.fov;
         if (cam.az != null && (type === 'medium' || type === 'close')) p.az = cam.az;
+        // The rule of thirds on hand-written poses: the look-at steps aside so the subject
+        // lands on a thirds line; coverage alternates the side shot by shot.
+        if ((type === 'close' || type === 'medium' || type === 'low') && cam.x == null && typeof MovieData !== 'undefined' && MovieData.thirdsOffset) {
+            const dist = 720 / (2 * Math.tan(p.fov * Math.PI / 360) * Math.max(0.05, p.zoom));
+            const off = MovieData.thirdsOffset(p.az, dist, p.fov, (this.shot % 2) ? 1 : -1);
+            p.x += off.dx; p.y += off.dy;
+        }
         return p;
     },
 
@@ -1131,6 +1202,8 @@ const MovieSequencer = {
     _focusSnap: false,
     /** @type {{ seed: string, flare: string | null, dirt: string | null } | null} glass cache. */
     _glass: null,
+    /** @type {any} the foreground frame prop of the current shot, if the shot earned one. */
+    _fg: null,
 };
 
 // The beat cursor resets on every shot switch — hook into _beginShot.

@@ -16,6 +16,12 @@ const MovieData = {
     fovFor: null,
     /** Coarse plan class for DoF/shadows/lighting: 'close'|'mid'|'wide' (assigned below). @type {((tag: string) => string) | null} */
     planSize: null,
+    /** The color-script accent table by scene kind (filled below). @type {Record<string, number[]> | null} */
+    ACCENTS: null,
+    /** The scene kind's dominant palette accent (assigned below). @type {((kind: string) => number[]) | null} */
+    accentFor: null,
+    /** Rule-of-thirds look-at offset in map px (assigned below). @type {((azDeg: number, dist: number, vfovDeg: number, side: number) => { dx: number, dy: number }) | null} */
+    thirdsOffset: null,
 
     // --- sound -------------------------------------------------------------------------
     // SFX ids used by timeline beats -> asset paths (literals for the scanner).
@@ -731,4 +737,47 @@ MovieData.planSize = function (tag) {
         case 'wide': case 'crane': case 'fixed': return 'wide';
         default: return 'mid';
     }
+};
+
+// --- color script: one dominant palette per scene kind ---------------------------------------
+// The accent biases the LUT's highlight (and a little of the shadow) split-tone, so a
+// romance scene keeps a rose gate and a crisis a cold steel one — the picture has one
+// dominant color per scene, the way a color script promises. Numbers are content, like
+// the genre tables; CINE_COLORSCRIPT masters the whole effect.
+MovieData.ACCENTS = {
+    intro: [0.02, 0.01, 0.0],
+    meet: [0.05, 0.03, -0.01],
+    setup: [0.0, 0.01, 0.02],
+    threat: [-0.02, 0.01, 0.05],
+    chase: [0.06, 0.02, -0.03],
+    fight: [0.07, -0.02, -0.02],
+    romance: [0.06, 0.01, 0.03],
+    reveal: [-0.02, 0.04, 0.05],
+    comic: [0.05, 0.03, 0.0],
+    crisis: [-0.03, 0.0, 0.06],
+    climax: [0.06, -0.01, 0.02],
+    coda: [0.04, 0.02, 0.01],
+};
+
+/** The scene kind's accent (a 0..1 master lives in CINE_COLORSCRIPT); unknown kinds stay neutral. */
+MovieData.accentFor = function (kind) {
+    const U = 'undefined';
+    const k = typeof CINE_COLORSCRIPT !== U ? CINE_COLORSCRIPT : 1;
+    const a = MovieData.ACCENTS[kind || ''] || [0, 0, 0];
+    return [a[0] * k, a[1] * k, a[2] * k];
+};
+
+/**
+ * The rule of thirds (pure): how far to shift the look-at point sideways so the subject
+ * lands on a thirds line instead of the center. The offset is perpendicular to the lens
+ * axis in MAP space; side ±1 chooses the left/right third (coverage alternates it).
+ * @returns {{ dx: number, dy: number }} map px
+ */
+MovieData.thirdsOffset = function (azDeg, dist, vfovDeg, side) {
+    const U = 'undefined';
+    const aspect = typeof CINE_FRAME_ASPECT !== U ? CINE_FRAME_ASPECT : 1.78;
+    const half = Math.tan(Math.max(4, Math.min(110, vfovDeg || 52)) * Math.PI / 360) * Math.max(20, dist || 100);
+    const off = (side < 0 ? -1 : 1) * (half * aspect) / 3;   // half-width / 3 puts the subject on the line
+    const az = (azDeg || 0) * Math.PI / 180;
+    return { dx: -Math.sin(az) * off, dy: Math.cos(az) * off };
 };

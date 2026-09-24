@@ -1829,6 +1829,92 @@ const SCENE_SCHEMA = {
         },
         {
             "group": "particles",
+            "name": "CINE_COLORSCRIPT",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "no"
+                },
+                {
+                    "value": 1,
+                    "label": "yes"
+                }
+            ],
+            "label": "Color script",
+            "value": 1
+        },
+        {
+            "group": "particles",
+            "name": "CINE_KEY_BOOST_CLOSE",
+            "min": 1,
+            "max": 2,
+            "step": 0.02,
+            "kind": "number",
+            "options": null,
+            "label": "Key boost on close-ups",
+            "value": 1.18
+        },
+        {
+            "group": "particles",
+            "name": "CINE_VIGNETTE_CLOSE",
+            "min": 1,
+            "max": 2,
+            "step": 0.02,
+            "kind": "number",
+            "options": null,
+            "label": "Vignette on close-ups",
+            "value": 1.18
+        },
+        {
+            "group": "particles",
+            "name": "CINE_HAZE_WIDE",
+            "min": 1,
+            "max": 3,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Aerial haze on wides",
+            "value": 1.3
+        },
+        {
+            "group": "particles",
+            "name": "CINE_HAZE_CLOSE",
+            "min": 0.2,
+            "max": 1,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Haze on close-ups",
+            "value": 0.75
+        },
+        {
+            "group": "particles",
+            "name": "CINE_FRAME_ASPECT",
+            "min": 1.2,
+            "max": 2.4,
+            "step": 0.01,
+            "kind": "number",
+            "options": null,
+            "label": "Gate aspect",
+            "value": 1.78
+        },
+        {
+            "group": "particles",
+            "name": "CINE_FOREGROUND",
+            "min": 0,
+            "max": 1,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Foreground frame chance",
+            "value": 0.5
+        },
+        {
+            "group": "particles",
             "name": "ACTOR_SECONDARY",
             "min": null,
             "max": null,

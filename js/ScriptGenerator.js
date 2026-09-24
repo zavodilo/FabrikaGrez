@@ -960,9 +960,17 @@ const ScriptGenerator = {
         const dist = Math.max(40, Math.hypot(hd, vd));
         const fov = Math.max(o.fov || 52, this._fovFloor(dist, o.zoom || 9));
         const zoom = Math.max(1.05, Math.min(30, this.rigK(fov) / dist));
+        // The rule of thirds: the look-at steps aside (perpendicular to the lens axis) so the
+        // subject lands on a thirds line; coverage alternates the side between partners.
+        let lx = look[0], ly = look[1];
+        if (o.thirds && typeof MovieData !== 'undefined' && MovieData.thirdsOffset) {
+            const az0 = Math.round(Math.atan2(dy, dx) * 180 / Math.PI);
+            const off = MovieData.thirdsOffset(az0, dist, fov, o.thirds);
+            lx += off.dx; ly += off.dy;
+        }
         const cam = {
             type: 'fixed', local: true,
-            x: Math.round(look[0]), y: Math.round(look[1]), h: Math.round(look[2] != null ? look[2] : 120),
+            x: Math.round(lx), y: Math.round(ly), h: Math.round(look[2] != null ? look[2] : 120),
             az: Math.round(Math.atan2(dy, dx) * 180 / Math.PI),
             pitch: Math.round(Math.atan2(vd, hd) * 180 / Math.PI),
             zoom: Math.round(zoom * 100) / 100,
@@ -1011,14 +1019,14 @@ const ScriptGenerator = {
             const lens = MovieData.fovFor(type);
             const back = Math.min(620, Math.round(this.rigK(lens) / 4.6));
             const spot = this._toward(sxy, openXY, indoor ? 105 : back, 152);
-            return this._rig([sxy[0], sxy[1], H], spot, { fov: lens, zoom: indoor ? 9 : 4.6, roll: type === 'dutch' ? 9 : 0 });
+            return this._rig([sxy[0], sxy[1], H], spot, { fov: lens, zoom: indoor ? 9 : 4.6, roll: type === 'dutch' ? 9 : 0, thirds: subj === 'b' ? 1 : -1 });
         }
         if (type === 'medium' || type === 'low') {
             const low = type === 'low';
             const lens = MovieData.fovFor(type);
             const d = indoor ? (low ? 150 : 195) : (low ? 190 : Math.min(560, Math.round(this.rigK(lens) / 3.1)));
             const spot = this._toward(sxy, openXY, d, low ? (indoor ? 70 : 60) : 150);
-            return this._rig([sxy[0], sxy[1], low ? 110 : 128], spot, { fov: lens, zoom: low ? 4.8 : 3.8 });
+            return this._rig([sxy[0], sxy[1], low ? 110 : 128], spot, { fov: lens, zoom: low ? 4.8 : 3.8, thirds: subj === 'b' ? 1 : -1 });
         }
         if (type === 'over' || type === 'duo') {
             if (!pxy) return this._rigScene('medium', subj, A, B, S, set, xyOf, indoor);

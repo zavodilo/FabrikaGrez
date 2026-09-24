@@ -24,6 +24,8 @@ const CinePost3D = {
     view: null,
     /** The grade in force (gradeFor result) — reapplied when the preset changes. */
     _grade: null,
+    /** The shot plan's vignette multiplier (composition). */
+    _vigMul: 1,
     /** The DoF plan in force (dofFor result) — reapplied when the preset changes. */
     _dof: null,
     /** Live focus distance (px from the eye) the rack pulls toward. */
@@ -90,7 +92,7 @@ const CinePost3D = {
      * @param {string | null} era 'era-silver' | 'era-color' | 'era-clean' (MovieSequencer.eraClass)
      * @param {string | null} tod 'day' | 'sunset' | 'night'
      */
-    styleFor(genreId, era, tod) {
+    styleFor(genreId, era, tod, accent) {
         const base = this.STYLES[genreId || 'neutral'] || this.STYLES.neutral;
         const st = {
             sat: base.sat != null ? base.sat : 1,
@@ -109,6 +111,11 @@ const CinePost3D = {
             st.sat *= 0.95; st.fade += 0.1;
             st.splitH[0] += 0.035; st.splitH[1] += 0.01; st.splitH[2] -= 0.015;
         }
+        // The color script: the scene kind's dominant palette biases the split-tone.
+        if (accent && (accent[0] || accent[1] || accent[2])) {
+            st.splitH[0] += accent[0]; st.splitH[1] += accent[1]; st.splitH[2] += accent[2];
+            st.splitS[0] += accent[0] * 0.4; st.splitS[1] += accent[1] * 0.4; st.splitS[2] += accent[2] * 0.4;
+        }
         // The hour: a cold blue night, a golden sunset.
         if (tod === 'night') {
             st.contrast *= 1.05; st.splitS[1] += 0.012; st.splitS[2] += 0.04;
@@ -125,14 +132,14 @@ const CinePost3D = {
      * @param {string | null} era
      * @param {string | null} tod
      */
-    gradeFor(genreId, era, tod) {
+    gradeFor(genreId, era, tod, accent) {
         const c = this.cfg();
         const night = tod === 'night', sunset = tod === 'sunset';
         const cinema = !!genreId;
         const k = night ? 1 : (sunset ? 0.5 : 0);
         const grade = {
-            lutKey: (genreId || 'studio') + '|' + (era || 'era-clean') + '|' + (tod || 'day'),
-            lut: (cinema || era) ? this.styleFor(genreId, cinema ? era : null, tod) : null,
+            lutKey: (genreId || 'studio') + '|' + (era || 'era-clean') + '|' + (tod || 'day') + '|' + (accent ? accent.map((v) => v.toFixed(3)).join(',') : '0'),
+            lut: (cinema || era) ? this.styleFor(genreId, cinema ? era : null, tod, accent) : null,
             lutIntensity: cinema ? c.lutIntensity : 0,
             brightness: night ? c.exposureNight : (sunset ? 0.97 : 1),
             contrast: 1,
@@ -286,8 +293,14 @@ const CinePost3D = {
     },
 
     /** The cinema grade: genre × era stock × the scene's hour (MovieSequencer calls it). */
-    setCinema(genreId, era, tod) {
-        this.apply(this.gradeFor(genreId || null, era || null, tod || 'day'));
+    setCinema(genreId, era, tod, accent) {
+        this.apply(this.gradeFor(genreId || null, era || null, tod || 'day', accent || null));
+    },
+
+    /** The shot plan's vignette multiplier (composition: close plans sink their edges). */
+    setPlanVignette(mul) {
+        this._vigMul = Math.max(0.5, Math.min(2, Number(mul) || 1));
+        if (this._grade) this.apply(this._grade);
     },
 
     /** The neutral grade of the studio lot. */
@@ -343,7 +356,7 @@ const CinePost3D = {
         f.grading.contrast = g.contrast;
         f.grading.saturation = g.saturation;
         f.bloom.intensity = Math.max(0, Math.min(0.1, g.bloom));
-        f.vignette.intensity = Math.max(0, Math.min(1, g.vignette));
+        f.vignette.intensity = Math.max(0, Math.min(1, g.vignette * (this._vigMul || 1)));
         f.vignette.inner = 0.42;
         f.vignette.outer = 1.05;
         f.vignette.curvature = 0.55;

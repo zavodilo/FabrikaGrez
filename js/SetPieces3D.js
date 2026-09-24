@@ -1080,6 +1080,20 @@ SetPieces3D.PROPS = /** @type {Record<string, (S: any) => void>} */ ({
         S.B(88, 0, 30, 8, 60, 10, '#8a8a90');
     },
 
+    fdoor(S) {
+        // A door jamb and lintel in near-black: the foreground frame of an interior shot.
+        S.B(0, 0, 0, 14, 14, 220, '#141216');
+        S.B(0, 0, 214, 90, 14, 12, '#141216');
+    },
+
+    ffoliage(S) {
+        // A leaf cluster on a twig: the foreground frame of an exterior shot.
+        S.C(0, 0, 0, 2, 60, '#241d18', { rt: 2 });
+        S.G(6, 0, 66, 26, 10, 20, '#1c2418');
+        S.G(-8, 4, 74, 22, 9, 18, '#20281c');
+        S.G(2, -6, 82, 18, 8, 16, '#182016');
+    },
+
     cup(S) {
         S.C(0, 0, 0, 4, 10, '#e8e0d0', { rt: 4 });
         S.B(5, 0, 5, 3, 2, 6, '#e8e0d0');

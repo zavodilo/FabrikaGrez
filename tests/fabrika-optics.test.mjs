@@ -204,3 +204,47 @@ test('shadowPlanFor: карта теней по крупности плана, P
     const unknown = MovieSequencer.shadowPlanFor(null, false, 2);
     assert.equal(unknown.map, mid.map, 'неизвестный тег — средний класс');
 });
+
+test('color script: у каждого вида сцены своя доминирующая палитра, детерминированная', () => {
+    const kinds = ['intro', 'meet', 'setup', 'threat', 'chase', 'fight', 'romance', 'reveal', 'comic', 'crisis', 'climax', 'coda'];
+    const seen = new Set();
+    for (const k of kinds) {
+        const a = MovieData.accentFor(k);
+        assert.equal(a.length, 3, k + ': три канала');
+        assert.ok(a.every((v) => Number.isFinite(v) && Math.abs(v) <= 0.12), k + ': акцент в разумных границах');
+        seen.add(JSON.stringify(a));
+    }
+    assert.ok(seen.size >= 8, 'палитры видов различаются: ' + seen.size);
+    assert.deepEqual([...MovieData.accentFor('nope')], [0, 0, 0], 'неизвестный вид — нейтрально');
+    assert.equal(JSON.stringify(MovieData.accentFor('romance')), JSON.stringify(MovieData.accentFor('romance')), 'детерминизм');
+    // The accent must actually move the baked LUT.
+    const plain = CinePost3D.lutBytes(CinePost3D.styleFor('drama', 'era-clean', 'day', null));
+    const rose = CinePost3D.lutBytes(CinePost3D.styleFor('drama', 'era-clean', 'day', MovieData.accentFor('romance')));
+    let diff = 0;
+    for (let i = 0; i < plain.length; i += 4) diff += Math.abs(plain[i] - rose[i]) + Math.abs(plain[i + 1] - rose[i + 1]) + Math.abs(plain[i + 2] - rose[i + 2]);
+    assert.ok(diff > 500, 'акцент меняет LUT: суммарная дельта ' + diff);
+});
+
+test('правило третей: офсет перпендикулярен оси объектива и растёт с дистанцией', () => {
+    for (const az of [0, 37, -90, 180]) {
+        const a = MovieData.thirdsOffset(az, 300, 28, 1);
+        const b = MovieData.thirdsOffset(az, 300, 28, -1);
+        assert.equal(a.dx, -b.dx, 'стороны зеркальны');
+        const dir = { x: Math.cos(az * Math.PI / 180), y: Math.sin(az * Math.PI / 180) };
+        const dot = a.dx * dir.x + a.dy * dir.y;
+        assert.ok(Math.abs(dot) < 1e-6, 'офсет перпендикулярен взгляду: ' + dot);
+        const len = Math.hypot(a.dx, a.dy);
+        const wide = Math.hypot(...Object.values(MovieData.thirdsOffset(az, 600, 28, 1)));
+        assert.ok(wide > len * 1.9, 'дальше кадр — шире треть: ' + len + ' -> ' + wide);
+    }
+});
+
+test('композиционный план: крупный план поднимает ключ и виньетку, общий копит дымку', () => {
+    const close = MovieSequencer.compPlanFor('close');
+    const mid = MovieSequencer.compPlanFor('medium');
+    const wide = MovieSequencer.compPlanFor('wide');
+    assert.ok(close.keyBoost > mid.keyBoost && mid.keyBoost > wide.keyBoost, 'ключ по крупности');
+    assert.ok(close.vignette > wide.vignette, 'виньетка крупнее на крупных');
+    assert.ok(wide.haze > close.haze, 'общие планы дышат воздухом');
+    assert.ok(close.haze > 0 && close.haze <= 1, 'крупный план держит воздух чистым');
+});

@@ -369,6 +369,11 @@ try {
                 indoorSet: !!(MovieData.SET_INFO[(sc && sc.set) || ''] || {}).indoor,
                 practicals: ((MovieSequencer.set && MovieSequencer.set.lights) || []).filter((l) => l.light.intensity > 0).length,
                 setLights: ((MovieSequencer.set && MovieSequencer.set.lights) || []).length,
+                comp: MovieSequencer.compPlanFor(sh ? (sh.tag || (sh.cam && sh.cam.type) || 'wide') : 'wide'),
+                keyBoost: view._keyBoost || 1,
+                vigMul: CinePost3D._vigMul || 1,
+                haze: view._fogBase ? (view.app.scene.fogDensity / view._fogBase) : 1,
+                fg: !!MovieSequencer._fg,
                 flare: !!document.querySelector('.cine-flare'),
                 dirt: !!document.querySelector('.cine-dirt'),
                 flicker: !!document.querySelector('.cine-flicker'),
@@ -390,6 +395,9 @@ try {
             'pcss ' + optics.pcss + ', карта ' + optics.shadowMap);
         check('оптика: стекло объектива — flare и плёночные слои эпохи', optics.flare && (optics.era === 'era-clean' || (optics.dirt && optics.flicker)),
             'эпоха ' + optics.era + ', flare ' + optics.flare + ', dirt ' + optics.dirt + ', flicker ' + optics.flicker);
+        check('композиция: план кадра ведёт ключ, виньетку и дымку',
+            Math.abs(optics.keyBoost - optics.comp.keyBoost) < 0.01 && Math.abs(optics.vigMul - optics.comp.vignette) < 0.01 && Math.abs(optics.haze - optics.comp.haze) < 0.05,
+            'key ' + optics.keyBoost + '/' + optics.comp.keyBoost + ', виньетка ' + optics.vigMul + '/' + optics.comp.vignette + ', дымка ' + optics.haze.toFixed(2) + '/' + optics.comp.haze);
         check('свет: трёхточечная схема per-shot — контровой работает', optics.rimOn,
             'rim on ' + optics.rimOn + ', план ' + optics.tag);
         check('свет: процедурное небо по декорации — экстерьер с куполом, интерьер без',

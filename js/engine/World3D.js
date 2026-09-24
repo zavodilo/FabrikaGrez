@@ -963,7 +963,10 @@ class View3D {
         this.sunEntity.setPosition(0, 0, 0);
         this.sunEntity.lookAt(new pc.Vec3(dir.x, dir.y, dir.z).add(this.sunEntity.getPosition()), pc.Vec3.UP);
         const col = World3D.hexColor3(c.sunColor);
-        this.sun.color = new pc.Color(col.r * Math.max(0, c.sunIntensity), col.g * Math.max(0, c.sunIntensity), col.b * Math.max(0, c.sunIntensity));
+        this._sunBase = new pc.Color(col.r * Math.max(0, c.sunIntensity), col.g * Math.max(0, c.sunIntensity), col.b * Math.max(0, c.sunIntensity));
+        this.sun.color = this._sunBase.clone ? this._sunBase.clone() : new pc.Color(this._sunBase.r, this._sunBase.g, this._sunBase.b);
+        this._keyBoost = 1;
+        this._fogBase = Math.max(0, o.fogDensity != null ? o.fogDensity : c.fog);
 
         const sg = this.sun;
         sg.castShadows = true;
@@ -1000,6 +1003,22 @@ class View3D {
         this.fill.color = new pc.Color(col.r * intensity, col.g * intensity, col.b * intensity);
         this.fill.intensity = 1;
         void c;
+    }
+
+    /**
+     * Composition: ride the key up (or back down) for the plan — a close-up lifts its subject
+     * against the sinking background. Multiplies the grade's sun color in place.
+     */
+    setKeyBoost(mul) {
+        const b = Math.max(0.4, Math.min(2.5, Number(mul) || 1));
+        this._keyBoost = b;
+        if (this.sun && this._sunBase) this.sun.color = new pc.Color(this._sunBase.r * b, this._sunBase.g * b, this._sunBase.b * b);
+    }
+
+    /** Composition: aerial perspective by the plan — wide masters hazier, close plans clear. */
+    setHaze(mul) {
+        const m2 = Math.max(0.2, Math.min(3, Number(mul) || 1));
+        if (this.app && this.app.scene && this._fogBase != null) this.app.scene.fogDensity = this._fogBase * m2;
     }
 
     /**
