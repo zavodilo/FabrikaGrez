@@ -1829,6 +1829,26 @@ const SCENE_SCHEMA = {
         },
         {
             "group": "particles",
+            "name": "ACTOR_SECONDARY",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "no"
+                },
+                {
+                    "value": 1,
+                    "label": "yes"
+                }
+            ],
+            "label": "Secondary motion",
+            "value": 1
+        },
+        {
+            "group": "particles",
             "name": "PART_FIRE_N",
             "min": 0,
             "max": 80,

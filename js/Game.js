@@ -56,7 +56,7 @@ class Game {
         for (let i = 0; i < n; i++) {
             const look = PeopleSystem.randomLook(r);
             const wp = this.lot.waypoints[i % this.lot.waypoints.length];
-            const a = ActorRig3D.spawn(this.view, look, { x: wp.x, y: wp.y, heading: 0 });
+            const a = ActorRig3D.spawn(this.view, look, { x: wp.x, y: wp.y, heading: 0, lod: 'low' });
             a.gesture = i % 3;
             this.crowd.push(a);
             this._stroll(a, r);

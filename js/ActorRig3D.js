@@ -100,10 +100,11 @@ const ActorRig3D = {
      * ('m'|'f'), hairStyle (0..3), scale (0.85..1.15) }; opts — { x, y, h, heading (deg) }.
      * @param {View3D} view
      * @param {ActorLook} look
-     * @param {{ x?: number, y?: number, h?: number, heading?: number }} [opts]
+     * @param {{ x?: number, y?: number, h?: number, heading?: number, lod?: 'low' }} [opts]
      * @returns {ActorHandle}
      */
     spawn(view, look, opts) {
+        const low = !!(opts && opts.lod === 'low');
         const o = opts || {};
         const L = ActorRig3D._normLook(look);
         const root = new pc.Entity('actor' + this._nextId);
@@ -144,9 +145,13 @@ const ActorRig3D = {
         if (L.gender === 'f') P(hips, 'shirt', 0, -16, 0, 30, 26, 44, L.shirt);   // a dress/skirt block
         // Head, face, hair, hat
         P(head, 'skin', 0, 12, 0, 24, 26, 24, L.skin);
-        P(head, 'eyes', -12, 15, -6, 2.5, 4.5, 4.5, '#2a1d14');
-        P(head, 'eyes', -12, 15, 6, 2.5, 4.5, 4.5, '#2a1d14');
-        P(head, 'mouth', -13.5, 6.5, 0, 2, 1.8, 7, '#4a2320');
+        // LOD: a background body keeps its silhouette (hat, hair, coat) but drops the face —
+        // at crowd distance eyes and mouth cost meshes and read as nothing.
+        if (!low) {
+            P(head, 'eyes', -12, 15, -6, 2.5, 4.5, 4.5, '#2a1d14');
+            P(head, 'eyes', -12, 15, 6, 2.5, 4.5, 4.5, '#2a1d14');
+            P(head, 'mouth', -13.5, 6.5, 0, 2, 1.8, 7, '#4a2320');
+        }
         if (L.hairStyle !== 3) {
             P(head, 'hair', 0, 24.5, 0, 25.5, 7, 25.5, L.hair);
             if (L.hairStyle === 0) P(head, 'hair', 10, 15, 0, 6, 16, 25.5, L.hair);
@@ -250,6 +255,17 @@ const ActorRig3D = {
         }
     },
 
+    /**
+     * One step of the secondary-motion spring (pure — tests hold it in their hands):
+     * a damped oscillator driven by the body's acceleration; returns the new state.
+     */
+    _swayStep(st, accel, dt) {
+        const k = 42, c = 6.5;                     // a soft braid of hair, not a metronome
+        const a = accel - k * st.x - c * st.v;
+        const v = st.v + a * dt;
+        return { x: st.x + v * dt, v: v };
+    },
+
     // Eyes and mouth that live: a staggered blink, a closed eye on a corpse, and a mouth that
     // opens with the line. Base scales mirror the parts built in spawn() (eyes 2.5/4.5/4.5,
     // mouth 2/1.8/7) — change one and you must change the other.
@@ -274,6 +290,41 @@ const ActorRig3D = {
             const b = h.mouthBase || { x: 2, y: 1.8, z: 7 };
             const k = h.action === 'talk' ? 0.55 + Math.abs(Math.sin(h.t * 13)) * 2.1 : 1;
             for (const mi of mouth) { if (mi.node && mi.node.setLocalScale) mi.node.setLocalScale(b.x, b.y * k, b.z); }
+        }
+    },
+
+    /**
+     * Secondary motion and hand poses, layered OVER the action pose (which the action library
+     * rewrites every frame): the hair and the coat hem lag the body on a damped spring driven
+     * by the body's own acceleration; a pose ('hips', 'point') rests the hands.
+     */
+    _secondary(h, dt) {
+        const U = 'undefined';
+        const on = typeof ACTOR_SECONDARY !== U ? ACTOR_SECONDARY : 1;
+        const vx = h._px != null ? (h.x - h._px) / Math.max(1e-4, dt) : 0;
+        const vy = h._py != null ? (h.y - h._py) / Math.max(1e-4, dt) : 0;
+        h._px = h.x; h._py = h.y;
+        const speed = Math.hypot(vx, vy);
+        const accel = (speed - (h._ps || 0)) / Math.max(1e-4, dt);
+        h._ps = speed;
+        if (!on) { h._sw = { x: 0, v: 0 }; return; }
+        h._sw = this._swayStep(h._sw || { x: 0, v: 0 }, Math.max(-900, Math.min(900, accel)) * 0.0016, Math.min(0.05, dt));
+        const sway = Math.max(-1, Math.min(1, h._sw.x));
+        const bob = Math.sin(h.t * (h.action === 'walk' ? 9 : h.action === 'run' ? 13 : 2.2)) * (h.action === 'run' ? 0.35 : h.action === 'walk' ? 0.2 : 0.06);
+        const hairK = 2.6 * sway + 1.6 * bob;
+        for (const mi of (h.parts && h.parts.hair) || []) {
+            if (mi.node && mi.node.setLocalEulerAngles) mi.node.setLocalEulerAngles(hairK * 0.4, 0, hairK);
+        }
+        for (const mi of (h.parts && h.parts.shirt) || []) {
+            if (mi.node && mi.node.setLocalEulerAngles) mi.node.setLocalEulerAngles(-hairK * 0.25, 0, -hairK * 0.5);
+        }
+        const j = h.joints;
+        if (h.pose === 'hips' && j) {
+            j.armL.setLocalEulerAngles(0, 0, 34); j.foreL.setLocalEulerAngles(0, 0, 74);
+            j.armR.setLocalEulerAngles(0, 0, -34); j.foreR.setLocalEulerAngles(0, 0, -74);
+        } else if (h.pose === 'point' && j) {
+            j.armR.setLocalEulerAngles(-78, 0, -6); j.foreR.setLocalEulerAngles(-14, 0, 0);
+            j.armL.setLocalEulerAngles(0, 0, 10); j.foreL.setLocalEulerAngles(0, 0, 20);
         }
     },
 
@@ -393,6 +444,7 @@ const ActorRig3D = {
     despawn(h) {
         const i = this.handles.indexOf(h);
         if (i >= 0) this.handles.splice(i, 1);
+        if (h.holdHandle && typeof SetPieces3D !== 'undefined') { SetPieces3D.dispose(h.holdHandle); h.holdHandle = null; }
         World3D.removeObject(h.view, h.root);
     },
 

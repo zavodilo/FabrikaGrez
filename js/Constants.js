@@ -301,6 +301,7 @@ const PART_DUST_N = 48;                 // dry dust over a western noon
 const PART_SPARKS_N = 36;               // sparks of a fire or a gunshot
 const PART_SMOKE_N = 18;                // smoke puffs (they grow as they rise)
 const PART_FIRE_N = 22;                 // fire tongues (they shrink and die)
+const ACTOR_SECONDARY = 1;              // 1 — hair and cloth lag the body on a spring
 // Cinema color science: the sun, the sky and the ambient follow the scene's time of day, so a
 // night scene is lit by a cold moon and a sunset by a low golden key, not by the studio noon.
 const CINEMA_SUN_DAY = 0xffedc7;        // day key color

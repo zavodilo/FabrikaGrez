@@ -874,8 +874,25 @@ const ScriptGenerator = {
             const dur = Math.round(Math.max(1.1, this._dur('close', script, r) * 0.42) * 10) / 10;
             shots.splice(i + 1, 0, {
                 dur: dur, trans: 'cut', cam: cam, tag: 'close', role: 'reaction', sayWho: null,
-                beats: [{ t: 0.15, who: other, act: 'look', look: sh.sayWho, dur: dur - 0.2 }],
+                // The listener answers with the body: a hand on the hip or a finger at the
+                // speaker, then lets the pose go — secondary acting between the lines.
+                beats: [
+                    { t: 0.15, who: other, act: 'look', look: sh.sayWho, dur: dur - 0.2 },
+                    { t: 0.2, who: other, pose: r.chance(0.5) ? 'hips' : 'point' },
+                    { t: Math.max(0.35, dur - 0.2), who: other, pose: null },
+                ],
             });
+        }
+        // 2b) A cup in the hand where people sit and talk: the prop rides the forearm for the
+        //     length of the line (MovieSequencer._holdProp parents it to the rig).
+        const drinkSets = { diner: 1, saloon: 1, nightclub: 1, mansion: 1, office: 1, train: 1 };
+        if (drinkSets[sc.set]) {
+            for (const sh of shots) {
+                if (!sh.sayWho || !sh.beats || !r.chance(0.4)) continue;
+                sh.beats.push({ t: 0.05, who: sh.sayWho, hold: 'cup' });
+                sh.beats.push({ t: Math.max(0.25, sh.dur - 0.25), who: sh.sayWho, hold: null });
+                sh.beats.sort((a, b) => a.t - b.t);
+            }
         }
         // 3) One insert on a prop: hands, steel and glass sell the scene without a word.
         //    The anchor names live on the TIMELINE props (the script scene carries bare ids).
