@@ -51,6 +51,7 @@ const World3D = {
     toon: null,            // toon shader state — ArcToon below
     _fps: 60,
     _lastT: 0,
+    _lastDt: 0,
 
     // Render layers (pc.Layer order), the depth buffer is SHARED (see View3D):
     //   WORLD   — the ground and everything standing on it (the engine's World layer);
@@ -60,7 +61,19 @@ const World3D = {
     //   ACTOR   — objects that go last: OVERLAY paint does not land on top of them,
     //             but they hide behind walls honestly.
     LAYER: { WORLD: 0, OVERLAY: 1, ACTOR: 2 },
-    LAYER_ID: { OVERLAY: 11, ACTOR: 12 },   // pc.Layer ids (0..10 are the engine's own)
+    LAYER_ID: { OVERLAY: 11, ACTOR: 12, SPRITE: 13 },   // pc.Layer ids (0..10 are the engine's own)
+
+    // Presentation-layer overrides of the render constants (a variant's lighting preset,
+    // js/engine/Lighting3D.js). cfg() merges them, so the editor's Constants.js edits and a
+    // render profile compose instead of fighting — and no constant is ever rewritten.
+    /** @type {any | null} */
+    lightOverrides: null,
+
+    /** Set/clear the overrides (null — the constants alone decide). */
+    setLightOverrides(o) {
+        World3D.lightOverrides = (o && Object.keys(o).length) ? Object.assign({}, o) : null;
+        return World3D.lightOverrides;
+    },
 
     available() {
         return typeof pc !== 'undefined' && !!this.app;
@@ -134,6 +147,7 @@ const World3D = {
         const now = performance.now();
         const dt = Math.min(0.1, Math.max(0.0001, (now - (this._lastT || now)) / 1000));
         this._lastT = now;
+        this._lastDt = dt;      // sprite frame animation (Sprite2D) advances on this
         this._fps += (1 / dt - this._fps) * 0.05;
         const v = this.view;
         if (v && v.active) {
@@ -159,7 +173,7 @@ const World3D = {
     // window, only by typeof on the identifier.
     cfg() {
         const U = 'undefined';
-        return {
+        const c = {
             sunAz: typeof WORLD3D_SUN_AZIMUTH_DEG !== U ? WORLD3D_SUN_AZIMUTH_DEG : 53,
             sunEl: typeof WORLD3D_SUN_ELEVATION_DEG !== U ? WORLD3D_SUN_ELEVATION_DEG : 48,
             sunIntensity: typeof WORLD3D_SUN_INTENSITY !== U ? WORLD3D_SUN_INTENSITY : 0.8,
@@ -200,6 +214,8 @@ const World3D = {
             inkColor: typeof WORLD3D_TOON_INK_COLOR !== U ? WORLD3D_TOON_INK_COLOR : 0x10141a,
             inkAngle: typeof WORLD3D_TOON_INK_ANGLE !== U ? WORLD3D_TOON_INK_ANGLE : 40
         };
+        // A variant's lighting preset is the last word (see setLightOverrides).
+        return World3D.lightOverrides ? Object.assign(c, World3D.lightOverrides) : c;
     },
 
     // Live application of render constants to the view (editor): light, shadows,
@@ -932,72 +948,6 @@ class View3D {
     // Light, sky, fog and shadows from the render constants (the view's opts override them).
     // The shadow color/strength travel to the toon chunks as uniforms; the sun component
     // only provides direction, intensity and the shadow map.
-    /**
-     * Aim (or kill) the cinema fill. az/el are the cine camera's azimuth and pitch in the same
-     * map-space degrees the sun uses: the light travels along the lens axis, front-lighting
-     * whatever the frame sees. intensity 0 hides it.
-     */
-    setCinemaFill(on, azDeg, elDeg, intensity, colorHex) {
-        if (!this.fill) return;
-        if (!on || !intensity) { this.fill.intensity = 0; return; }
-        const c = World3D.cfg();
-        const dir = World3D.sunDirection({ sunAz: azDeg, sunEl: Math.max(6, Math.min(50, elDeg)), sunIntensity: 1, sunColor: 0xffffff });
-        this.fillEntity.setPosition(0, 0, 0);
-        this.fillEntity.lookAt(new pc.Vec3(dir.x, dir.y, dir.z).add(this.fillEntity.getPosition()), pc.Vec3.UP);
-        const col = World3D.hexColor3(colorHex != null ? colorHex : 0xffe9cf);
-        this.fill.color = new pc.Color(col.r * intensity, col.g * intensity, col.b * intensity);
-        this.fill.intensity = 1;
-        void c;
-    }
-
-    /**
-     * Cinema shadows for a shot: a shadow map sized by the plan (a close-up wants 4096 texels,
-     * a wide master survives 1024) and PCSS contact hardening (SHADOW_PCSS_32F) when asked.
-     * The caller gates on the preset and mobile; applyLighting() restores the kit's ladder.
-     * opts: { samples, blockers, penumbra } — the PCSS kernel.
-     */
-    setCinemaShadows(mapSize, pcss, opts) {
-        const sg = this.sun;
-        if (!sg || typeof pc === 'undefined') return;
-        const o = opts || {};
-        const size = Math.max(512, Math.min(4096, Math.round(mapSize) || this._mapSize));
-        if (sg.shadowResolution !== size) sg.shadowResolution = size;
-        if (pcss && pc.SHADOW_PCSS_32F != null) {
-            sg.shadowType = pc.SHADOW_PCSS_32F;
-            sg.shadowSamples = Math.max(1, Math.round(o.samples != null ? o.samples : 16));
-            sg.shadowBlockerSamples = Math.max(0, Math.round(o.blockers != null ? o.blockers : 8));
-            sg.penumbraSize = Math.max(0.01, Number(o.penumbra != null ? o.penumbra : 10));
-        }
-    }
-
-    /**
-     * Re-aim the sun (the shot's KEY) without touching its color, intensity or shadow setup:
-     * the per-shot three-point rig moves the key off the lens axis while the scene's hour
-     * keeps owning the light's warmth. az/el are the same map-space degrees applyLighting uses.
-     */
-    aimSun(azDeg, elDeg) {
-        const sg = this.sun;
-        if (!sg || typeof pc === 'undefined') return;
-        const dir = World3D.sunDirection({ sunAz: azDeg, sunEl: Math.max(4, Math.min(88, elDeg)), sunIntensity: 1, sunColor: 0xffffff });
-        this.sunEntity.setPosition(0, 0, 0);
-        this.sunEntity.lookAt(new pc.Vec3(dir.x, dir.y, dir.z).add(this.sunEntity.getPosition()), pc.Vec3.UP);
-    }
-
-    /**
-     * Aim (or kill) the cinema rim: a shadowless directional from behind the subject, opposite
-     * the key, so shoulders and hair catch an edge of light. intensity 0 hides it.
-     */
-    setCinemaRim(on, azDeg, elDeg, intensity, colorHex) {
-        if (!this.rim) return;
-        if (!on || !intensity) { this.rim.intensity = 0; return; }
-        const dir = World3D.sunDirection({ sunAz: azDeg, sunEl: Math.max(6, Math.min(60, elDeg)), sunIntensity: 1, sunColor: 0xffffff });
-        this.rimEntity.setPosition(0, 0, 0);
-        this.rimEntity.lookAt(new pc.Vec3(dir.x, dir.y, dir.z).add(this.rimEntity.getPosition()), pc.Vec3.UP);
-        const col = World3D.hexColor3(colorHex != null ? colorHex : 0xbcd4ff);
-        this.rim.color = new pc.Color(col.r * intensity, col.g * intensity, col.b * intensity);
-        this.rim.intensity = 1;
-    }
-
     applyLighting(c) {
         c = c || World3D.cfg();
         const o = this.opts || {};
@@ -1032,6 +982,72 @@ class View3D {
         sg.normalOffsetBias = Math.max(0, c.shadowNormalBias) * texel;
         if (this._lightAt) this.updateLightFrustum(this._lightAt.x, this._lightAt.y, this._lightAt.h, this._lightAt.r);
         World3D.toon.push(this, c);
+    }
+
+    /**
+     * Aim (or kill) the cinema fill. az/el are the cine camera's azimuth and pitch in the same
+     * map-space degrees the sun uses: the light travels along the lens axis, front-lighting
+     * whatever the frame sees. intensity 0 hides it.
+     */
+    setCinemaFill(on, azDeg, elDeg, intensity, colorHex) {
+        if (!this.fill) return;
+        if (!on || !intensity) { this.fill.intensity = 0; return; }
+        const c = World3D.cfg();
+        const dir = World3D.sunDirection({ sunAz: azDeg, sunEl: Math.max(6, Math.min(50, elDeg)), sunIntensity: 1, sunColor: 0xffffff });
+        this.fillEntity.setPosition(0, 0, 0);
+        this.fillEntity.lookAt(new pc.Vec3(dir.x, dir.y, dir.z).add(this.fillEntity.getPosition()), pc.Vec3.UP);
+        const col = World3D.hexColor3(colorHex != null ? colorHex : 0xffe9cf);
+        this.fill.color = new pc.Color(col.r * intensity, col.g * intensity, col.b * intensity);
+        this.fill.intensity = 1;
+        void c;
+    }
+
+    /**
+     * Re-aim the sun (the shot's KEY) without touching its color, intensity or shadow setup:
+     * the per-shot three-point rig moves the key off the lens axis while the scene's hour
+     * keeps owning the light's warmth. az/el are the same map-space degrees applyLighting uses.
+     */
+    aimSun(azDeg, elDeg) {
+        const sg = this.sun;
+        if (!sg || typeof pc === 'undefined') return;
+        const dir = World3D.sunDirection({ sunAz: azDeg, sunEl: Math.max(4, Math.min(88, elDeg)), sunIntensity: 1, sunColor: 0xffffff });
+        this.sunEntity.setPosition(0, 0, 0);
+        this.sunEntity.lookAt(new pc.Vec3(dir.x, dir.y, dir.z).add(this.sunEntity.getPosition()), pc.Vec3.UP);
+    }
+
+    /**
+     * Aim (or kill) the cinema rim: a shadowless directional from behind the subject, opposite
+     * the key, so shoulders and hair catch an edge of light. intensity 0 hides it.
+     */
+    setCinemaRim(on, azDeg, elDeg, intensity, colorHex) {
+        if (!this.rim) return;
+        if (!on || !intensity) { this.rim.intensity = 0; return; }
+        const dir = World3D.sunDirection({ sunAz: azDeg, sunEl: Math.max(6, Math.min(60, elDeg)), sunIntensity: 1, sunColor: 0xffffff });
+        this.rimEntity.setPosition(0, 0, 0);
+        this.rimEntity.lookAt(new pc.Vec3(dir.x, dir.y, dir.z).add(this.rimEntity.getPosition()), pc.Vec3.UP);
+        const col = World3D.hexColor3(colorHex != null ? colorHex : 0xbcd4ff);
+        this.rim.color = new pc.Color(col.r * intensity, col.g * intensity, col.b * intensity);
+        this.rim.intensity = 1;
+    }
+
+    /**
+     * Cinema shadows for a shot: a shadow map sized by the plan (a close-up wants 4096 texels,
+     * a wide master survives 1024) and PCSS contact hardening (SHADOW_PCSS_32F) when asked.
+     * The caller gates on the preset and mobile; applyLighting() restores the kit's ladder.
+     * opts: { samples, blockers, penumbra } — the PCSS kernel.
+     */
+    setCinemaShadows(mapSize, pcss, opts) {
+        const sg = this.sun;
+        if (!sg || typeof pc === 'undefined') return;
+        const o = opts || {};
+        const size = Math.max(512, Math.min(4096, Math.round(mapSize) || this._mapSize));
+        if (sg.shadowResolution !== size) sg.shadowResolution = size;
+        if (pcss && pc.SHADOW_PCSS_32F != null) {
+            sg.shadowType = pc.SHADOW_PCSS_32F;
+            sg.shadowSamples = Math.max(1, Math.round(o.samples != null ? o.samples : 16));
+            sg.shadowBlockerSamples = Math.max(0, Math.round(o.blockers != null ? o.blockers : 8));
+            sg.penumbraSize = Math.max(0.01, Number(o.penumbra != null ? o.penumbra : 10));
+        }
     }
 
     // Fog parameters for the custom shaders (outline, ink): color and density in use.
@@ -1107,7 +1123,16 @@ class View3D {
         const comp = this.app.scene.layers;
         const old = this._miLayers.get(mi);
         if (old != null && old !== id) comp.getLayerById(old).removeMeshInstances([mi]);
-        if (old == null || old !== id) comp.getLayerById(id).addMeshInstances([mi], true);
+        if (old == null || old !== id) {
+            comp.getLayerById(id).addMeshInstances([mi], true);
+            // Engine quirk (vendored PlayCanvas 2.22.x): a TRANSPARENT instance added once may
+            // never enter the layer's transparent composition and silently never draws.
+            // A remove/add cycle forces it. Upstream: PlayArcEngine PR #16.
+            if (mi.material && mi.material.blendType != null && mi.material.blendType !== pc.BLEND_NONE) {
+                comp.getLayerById(id).removeMeshInstances([mi]);
+                comp.getLayerById(id).addMeshInstances([mi], true);
+            }
+        }
         this._miLayers.set(mi, id);
     }
 

@@ -33,7 +33,7 @@ const UI = {
         bar: { anchor: 'top-left', x: 20, y: 20, w: 240, h: 18, value: 0.6, color: '#5ad05a', fill: '#10202c', border: '#ffffff', radius: 9, alpha: 1, visible: 1 },
         button: { anchor: 'bottom-center', x: 0, y: 40, w: 180, h: 48, text: 'Button', fontSize: 20, color: '#ffffff', fill: '#2a6fb0', border: '', radius: 10, alpha: 1, visible: 1 },
         // screen — a full-size management panel (menus, tables, forms): a panel whose inner
-        // HTML the game feeds through setHTML(html); clicks/changes on [data-act] nodes are
+        // HTML the game renders from its data (setHTML); clicks on [data-act] nodes are
         // delegated to onAction(fn). Content styling — STUDIO_CSS (injected once as <style>).
         screen: { anchor: 'top-left', x: 0, y: 0, w: 1280, h: 720, fill: '#131a26', border: '', radius: 0, alpha: 1, visible: 1, bleed: 0 },
     },
@@ -68,6 +68,21 @@ const UI = {
         return this;
     },
 
+    // One <style> for the inner content of 'screen' elements: a game ships STUDIO_CSS
+    // (a plain string constant in a game script); the kit alone has none — guarded.
+    injectCss() {
+        if (document.getElementById('arc-screen-css')) return;
+        // STUDIO_CSS is a top-level `const` of a game css script — a lexical global binding,
+        // NOT a property of `window`. Reading it off `window` always came back undefined,
+        // which left the entire management UI unstyled. Read it by direct reference.
+        const css = typeof STUDIO_CSS !== 'undefined' ? STUDIO_CSS : null;
+        if (typeof css !== 'string' || !css) return;
+        const st = document.createElement('style');
+        st.id = 'arc-screen-css';
+        st.textContent = css;
+        document.head.appendChild(st);
+    },
+
     dispose() {
         if (this._observer) this._observer.disconnect();
         if (this.root) this.root.remove();
@@ -75,22 +90,6 @@ const UI = {
         this.root = null;
         this.canvas = null;
         this.elements.clear();
-    },
-
-    // One <style> for the inner content of 'screen' elements: the game ships STUDIO_CSS
-    // (a plain string constant in a game script); the kit alone has none — guarded.
-    injectCss() {
-        if (document.getElementById('arc-screen-css')) return;
-        // STUDIO_CSS is a top-level `const` of UiCss.js — a lexical global binding, NOT a
-        // property of `window`. Reading it off `window` always came back undefined, which left
-        // the entire management UI (every 'screen' element's inner HTML) unstyled: black text on
-        // a see-through panel. Read it by direct reference, guarded for the bare kit.
-        const css = typeof STUDIO_CSS !== 'undefined' ? STUDIO_CSS : null;
-        if (typeof css !== 'string' || !css) return;
-        const st = document.createElement('style');
-        st.id = 'arc-screen-css';
-        st.textContent = css;
-        document.head.appendChild(st);
     },
 
     get(id) {
@@ -136,11 +135,36 @@ const UI = {
         return e;
     },
 
-    // UI px per CSS px: screen height / UI_REF_HEIGHT.
+    // UI px per CSS px: screen height / UI_REF_HEIGHT, times the presentation factor.
     scale() {
         const ref = typeof UI_REF_HEIGHT !== 'undefined' ? UI_REF_HEIGHT : 720;
         const h = this.canvas ? this.canvas.clientHeight : 0;
-        return ref > 0 && h > 0 ? h / ref : 1;
+        const base = ref > 0 && h > 0 ? h / ref : 1;
+        return base * (UI.extraScale || 1);
+    },
+
+    // --- presentation (a render profile / variant may change HOW the UI is shown) ---------
+    // The UI DEFINITION (UILayout.js records, ids, bindings) is profile-independent: one
+    // HealthBar in 2D and in Full 3D. Only presentation changes — and the DOM HUD is always
+    // screen-space, so 'world'/'mixed' are recorded and reported, not silently pretended.
+    /** 'screen' | 'world' | 'mixed' */
+    space: 'screen',
+    /** Extra layout scale a variant may ask for (1 — the layout as authored). */
+    extraScale: 1,
+
+    /** Set the presentation space (manifest profiles[*].ui.space, variant ui.space). */
+    setSpace(space) {
+        const s = String(space || 'screen');
+        if (!['screen', 'world', 'mixed'].includes(s)) throw new Error('UI.setSpace: screen | world | mixed, got ' + JSON.stringify(space));
+        UI.space = s;
+        return { space: UI.space, screenSpace: true, elements: UI.elements.size };
+    },
+
+    /** Scale the whole HUD by a factor (a variant's ui.scale); 1 restores the layout. */
+    setScale(k) {
+        UI.extraScale = Math.max(0.25, Math.min(4, Number(k) || 1));
+        UI.resize();
+        return UI.extraScale;
     },
 
     // The root covers the canvas; its inner size is the screen in layout px.
@@ -222,11 +246,6 @@ class UIElement {
         });
     }
 
-    setText(text) { this._text = String(text); this.apply(); return this; }
-
-    // Bar fill 0..1.
-    setValue(v) { this._value = Math.max(0, Math.min(1, Number(v) || 0)); this.apply(); return this; }
-
     // Screen content: an HTML string the game renders from its data. Interactive nodes
     // carry data-act="name"; clicks arrive at onAction(fn) as fn(act, node, event),
     // control changes — as fn('change:' + act, node, event).
@@ -237,6 +256,11 @@ class UIElement {
     }
 
     onAction(fn) { this._action = fn || null; return this; }
+
+    setText(text) { this._text = String(text); this.apply(); return this; }
+
+    // Bar fill 0..1.
+    setValue(v) { this._value = Math.max(0, Math.min(1, Number(v) || 0)); this.apply(); return this; }
 
     show(on) { this._shown = on !== false; this.apply(); return this; }
 

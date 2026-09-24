@@ -1,6 +1,18 @@
-// main.js — entry point: 3D engine -> location with objects from Objects.js -> camera ->
-// UI (UILayout.js) -> game (Game.js) -> frame loop (Sound3D hears from where the camera is). window.app = { location, camera, game } —
-// for the console and for game code built on top of the kit.
+// main.js — entry point: engine (PlayArcEngine UVP generation) -> location -> camera -> UI ->
+// presentation bridge -> game -> frame loop. Sound3D hears from where the camera is.
+//
+//     World3D.init(canvas)                        the PlayCanvas backend (the only one)
+//     new Location3D({ objects })                 ground + the editor's objects
+//     new CameraController(view)                  camera rig
+//     UI.init(canvas)                             the DOM HUD (STUDIO_CSS injected inside)
+//     Visual3D.attach({ view, location, camera }) the bridge: semantic layer <-> engine
+//     CinePost3D.attach(view) / Sky3D.attach(view) the cinema frame and the procedural sky
+//     new Game(app)                               gameplay: the studio simulator
+//
+// The PlayArcRuntime/GAME_SPEC port of the studio simulator is a separate ROADMAP phase
+// («Движок: UVP»): until then the runtime stays off and the game presents itself through its
+// own engine-layer modules (MovieSequencer, SetPieces3D, ActorRig3D, CinePost3D, Sky3D).
+// window.app = { location, camera, game, runtime } — for the console and for game code.
 
 function updateLoadingProgress(percent) {
     const bar = /** @type {HTMLElement | null} */ (document.querySelector('.loading-progress'));
@@ -36,12 +48,12 @@ function startGame() {
     });
     camera.attach(canvas);
     UI.init(canvas);
-    window.app = { location, camera, game: null };
+    window.app = { location, camera, game: null, runtime: null };
+    // The presentation backend: from here on the semantic layer can actually show things.
+    if (typeof Visual3D !== 'undefined') Visual3D.attach({ view: location.view, location: location, camera: camera, canvas: canvas });
     // The post-processing frame (ACES, bloom, SSAO, vignette, genre LUTs) hangs on the view's
-    // camera; the stored preset is restored inside attach.
+    // camera; the stored preset is restored inside attach. The procedural sky dresses the lot.
     if (typeof CinePost3D !== 'undefined') CinePost3D.attach(location.view);
-    // The procedural sky (gradient dome, sun disc, stars, drifting cloud billboards) hangs on
-    // the same view; the lot wears its neutral day until a scene dresses it otherwise.
     if (typeof Sky3D !== 'undefined' && Sky3D.attach(location.view)) Sky3D.setLot();
     const game = window.app.game = new Game(window.app);
     console.log('ArcEngine: локация запущена, объектов ' + location.objects.length + '.');
@@ -54,11 +66,14 @@ function startGame() {
         const now = performance.now(), dt = (now - last) / 1000;
         last = now;
         game.update(Math.min(0.1, dt));
+        if (typeof GameModel !== 'undefined') GameModel.run(Math.min(0.1, dt));
+        if (typeof GameAnimation !== 'undefined') GameAnimation.update(Math.min(0.1, dt));
         if (typeof Kit !== 'undefined') Kit._run(Math.min(0.1, dt));
         location.update(dt);
         camera.update(dt);
         if (typeof CineCam3D !== 'undefined' && CineCam3D.isActive()) CineCam3D.capture();
         if (typeof CinePost3D !== 'undefined') CinePost3D.tick(Math.min(0.1, dt));
+        if (typeof Visual3D !== 'undefined') Visual3D.update(Math.min(0.1, dt), {});
         Sound3D.update(camera);
         World3D.renderFrame();
         requestAnimationFrame(loop);

@@ -53,7 +53,7 @@ function fakeLayer() {
 }
 
 function makeClips() {
-    const page = loadScripts(['js/Constants.js', 'js/Gltf3D.js'], { pc: stub(), World3D: stub() });
+    const page = loadScripts(['js/Constants.js', 'js/engine/Gltf3D.js'], { pc: stub(), World3D: stub() });
     const Clips3D = page.get('Clips3D');
     const layer = fakeLayer();
     const entity = {
