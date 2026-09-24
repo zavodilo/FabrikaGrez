@@ -176,6 +176,200 @@ const SetPieces3D = {
         return this;
     },
 
+    // --- baked vertex AO + a chamfer: the per-part box mesh -------------------------------
+    // Corner order: bottom ring then top ring, each -x+x across -z+z.
+    AO_CORNERS: [[-1, -1, -1], [1, -1, -1], [1, -1, 1], [-1, -1, 1], [-1, 1, -1], [1, 1, -1], [1, 1, 1], [-1, 1, 1]],
+    AO_BRIGHT: [0.44, 0.63, 0.82, 1.0],
+
+    /**
+     * Baked ambient per box corner (pure — tests hold it in their hands): a corner darkens
+     * for every neighbour whose grown AABB swallows it, plus one level for standing on the
+     * ground. parts: [{ lx, ly, cz, hx, hy, hz }] in set-local px (ly is the map depth).
+     * @returns {number[][]} per part, eight brightness values in 0.44..1
+     */
+    aoFor(parts) {
+        const EPS = 6;
+        const out = [];
+        for (let i = 0; i < parts.length; i++) {
+            const p = parts[i];
+            const row = [];
+            const onGround = p.cz - p.hz <= 6;
+            for (const c of this.AO_CORNERS) {
+                const px = p.lx + c[0] * p.hx, py = p.ly + c[1] * p.hy, pz = p.cz + c[2] * p.hz;   // cz — height
+                let occ = 0;
+                for (let j = 0; j < parts.length && occ < 3; j++) {
+                    if (j === i) continue;
+                    const q = parts[j];
+                    if (Math.abs(px - q.lx) <= q.hx + EPS && Math.abs(py - q.ly) <= q.hy + EPS && Math.abs(pz - q.cz) <= q.hz + EPS) occ++;
+                }
+                if (c[2] < 0 && onGround) occ++;
+                row.push(this.AO_BRIGHT[3 - Math.min(3, occ)]);
+            }
+            out.push(row);
+        }
+        return out;
+    },
+
+    /** A chamfered box mesh with per-corner vertex colors and face UVs (24 verts, 6 quads). */
+    _aoBoxMesh(view, ao) {
+        const b = 0.06;   // the chamfer: the top ring sits a hair inside the footprint
+        const P = (sx, sy, sz, inset) => [sx * (0.5 - (inset && sy > 0 ? b : 0)), sy * 0.5, sz * (0.5 - (inset && sy > 0 ? b : 0))];
+        // Corner ids follow AO_CORNERS (x, depth, height): the bottom ring is 0,1,4,5.
+        const faces = [
+            { n: [1, 0, 0], c: [1, 5, 6, 2], uv: 1 },     // +x
+            { n: [-1, 0, 0], c: [0, 4, 7, 3], uv: 1 },    // -x
+            { n: [0, 0, 1], c: [4, 5, 6, 7], uv: 1 },     // +z
+            { n: [0, 0, -1], c: [0, 1, 2, 3], uv: 1 },    // -z
+            { n: [0, 1, 0], c: [3, 2, 6, 7], uv: 0 },     // top
+            { n: [0, -1, 0], c: [0, 1, 5, 4], uv: 0 },    // bottom
+        ];
+        const pos = [], nor = [], uv = [], col = [], idx = [];
+        for (const f of faces) {
+            const base = pos.length / 3;
+            const uvs = f.uv ? [[0, 0], [1, 0], [1, 1], [0, 1]] : [[0, 0], [1, 0], [1, 1], [0, 1]];
+            for (let k = 0; k < 4; k++) {
+                const ci = f.c[k];
+                const c = this.AO_CORNERS[ci];
+                // AO_CORNERS is (x, depth, height); the mesh space is (x, up, z).
+                const p = P(c[0], c[2], c[1], true);
+                pos.push(p[0], p[1], p[2]);
+                nor.push(f.n[0], f.n[1], f.n[2]);
+                uv.push(uvs[k][0], uvs[k][1]);
+                const g = ao[ci];
+                col.push(g, g, g, 1);
+            }
+            idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+        }
+        const mesh = new pc.Mesh(view.world.app.graphicsDevice);
+        mesh.setPositions(pos);
+        mesh.setNormals(nor);
+        mesh.setUvs(0, uv);
+        mesh.setColors(col);
+        mesh.setIndices(idx);
+        mesh.update(pc.PRIMITIVE_TRIANGLES);
+        return mesh;
+    },
+
+    /** The shared hand-painted gradient: soft vertical light with a few canvas speckles. */
+    _handTex(view) {
+        if (this._hand) return this._hand;
+        if (typeof document === 'undefined') return null;
+        const S = 64;
+        const cv = document.createElement('canvas');
+        cv.width = S; cv.height = S;
+        const g = cv.getContext('2d');
+        if (!g) return null;
+        const grad = g.createLinearGradient(0, 0, 0, S);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.55, '#f0efe9');
+        grad.addColorStop(1, '#d9d6cc');
+        g.fillStyle = grad;
+        g.fillRect(0, 0, S, S);
+        const r = (typeof Rng !== 'undefined' && Rng.create) ? Rng.create('handpaint') : null;
+        const rnd = r ? () => r.float(0, 1) : Math.random;
+        for (let i = 0; i < 26; i++) {
+            g.fillStyle = 'rgba(120,110,96,' + (0.03 + rnd() * 0.05).toFixed(3) + ')';
+            const x = rnd() * S, y = rnd() * S, rr = 2 + rnd() * 7;
+            g.beginPath(); g.arc(x, y, rr, 0, Math.PI * 2); g.fill();
+        }
+        const tex = new pc.Texture(view.world.app.graphicsDevice, {
+            name: 'handpaint', width: S, height: S, format: pc.PIXELFORMAT_RGBA8,
+            mipmaps: true, minFilter: pc.FILTER_LINEAR_MIPMAP_LINEAR, magFilter: pc.FILTER_LINEAR,
+            addressU: pc.ADDRESS_REPEAT, addressV: pc.ADDRESS_REPEAT,
+        });
+        tex.setSource(cv);
+        this._hand = tex;
+        return tex;
+    },
+
+    /** Neon streaks for wet floors: the set's lights reflected in the rain-dark ground. */
+    _streakTex(view) {
+        if (this._streak) return this._streak;
+        if (typeof document === 'undefined') return null;
+        const S = 64;
+        const cv = document.createElement('canvas');
+        cv.width = S; cv.height = S;
+        const g = cv.getContext('2d');
+        if (!g) return null;
+        g.fillStyle = '#050508';
+        g.fillRect(0, 0, S, S);
+        const cols = ['#ff5a8a', '#2ad0c8', '#ffd27a', '#7aa0ff'];
+        for (let i = 0; i < 7; i++) {
+            const x = (i + 0.5) / 7 * S + (i % 2 ? 3 : -3);
+            const grad = g.createLinearGradient(x - 3, 0, x + 3, 0);
+            grad.addColorStop(0, 'rgba(0,0,0,0)');
+            grad.addColorStop(0.5, cols[i % cols.length]);
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            g.fillStyle = grad;
+            g.globalAlpha = 0.35 + (i % 3) * 0.15;
+            g.fillRect(x - 4, 0, 8, S);
+        }
+        g.globalAlpha = 1;
+        const tex = new pc.Texture(view.world.app.graphicsDevice, {
+            name: 'wetstreaks', width: S, height: S, format: pc.PIXELFORMAT_RGBA8,
+            mipmaps: true, minFilter: pc.FILTER_LINEAR_MIPMAP_LINEAR, magFilter: pc.FILTER_LINEAR,
+            addressU: pc.ADDRESS_REPEAT, addressV: pc.ADDRESS_REPEAT,
+        });
+        tex.anisotropy = 4;   // grazing angles on a floor moire without it
+        tex.setSource(cv);
+        this._streak = tex;
+        return tex;
+    },
+
+    /** Vertex-colored toon material with the hand-painted gradient (cached per color).
+     *  Built fresh (never cloned): the toon chunks live on the instance World3D.addObject
+     *  meets first, and a clone of a tooned material would silently drop them. */
+    _aoMat(hex) {
+        const key = String(hex || '#808080').toLowerCase();
+        if (!this._aoMats) this._aoMats = new Map();
+        let m = this._aoMats.get(key);
+        if (m) return m;
+        const v = parseInt(key.slice(1), 16);
+        const lin = (/** @type {number} */ c) => {
+            const s = c / 255;
+            return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+        };
+        m = /** @type {any} */ (new pc.StandardMaterial());
+        m.name = 'set-ao-' + key;
+        m.diffuse = new pc.Color(lin((v >> 16) & 255), lin((v >> 8) & 255), lin(v & 255));
+        m.diffuseVertexColor = true;
+        if (this._hand) m.diffuseMap = this._hand;
+        m.update();
+        this._aoMats.set(key, m);
+        return m;
+    },
+
+    /** The rain-dark floor: deep diffuse + neon streaks standing in for reflections. */
+    _wetMat(hex) {
+        const key = String(hex || '#808080').toLowerCase();
+        if (!this._wetMats) this._wetMats = new Map();
+        let m = this._wetMats.get(key);
+        if (m) return m;
+        const v = parseInt(key.slice(1), 16);
+        const lin = (/** @type {number} */ c) => {
+            const s = c / 255;
+            return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+        };
+        m = /** @type {any} */ (new pc.StandardMaterial());
+        m.name = 'set-wet-' + key;
+        m.diffuse = new pc.Color(lin((v >> 16) & 255) * 0.3, lin((v >> 8) & 255) * 0.3, lin(v & 255) * 0.32);
+        m.diffuseVertexColor = true;
+        if (this._hand) m.diffuseMap = this._hand;
+        if (this._streak) { m.emissiveMap = this._streak; m.emissive = new pc.Color(0.38, 0.38, 0.42); }
+        m.update();
+        this._wetMats.set(key, m);
+        return m;
+    },
+
+    /** Noir rain: the set's floors turn to wet asphalt (gloss + reflected neon). */
+    setWet(handle, on) {
+        const floors = handle && handle.floors;
+        if (!floors) return;
+        for (const f of floors) {
+            f.mi.material = on ? this._wetMat(f.hex) : this._aoMat(f.hex);
+        }
+    },
+
     finish(view, baseX, baseY, groundH) {
         const b = this._b;
         this._b = null;
@@ -187,6 +381,16 @@ const SetPieces3D = {
         view.root.addChild(root);
         const gh = groundH || 0;
         root.setPosition(-baseX, gh, baseY);
+        // Baked vertex AO: every box part gets its own chamfered mesh with corner colors
+        // read from the set's own geometry (cheap, stable, complements SSAO in the frame).
+        const boxes = b.parts.filter((p) => p.m === 'box');
+        const ao = this.aoFor(boxes);
+        let bi = 0;
+        this._handDev = view; this._streakDev = view;
+        const hand = this._handTex(view);
+        const streak = this._streakTex(view);
+        void hand; void streak;
+        const floors = [];
         for (const p of b.parts) {
             const e = new pc.Entity('p');
             root.addChild(e);
@@ -194,16 +398,33 @@ const SetPieces3D = {
             if (p.yaw || p.tilt) e.setRotation(World3D.rotQuat((p.tilt || 0) * this.DEG, -(p.yaw || 0) * this.DEG, 0));
             e.setLocalScale(p.sx, p.sy, p.sz);
             e.addComponent('render', { layers: [pc.LAYERID_WORLD] });
-            const mesh = p.m === 'box' ? ActorRig3D.unitBox(view)
-                : p.m === 'cone' ? this.coneMesh(view)
-                : p.m === 'cyl' ? this.cylMesh(view) : this.gemMesh(view);
-            const mat = p.glow ? this.glowMat(p.hex) : ActorRig3D.mat(p.hex);
-            e.render.meshInstances = [new pc.MeshInstance(mesh, mat, e)];
+            let mesh, mat;
+            if (p.m === 'box' && !p.glow) {
+                mesh = this._aoBoxMesh(view, ao[bi]);
+                mat = this._aoMat(p.hex);
+                if (p.sy <= 12 && Math.max(p.sx, p.sz) >= 250 && p.lh - p.sy / 2 <= 8) floors.push({ mi: null, hex: p.hex });
+                bi++;
+            } else {
+                mesh = p.m === 'box' ? ActorRig3D.unitBox(view)
+                    : p.m === 'cone' ? this.coneMesh(view)
+                    : p.m === 'cyl' ? this.cylMesh(view) : this.gemMesh(view);
+                mat = p.glow ? this.glowMat(p.hex) : ActorRig3D.mat(p.hex);
+            }
+            const mi = new pc.MeshInstance(mesh, mat, e);
+            e.render.meshInstances = [mi];
+            if (floors.length && floors[floors.length - 1].mi === null && mi.material === this._aoMat(p.hex) && p.m === 'box' && !p.glow && p.sy <= 12) {
+                floors[floors.length - 1].mi = mi;
+            }
             // Shell parts (ceilings, the fourth wall) are handed back on the handle so the
             // cinema can drop them and shoot the interior as a dollhouse.
             if (p.shell) b.shell.push(e);
         }
         World3D.addObject(view, root, 'prop');
+        // Wet variants swap in later (noir rain): give them the toon chunks up front, so the
+        // swap never drops the look. attach() is idempotent (arcToon mark).
+        if (World3D.toon && World3D.toon.attach) {
+            for (const f of floors) World3D.toon.attach(view, this._wetMat(f.hex));
+        }
         /** @type {Record<string, SetAnchor>} */
         const anchors = {};
         for (const name of Object.keys(b.anchors)) {
@@ -224,7 +445,7 @@ const SetPieces3D = {
             lt.intensity = 0;
             lights.push({ e: e, light: lt, base: Math.max(0, rec.intensity), flicker: rec.flicker, mode: rec.mode, gate: 0, phase: (lights.length * 1.7 + rec.lx * 0.013) % 6.283 });
         }
-        return { root: root, anchors: anchors, view: view, groundH: gh, id: '', shell: b.shell.slice(), lights: lights };
+        return { root: root, anchors: anchors, view: view, groundH: gh, id: '', shell: b.shell.slice(), lights: lights, floors: floors.filter((f) => f.mi) };
     },
 
     /** sRGB hex -> linear pc.Color, the same space the glow materials paint in. */
@@ -857,6 +1078,17 @@ SetPieces3D.PROPS = /** @type {Record<string, (S: any) => void>} */ ({
         S.L(92, 0, 48, { color: '#ffe8a0', range: 260, intensity: 1.8, mode: 'night' });
         S.B(-88, -24, 44, 5, 12, 8, '#ff5a4a', { glow: true }).B(-88, 24, 44, 5, 12, 8, '#ff5a4a', { glow: true });
         S.B(88, 0, 30, 8, 60, 10, '#8a8a90');
+    },
+
+    cup(S) {
+        S.C(0, 0, 0, 4, 10, '#e8e0d0', { rt: 4 });
+        S.B(5, 0, 5, 3, 2, 6, '#e8e0d0');
+    },
+
+    gun(S) {
+        S.B(0, 0, 6, 18, 4, 5, '#2a2a30');
+        S.B(9, 0, 8, 12, 3, 3, '#2a2a30');
+        S.B(-7, 0, 0, 4, 4, 9, '#3a2a1a');
     },
 
     horse(S) {

@@ -20,6 +20,7 @@ const page = loadScripts([
 ]);
 const get = page.get;
 const SetPieces3D = get('SetPieces3D');
+const ActorRig3D = get('ActorRig3D');
 const MovieData = get('MovieData');
 const ScriptGenerator = get('ScriptGenerator');
 const PeopleSystem = get('PeopleSystem');
@@ -104,4 +105,44 @@ test('расстановка сцены: актёры, массовка и ре�
         }
     }
     assert.deepEqual(clashes, [], 'предметы в одной точке:\n' + clashes.join('\n'));
+});
+
+test('aoFor: запечённый vertex-AO читает соседей и землю', () => {
+    const S = SetPieces3D;
+    // A lone box in the air: every corner sees the sky.
+    const lone = S.aoFor([{ lx: 0, ly: 0, cz: 200, hx: 50, hy: 50, hz: 50 }]);
+    assert.deepEqual([...lone[0]], [1, 1, 1, 1, 1, 1, 1, 1], 'парящий ящик целиком освещён');
+    // Standing on the ground: the bottom ring darkens one level, the top stays lit.
+    const ground = S.aoFor([{ lx: 0, ly: 0, cz: 50, hx: 50, hy: 50, hz: 50 }]);
+    assert.deepEqual([0, 1, 4, 5].map((i) => ground[0][i]), [0.82, 0.82, 0.82, 0.82], 'нижние углы на земле темнее');
+    assert.deepEqual([2, 3, 6, 7].map((i) => ground[0][i]), [1, 1, 1, 1], 'верхние углы свободны');
+    // A stack: the contact rings of both boxes darken.
+    const stack = S.aoFor([
+        { lx: 0, ly: 0, cz: 50, hx: 60, hy: 50, hz: 50 },
+        { lx: 0, ly: 0, cz: 150, hx: 60, hy: 50, hz: 50 },
+    ]);
+    assert.ok(stack[0][2] < 1 && stack[0][6] < 1, 'верх нижнего ящика прикрыт верхним: ' + stack[0]);
+    assert.ok(stack[1][0] < 1, 'низ верхнего ящика в контакте: ' + stack[1][0]);
+    assert.equal(stack[1][7], 1, 'верх верхнего ящика свободен');
+    // Determinism: the same set bakes the same AO.
+    const again = S.aoFor([
+        { lx: 0, ly: 0, cz: 50, hx: 60, hy: 50, hz: 50 },
+        { lx: 0, ly: 0, cz: 150, hx: 60, hy: 50, hz: 50 },
+    ]);
+    assert.equal(JSON.stringify(again), JSON.stringify(stack), 'AO детерминирован');
+});
+
+test('пружина вторичного движения: сходится, колеблется в границах, затухает', () => {
+    const A = ActorRig3D;
+    let st = { x: 0, v: 0 };
+    const dt = 1 / 60;
+    for (let i = 0; i < 30; i++) st = A._swayStep(st, 1, dt);      // a jerk forward
+    const peak = st.x;
+    assert.ok(peak > 0 && peak < 0.2, 'отклик на рывок ограничен: ' + peak);
+    for (let i = 0; i < 600; i++) st = A._swayStep(st, 0, dt);      // then stillness
+    assert.ok(Math.abs(st.x) < 0.01 && Math.abs(st.v) < 0.05, 'пружина затухает: ' + JSON.stringify(st));
+    // A steady push settles at accel / k, not at infinity.
+    let s2 = { x: 0, v: 0 };
+    for (let i = 0; i < 1200; i++) s2 = A._swayStep(s2, 0.5, dt);
+    assert.ok(Math.abs(s2.x - 0.5 / 42) < 0.01, 'статика пружины: ' + s2.x);
 });

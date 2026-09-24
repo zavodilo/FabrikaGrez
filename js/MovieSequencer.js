@@ -333,6 +333,10 @@ const MovieSequencer = {
             SetPieces3D.setPracticals(this.set, sc.timeOfDay, indoorSet, 1);
             for (const id of Object.keys(this.props)) SetPieces3D.setPracticals(this.props[id], sc.timeOfDay, indoorSet, 1);
         }
+        // Noir rain: the floors turn to wet asphalt — gloss and reflected neon streaks.
+        if (typeof SetPieces3D !== 'undefined' && SetPieces3D.setWet) {
+            SetPieces3D.setWet(this.set, this.tl.genre === 'noir' && (sc.timeOfDay === 'night' || sc.tint === 'rain'));
+        }
         if (typeof Sky3D !== 'undefined' && Sky3D.attached) {
             if (indoorSet) Sky3D.hide();
             else { Sky3D.show(); Sky3D.setLook(sc.timeOfDay, grade); }
@@ -495,6 +499,23 @@ const MovieSequencer = {
             Particles3D.start(view, 'fire', { x: fx, y: fy, h: 30, r: 16, seed: seed });
             Particles3D.start(view, 'smoke', { x: fx, y: fy, h: 60, r: 14, seed: seed + 1 });
         }
+    },
+
+    /** A prop in the actor's hand: parented to the forearm, disposed with the actor. */
+    _holdProp(a, id) {
+        if (a.holdHandle) { SetPieces3D.dispose(a.holdHandle); a.holdHandle = null; }
+        if (!id) return;
+        const view = this._app && this._app.location && this._app.location.view;
+        const h = SetPieces3D.buildProp(view, id, a.x, a.y, a.heading, 0);
+        if (!h) return;
+        const hand = a.joints && a.joints.foreR;
+        if (hand) {
+            hand.addChild(h.root);
+            h.root.setLocalPosition(0, -14, 6);
+            h.root.setLocalEulerAngles(90, 0, 0);
+            h.root.setLocalScale(0.7, 0.7, 0.7);
+        }
+        a.holdHandle = h;
     },
 
     /** Fires breathe and neon buzzes on the playback clock (deterministic rewatch). */
@@ -694,6 +715,8 @@ const MovieSequencer = {
             a.lookYaw = this._resolveYaw(b.look, a);
             return;
         }
+        if (a && b.pose !== undefined) { a.pose = b.pose || null; return; }
+        if (a && b.hold !== undefined) { this._holdProp(a, b.hold); return; }
         if (a && b.rideProp != null) {
             const prop = this.props[b.rideProp];
             if (prop) { this.riding[b.who] = { prop: b.rideProp, h: b.h != null ? b.h : 62 }; a.act('ride'); }
@@ -1089,7 +1112,7 @@ const MovieSequencer = {
         const view = this._app.location.view;
         this.actors = {};
         for (const m of this.tl.cast || []) {
-            const a = ActorRig3D.spawn(view, m.look || {}, {
+            const a = ActorRig3D.spawn(view, m.look || {}, { lod: /^e/.test(m.id) ? 'low' : undefined,
                 x: this.base.x + 1400, y: this.base.y + 900, h: 0, heading: 0,
             });
             this.actors[m.id] = a;
