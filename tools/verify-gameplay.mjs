@@ -438,6 +438,10 @@ try {
     // --- 11c. Phase Д: the editing room, the premiere, the run ------------------------------------------------
     await click('rel:open:' + pr0.id);
     await sleep(400);
+    check('сделка о прокате выбирается в монтажной', await st(() => {
+        const html = (document.querySelector('.arc-ui') || {}).innerHTML || '';
+        return /Платформенный выпуск/.test(html) && /Продажа стримингу/.test(html) && /Фестивальный маршрут/.test(html);
+    }));
     check('монтажная открыта', await st(() => app.game.screen === 'post'));
     await shot('14-editing-room');
     await click('rel:edit:' + pr0.id + ':fast');
@@ -592,6 +596,45 @@ try {
         const p = document.querySelector('.arc-ui .poster');
         return !!p && /radial-gradient/.test(p.getAttribute('style') || '');
     }));
+
+    // --- 11g. Economy depth: deals and foreign distribution -------------------------------------------------
+    // A finished picture can open a foreign region; the gross keeps coming afterwards.
+    const mvId = await st(() => {
+        const m = StudioManager.state.released[0];
+        if (m) { m.state = 'done'; m.takes = m.takes.length ? m.takes : [500000, 300000]; }
+        return m ? m.id : null;
+    });
+    if (mvId) {
+        await page.evaluate(() => app.game.showScreen('reviews'));
+        await sleep(300);
+        const foreignBtn = await st(() => {
+            const node = document.querySelector('.arc-ui [data-act^="rel:foreign:"]');
+            return node && !/off/.test(node.className) ? node.getAttribute('data-act') : null;
+        });
+        check('кнопки зарубежного проката на экране кассы', !!foreignBtn);
+        if (foreignBtn) {
+            const gross0 = await st((id) => StudioManager.state.released.find((x) => x.id === id).boxOffice, mvId);
+            const region = foreignBtn.split(':')[3];
+            const why = await st((a) => {
+                const m = StudioManager.state.released.find((x) => x.id === a.id);
+                const res = ReleaseSystem.startForeign(StudioManager.state, StudioManager, m, a.region);
+                return res.ok ? '' : res.why;
+            }, { id: mvId, region: region });
+            if (why) bad('startForeign в браузере отказал: ' + why);
+            await sleep(300);
+            const opened = await st((id) => {
+                const m = StudioManager.state.released.find((x) => x.id === id);
+                return m.foreign ? Object.keys(m.foreign.regions).length : 0;
+            }, mvId);
+            check('зарубежный регион открылся', opened === 1, 'регионов ' + opened);
+            await page.evaluate(() => app.game.nextWeek());
+            await sleep(250);
+            check('зарубежные сборы приходят в кассу', await st((a) => {
+                const m = StudioManager.state.released.find((x) => x.id === a.id);
+                return m.boxOffice > a.g;
+            }, { id: mvId, g: gross0 }));
+        } else bad('кнопка зарубежного проката недоступна');
+    }
 
     // --- 12. no console errors across the whole journey -------------------------------------------------------------
     await shot('11-back-to-studio');

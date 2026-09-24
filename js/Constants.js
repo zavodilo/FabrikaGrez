@@ -191,6 +191,28 @@ const RELEASE_HOLD_BONUS = 0.12;        // weekly decay softened per 10 audience
 const AWARD_REP = 6;                    // studio reputation per «Золотой Кадр»
 const AWARD_FANS = 4;                   // fans per «Золотой Кадр»
 const AWARD_CASH = 25000;               // $ prize of a «Золотой Кадр»
+// Distribution deals (ReleaseSystem.premiere): how a picture meets its audience.
+const DEAL_PLATFORM_OPEN = 0.45;        // platform release: opening as a fraction of the wide one
+const DEAL_PLATFORM_HOLD = 0.15;        // platform release: weekly decay softened by this
+const DEAL_PLATFORM_WEEKS = 4;          // platform release: extra weeks in theaters
+const DEAL_PLATFORM_CRITIC = 0.3;       // platform release: critics' bonus (careful handling)
+const DEAL_STREAM_PER_QUALITY = 150000; // streaming sale: $ per quality point, paid at once
+const DEAL_STREAM_PER_FAN = 5000;       // streaming sale: $ per fan point, paid at once
+const DEAL_FESTIVAL_OPEN = 0.25;        // festival route: opening as a fraction of the wide one
+const DEAL_FESTIVAL_REP = 6;            // festival route: reputation at the premiere
+// Foreign distribution (after the domestic run): regions buy a second life for the gross.
+const FOREIGN_COST = 50000;             // $ per region to open it
+const FOREIGN_WEEKS = 4;                // weeks a foreign run lasts
+const FOREIGN_MULT_EUROPE = 0.35;       // foreign weekly take as a fraction of the domestic one
+const FOREIGN_MULT_ASIA = 0.3;          // foreign weekly take as a fraction of the domestic one
+const FOREIGN_MULT_LATAM = 0.25;        // foreign weekly take as a fraction of the domestic one
+const FOREIGN_PIRACY_CHANCE = 0.15;     // weekly chance a region is hit by piracy
+const FOREIGN_PIRACY_CUT = 0.5;         // piracy halves the region's remaining take
+// Agents (PeopleSystem): a staff agent softens the market's appetite.
+const AGENT_RENEW_RELIEF = 0.2;         // renewal raise cut per agent on staff
+const AGENT_POACH_RELIEF = 0.3;         // poach chance cut per agent on staff
+const AGENT_HIRE_RELIEF = 0.1;          // new-hire salary cut per agent on staff
+const AGENT_MAX_POWER = 2;              // agents beyond this add nothing
 // Meta-game (MetaSystem): weekly studio events, sequels and franchises, scenarios, achievements.
 const META_EVENT_CHANCE = 0.18;         // weekly chance of a studio-wide event
 const META_SEQUEL_MIN_SCORE = 6;        // critics' score a film needs to breed a sequel

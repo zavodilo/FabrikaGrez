@@ -194,7 +194,8 @@ const StudioManager = {
         const n = c.marketSize;
         for (let i = 0; i < n; i++) {
             const roll = this.rand();
-            const role = roll < 0.62 ? 'actor' : roll < 0.78 ? 'director' : roll < 0.92 ? 'writer' : (roll < 0.97 ? 'editor' : 'marketer');
+            const role = roll < 0.58 ? 'actor' : roll < 0.74 ? 'director' : roll < 0.88 ? 'writer'
+                : roll < 0.93 ? 'editor' : roll < 0.97 ? 'marketer' : 'agent';
             const tier = this.rand();
             s.market.push(PeopleSystem.randomPerson(this.rngObj(), {
                 role: role,
@@ -238,6 +239,9 @@ const StudioManager = {
         person.mood = Math.min(100, person.mood + 10);
         person.loyalty = Math.min(100, person.loyalty + 5);
         person.demand = null; person.offer = null;
+        // An agent on staff negotiates the new salary down before the ink dries.
+        const relief = typeof AGENT_HIRE_RELIEF !== 'undefined' ? AGENT_HIRE_RELIEF : 0.1;
+        person.salary = Math.max(100, Math.round(person.salary * (1 - relief * PeopleSystem.agentPower(s)) / 10) * 10);
         person.contract = PeopleSystem.makeContract(person);
         if (person.role === 'actor') s.roster.push(person);
         else s.staff.push(person);

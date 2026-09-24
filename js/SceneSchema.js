@@ -921,6 +921,28 @@ const SCENE_SCHEMA = {
         },
         {
             "group": "game",
+            "name": "DEAL_STREAM_PER_QUALITY",
+            "min": 0,
+            "max": 500000,
+            "step": 10000,
+            "kind": "number",
+            "options": null,
+            "label": "Streaming $ per quality",
+            "value": 150000
+        },
+        {
+            "group": "game",
+            "name": "FOREIGN_COST",
+            "min": 0,
+            "max": 500000,
+            "step": 5000,
+            "kind": "number",
+            "options": null,
+            "label": "Foreign opening cost",
+            "value": 50000
+        },
+        {
+            "group": "game",
             "name": "WORLD3D_CINEMA_FILL",
             "min": 0,
             "max": 1.5,

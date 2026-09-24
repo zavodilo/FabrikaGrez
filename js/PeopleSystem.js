@@ -4,8 +4,8 @@
 
 /** @satisfies {Record<string, any>} */
 const PeopleSystem = {
-    ROLES: ['actor', 'director', 'writer', 'editor', 'marketer'],
-    ROLE_RU: { actor: 'Актёр', director: 'Режиссёр', writer: 'Сценарист', editor: 'Монтажёр', marketer: 'Маркетолог' },
+    ROLES: ['actor', 'director', 'writer', 'editor', 'marketer', 'agent'],
+    ROLE_RU: { actor: 'Актёр', director: 'Режиссёр', writer: 'Сценарист', editor: 'Монтажёр', marketer: 'Маркетолог', agent: 'Агент' },
     SKILLS: ['drama', 'comedy', 'action', 'romance'],
     SKILL_RU: { drama: 'Драма', comedy: 'Комедия', action: 'Экшн', romance: 'Романтика' },
 
@@ -251,6 +251,13 @@ const PeopleSystem = {
     /** Everyone on the studio's books. */
     books(state) { return (state.roster || []).concat(state.staff || []); },
 
+    /** How many agents the studio employs, capped: two professionals cover the market. */
+    agentPower(state) {
+        const n = (state.staff || []).filter((p) => p.role === 'agent').length;
+        const cap = typeof AGENT_MAX_POWER !== 'undefined' ? AGENT_MAX_POWER : 2;
+        return Math.min(cap, n);
+    },
+
     /** Remove a person from the books (leaves, poached, retired). */
     leave(state, mgr, person, reason) {
         let arr = state.roster || [], i = arr.indexOf(person);
@@ -281,7 +288,9 @@ const PeopleSystem = {
             if (p.contract) {
                 p.contract.weeksLeft--;
                 if (p.contract.weeksLeft <= 0 && !p.demand) {
-                    const raise = Math.round(p.salary * (c.raisePerStar * (p.star || 0) + 0.1 + (100 - (p.loyalty || 50)) / 500) / 10) * 10;
+                    const relief = typeof AGENT_RENEW_RELIEF !== 'undefined' ? AGENT_RENEW_RELIEF : 0.2;
+                    const cut = 1 - relief * this.agentPower(state);
+                    const raise = Math.round(p.salary * cut * (c.raisePerStar * (p.star || 0) + 0.1 + (100 - (p.loyalty || 50)) / 500) / 10) * 10;
                     p.demand = { raise: raise, weeksLeft: c.grace };
                     out.push('📝 ' + p.name + ' ждёт продления контракта: +' + StudioUI_money(raise) + '/нед (' + c.grace + ' нед. на ответ).');
                     continue;                       // the grace starts NEXT week, not inside this one
@@ -298,7 +307,9 @@ const PeopleSystem = {
                 }
             }
             // Poaching: a disloyal star hears money elsewhere.
-            if (!p.offer && (p.star || 0) >= 3 && (p.loyalty || 50) < 60 && r.chance(c.poachChance)) {
+            const poachRelief = typeof AGENT_POACH_RELIEF !== 'undefined' ? AGENT_POACH_RELIEF : 0.3;
+            const poachChance = c.poachChance * (1 - poachRelief * this.agentPower(state));
+            if (!p.offer && (p.star || 0) >= 3 && (p.loyalty || 50) < 60 && r.chance(poachChance)) {
                 p.offer = { salary: Math.round(p.salary * c.poachMult), weeksLeft: 3 };
                 out.push('🕵 Конкуренты манят ' + p.name + ': ' + StudioUI_money(p.offer.salary) + '/нед. Удержать — поднять зарплату.');
                 mgr.pushNews('Слух: ' + p.name + ' ведёт переговоры с конкурентами.', 'bad');

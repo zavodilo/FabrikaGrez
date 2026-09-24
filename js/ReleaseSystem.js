@@ -57,6 +57,30 @@ const ReleaseSystem = {
         };
     },
 
+    // How a picture meets its audience. The wide release is the baseline; the others trade
+    // opening money for legs, immediacy or prestige.
+    DEALS: {
+        wide: { ru: 'Широкий прокат', hint: 'Полный старт на всех экранах: максимум кассы в первые недели' },
+        platform: { ru: 'Платформенный выпуск', hint: 'Скромный старт, длинные ноги: фильм живёт дольше и любит критику' },
+        streaming: { ru: 'Продажа стримингу', hint: 'Деньги сразу и без риска: ни проката, ни фанатов, ни славы' },
+        festival: { ru: 'Фестивальный маршрут', hint: 'Мало кассы, много репутации: путь к наградам' },
+    },
+
+    // A second life for the gross: regions buy foreign weeks after the domestic run.
+    FOREIGN: {
+        europe: { ru: 'Европа', mult: 'FOREIGN_MULT_EUROPE' },
+        asia: { ru: 'Азия', mult: 'FOREIGN_MULT_ASIA' },
+        latam: { ru: 'Латинская Америка', mult: 'FOREIGN_MULT_LATAM' },
+    },
+
+    foreignMult(key) {
+        const U = 'undefined';
+        const fb = { FOREIGN_MULT_EUROPE: 0.35, FOREIGN_MULT_ASIA: 0.3, FOREIGN_MULT_LATAM: 0.25 };
+        const name = (this.FOREIGN[key] || {}).mult;
+        const v = name && typeof globalThis !== U && globalThis[name] !== undefined ? globalThis[name] : fb[name];
+        return v != null ? v : 0.3;
+    },
+
     // --- the editing room ------------------------------------------------------------------------
 
     /** How well the chosen cut tempo suits the genre: +match / 0 / mismatch. */
@@ -148,7 +172,10 @@ const ReleaseSystem = {
         const marketing = Math.max(0, Math.min(Math.round(proj.budget * c.marketingMax), Math.round(o.marketing != null ? o.marketing : proj.budget * 0.3)));
         if (!mgr.canAfford(marketing)) return { ok: false, why: 'На кампанию нужно ' + StudioUI_money(marketing) + ' — в кассе столько нет.' };
 
-        const fq = this.finalQuality(state, proj, { edit: o.edit || 'normal', music: o.music || (MovieData.GENRES[proj.genre] || {}).music });
+        const deal = this.DEALS[o.deal] ? o.deal : 'wide';
+        const fqRaw = this.finalQuality(state, proj, { edit: o.edit || 'normal', music: o.music || (MovieData.GENRES[proj.genre] || {}).music });
+        const fq = { quality: fqRaw.quality, base: fqRaw.base, edit: fqRaw.edit, music: fqRaw.music };
+        if (deal === 'platform') fq.quality = Math.min(10, fq.quality + (typeof DEAL_PLATFORM_CRITIC !== 'undefined' ? DEAL_PLATFORM_CRITIC : 0.3));
         mgr.pay(marketing, 'Маркетинг: «' + proj.title + '»');
         const plan = this.openingPlan(state, proj, marketing, fq.quality);
 
@@ -183,9 +210,11 @@ const ReleaseSystem = {
             audience: audience,
             boxOffice: 0,
             takes: [],
-            weeksLeft: c.runWeeks,
-            take: plan.opening,
-            opening: plan.opening,
+            weeksLeft: c.runWeeks + (deal === 'platform' ? (typeof DEAL_PLATFORM_WEEKS !== 'undefined' ? DEAL_PLATFORM_WEEKS : 4) : 0),
+            take: movie_take(plan.opening, deal),
+            opening: movie_take(plan.opening, deal),
+            deal: deal,
+            holdBonus: deal === 'platform' ? (typeof DEAL_PLATFORM_HOLD !== 'undefined' ? DEAL_PLATFORM_HOLD : 0.15) : 0,
             state: 'run',
             awards: [],
             directorId: proj.directorId,
@@ -196,6 +225,24 @@ const ReleaseSystem = {
         state.released.push(movie);
         proj.state = 'released';
         proj.movieId = movie.id;
+        if (deal === 'festival') {
+            state.rep = Math.min(100, (state.rep || 20) + (typeof DEAL_FESTIVAL_REP !== 'undefined' ? DEAL_FESTIVAL_REP : 6));
+        }
+        if (deal === 'streaming') {
+            // The streamer pays at once: no run, no fans, no glory — and no risk either.
+            const price = Math.round(fq.quality * (typeof DEAL_STREAM_PER_QUALITY !== 'undefined' ? DEAL_STREAM_PER_QUALITY : 150000) +
+                state.fans * (typeof DEAL_STREAM_PER_FAN !== 'undefined' ? DEAL_STREAM_PER_FAN : 5000));
+            mgr.earn(price, 'Стриминг-продажа: «' + proj.title + '»');
+            movie.boxOffice = price;
+            movie.take = 0;
+            movie.weeksLeft = 0;
+            movie.state = 'done';
+            movie.profit = price - (proj.spent || proj.budget) - marketing;
+            state.stats = state.stats || { films: 0, boxOffice: 0, bestScore: 0, awards: 0, weeks: 0 };
+            state.stats.films++;
+            state.stats.boxOffice += price;
+            state.stats.bestScore = Math.max(state.stats.bestScore || 0, movie.score);
+        }
         if (script) script.state = 'released';   // the script leaves the pipeline for good
 
         // The people of the picture get their credit (and their star power starts compounding).
@@ -256,6 +303,8 @@ const ReleaseSystem = {
         const c = this.cfg();
         const out = [];
         for (const m of (state.released || [])) {
+            // Foreign runs keep paying after the domestic one wraps: process them first.
+            for (const t of this._foreignWeek(state, mgr, m, c)) out.push(t);
             if (m.state !== 'run') continue;
             const season = this.SEASON[Math.floor(((state.week || 1) - 1) * 12 / 52) % 12] || 1;
             const gross = Math.round(m.take * season);
@@ -265,7 +314,7 @@ const ReleaseSystem = {
             m.takes.push(share);
             m.weeksLeft--;
             // Word of mouth: a loved picture holds its screens, a hated one dies fast.
-            const hold = Math.max(0.15, Math.min(0.9, 1 - c.drop + (m.audience - 60) / 100 * c.holdBonus));
+            const hold = Math.max(0.15, Math.min(0.9, 1 - c.drop + (m.audience - 60) / 100 * c.holdBonus + (m.holdBonus || 0)));
             m.take = Math.round(m.take * hold);
             if (m.weeksLeft <= 0 || m.take < 5000) {
                 m.state = 'done';
@@ -357,6 +406,62 @@ const ReleaseSystem = {
         return out;
     },
 
+    // --- foreign distribution ---------------------------------------------------------------------
+
+    /** How many more regions the studio can run at once: one, plus one per agent. */
+    foreignSlots(state, movie) {
+        const cap = 1 + (typeof PeopleSystem !== 'undefined' ? PeopleSystem.agentPower(state) : 0);
+        const open = movie.foreign ? Object.keys(movie.foreign.regions || {}).length : 0;
+        return Math.max(0, cap - open);
+    },
+
+    canForeign(state, movie) {
+        if (!movie || movie.state !== 'done') return false;
+        if (this.foreignSlots(state, movie) <= 0) return false;
+        const cost = typeof FOREIGN_COST !== 'undefined' ? FOREIGN_COST : 50000;
+        return state.cash >= cost;
+    },
+
+    startForeign(state, mgr, movie, region) {
+        if (!this.FOREIGN[region]) return { ok: false, why: 'Неизвестный регион.' };
+        if (!movie || movie.state !== 'done') return { ok: false, why: 'Зарубежный прокат открывается после домашнего.' };
+        if (movie.foreign && movie.foreign.regions && movie.foreign.regions[region]) return { ok: false, why: 'Этот регион уже открыт.' };
+        if (this.foreignSlots(state, movie) <= 0) return { ok: false, why: 'Столько регионов сразу студия не тянет: наймите агента.' };
+        const cost = typeof FOREIGN_COST !== 'undefined' ? FOREIGN_COST : 50000;
+        if (!mgr.canAfford(cost)) return { ok: false, why: 'Нужно ' + StudioUI_money(cost) + ' на выход в регион.' };
+        mgr.pay(cost, 'Зарубежный прокат: ' + this.FOREIGN[region].ru);
+        movie.foreign = movie.foreign || { regions: {} };
+        movie.foreign.regions[region] = {
+            weeksLeft: typeof FOREIGN_WEEKS !== 'undefined' ? FOREIGN_WEEKS : 4,
+            take: Math.round(m_avg(movie) * this.foreignMult(region)),
+        };
+        mgr.pushNews('«' + movie.title + '» выходит в регионе ' + this.FOREIGN[region].ru + '.', 'good');
+        return { ok: true, region: region };
+    },
+
+    _foreignWeek(state, mgr, m, c) {
+        const out = [];
+        if (!m.foreign || !m.foreign.regions) return out;
+        const piracy = typeof FOREIGN_PIRACY_CHANCE !== 'undefined' ? FOREIGN_PIRACY_CHANCE : 0.15;
+        const cut = typeof FOREIGN_PIRACY_CUT !== 'undefined' ? FOREIGN_PIRACY_CUT : 0.5;
+        for (const key of Object.keys(m.foreign.regions)) {
+            const reg = m.foreign.regions[key];
+            if (reg.weeksLeft <= 0) continue;
+            const r = Rng.create(((state.seed ^ Math.imul(state.weekIdx + 7, 2654435761) ^ Rng.hash(m.id + key)) >>> 0) || 1);
+            if (r.chance(piracy)) {
+                reg.take = Math.round(reg.take * cut);
+                out.push('🏴 Пираты слили «' + m.title + '» в регионе ' + this.FOREIGN[key].ru + ': сборы уполовинены.');
+                mgr.pushNews('Пиратская копия «' + m.title + '» гуляет по региону ' + this.FOREIGN[key].ru + '.', 'bad');
+            }
+            const share = Math.round(reg.take * (c.share || 0.6));
+            mgr.earn(share, 'Зарубежный прокат: «' + m.title + '» (' + this.FOREIGN[key].ru + ')');
+            m.boxOffice += share;
+            reg.take = Math.round(reg.take * (1 - (c.drop || 0.42) * 0.8));
+            reg.weeksLeft--;
+        }
+        return out;
+    },
+
     // --- the screens ---------------------------------------------------------------------------------------
 
     _proj(state, id) {
@@ -413,6 +518,13 @@ const ReleaseSystem = {
         }
         h += '</div><div class="meta hint">Родная музыка жанра льстит картине, чужая слышна в каждой рецензии.</div>';
 
+        // The deal: how the picture meets its audience.
+        h += '<div class="h2">🤝 Сделка о прокате</div><div class="row tight">';
+        for (const dk of Object.keys(this.DEALS)) {
+            const D = this.DEALS[dk];
+            h += '<span class="btn small' + ((ed.deal || 'wide') === dk ? ' gold' : '') + '" data-act="rel:deal:' + proj.id + ':' + dk + '" title="' + UIx.esc(D.hint) + '">' + D.ru + '</span>';
+        }
+        h += '</div><div class="meta hint">' + UIx.esc(this.DEALS[ed.deal || 'wide'].hint) + '</div>';
         // Marketing.
         h += '<div class="h2">📣 Кампания</div><div class="panel" style="padding:12px">' +
             '<label class="fld">Бюджет кампании: <b>' + UIx.money(ed.marketing) + '</b> (' + Math.round(plan.mFrac * 100) + '% сметы)</label>' +
@@ -474,7 +586,15 @@ const ReleaseSystem = {
                 '</div><div style="flex:1;min-width:240px">' +
                 (m.reviews || []).map((rv) => '<div class="dlg" style="margin:5px 0"><span class="tag gold" style="margin-right:8px">' + rv.score.toFixed(1) + '/10</span>' + UIx.esc(rv.text) + '</div>').join('') +
                 (m.awards || []).map((a) => '<div class="meta gold">🏆 ' + UIx.esc(a) + '</div>').join('') +
-                '<div class="row tight" style="margin-top:8px"><span class="btn small" data-act="watch:' + m.id + '">▶ Смотреть фильм</span></div>' +
+                '<div class="row tight" style="margin-top:8px"><span class="btn small" data-act="watch:' + m.id + '">▶ Смотреть фильм</span>' +
+                (m.state === 'done' ? '<span class="hint" style="margin-left:8px">🌍 Зарубежный прокат:</span>' +
+                    Object.keys(this.FOREIGN).map((rk) => {
+                        const opened = m.foreign && m.foreign.regions && m.foreign.regions[rk];
+                        if (opened) return '<span class="tag green">' + this.FOREIGN[rk].ru + (opened.weeksLeft > 0 ? ' · ' + opened.weeksLeft + ' нед.' : ' · завершено') + '</span>';
+                        return '<span class="btn small' + (this.canForeign(s, m) ? '' : ' off') + '" data-act="rel:foreign:' + m.id + ':' + rk + '" title="Открыть регион: ' + Math.round(this.foreignMult(rk) * 100) + '% домашней недели, риск пиратства">' + this.FOREIGN[rk].ru + ' · ' + StudioUI_money(typeof FOREIGN_COST !== 'undefined' ? FOREIGN_COST : 50000) + '</span>';
+                    }).join('') +
+                    (this.foreignSlots(s, m) <= 0 && !(m.foreign && Object.keys(m.foreign.regions || {}).length) ? '<span class="hint">нужен агент для второго региона</span>' : '') : '') +
+                '</div>' +
                 '</div></div></div>';
         }
         h += '<div class="row" style="margin-top:12px"><span class="btn" data-act="nav:cinema">← Кинотеатр</span>' +
@@ -509,6 +629,24 @@ const ReleaseSystem = {
         if (parts[1] === 'edit') { ed.edit = this.EDIT_RU[parts[3]] ? parts[3] : ed.edit; game.showScreen('post'); return true; }
         if (parts[1] === 'music') { ed.music = parts[3] || ed.music; game.showScreen('post'); return true; }
         if (parts[1] === 'marketing') { ed.marketing = Math.max(0, Math.round(Number(parts[3]) || 0)); game.showScreen('post'); return true; }
+        if (parts[1] === 'deal') {
+            const pr2 = (s.projects || []).find((x) => x.id === parts[2]);
+            if (pr2) {
+                game.uiState.postEdit = game.uiState.postEdit || {};
+                const ed2 = game.uiState.postEdit[pr2.id] = game.uiState.postEdit[pr2.id] || { edit: 'normal', marketing: Math.round(pr2.budget * 0.3) };
+                ed2.deal = this.DEALS[parts[3]] ? parts[3] : 'wide';
+                game.showScreen('post');
+            }
+            return true;
+        }
+        if (parts[1] === 'foreign') {
+            const mv = (s.released || []).find((x) => x.id === parts[2]);
+            const res = this.startForeign(s, S, mv, parts[3]);
+            if (!res.ok) { game.toast(res.why); return true; }
+            game.toast('🌍 «' + mv.title + '» выходит в регионе ' + this.FOREIGN[res.region].ru + ': недели зарубежных сборов пошли.');
+            game.showScreen('reviews');
+            return true;
+        }
         if (parts[1] === 'premiere') {
             const res = this.premiere(s, S, proj, ed);
             if (!res.ok) { game.toast(res.why); return true; }
@@ -525,4 +663,21 @@ const ReleaseSystem = {
 /** Prize money of the ceremony lands in the studio's ledger. */
 function mgrEarn(state, amount) {
     if (typeof StudioManager !== 'undefined' && StudioManager.earn) StudioManager.earn(amount, 'Премия «Золотой Кадр»');
+}
+
+/** The deal-adjusted first-week gross: the number the poster calls the opening. */
+function movie_take(opening, deal) {
+    const U = 'undefined';
+    const platform = typeof DEAL_PLATFORM_OPEN !== U ? DEAL_PLATFORM_OPEN : 0.45;
+    const festival = typeof DEAL_FESTIVAL_OPEN !== U ? DEAL_FESTIVAL_OPEN : 0.25;
+    return Math.round(opening * (deal === 'platform' ? platform : deal === 'festival' ? festival : 1));
+}
+
+/** The picture's average domestic weekly take: the baseline a foreign region buys. */
+function m_avg(movie) {
+    const takes = (movie && movie.takes) || [];
+    if (!takes.length) return (movie && movie.opening) || 100000;
+    let sum = 0;
+    for (const t of takes) sum += t;
+    return sum / takes.length;
 }
