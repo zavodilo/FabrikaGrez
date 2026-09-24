@@ -131,6 +131,7 @@ const MovieSequencer = {
     },
 
     _teardown() {
+        this._duck(false);
         Sound3D.music(null);
         if (this._proj) { this._proj.stop(); this._proj = null; }
         for (const id of Object.keys(this.props)) SetPieces3D.dispose(this.props[id]);
@@ -655,8 +656,16 @@ const MovieSequencer = {
         el.setHTML(html);
     },
 
+    /** The score steps back while a line is on screen: voices own the mix. */
+    _duck(on) {
+        if (typeof Sound3D === 'undefined') return;
+        const mh = Sound3D._music;
+        if (mh && mh.setVolume) mh.setVolume(on ? 0.45 : 1);
+    },
+
     _subtitle(who, text, dur) {
         const member = who == null ? null : (this.tl.cast || []).find((m) => m.id === who);
+        this._duck(true);
         const st = UI.get('subText'), sp = UI.get('subSpeaker'), pn = UI.get('subPanel');
         if (st) { st.setText(text); st.show(true); }
         if (sp) { sp.setText(member ? member.role : ''); sp.show(!!member); }
@@ -666,6 +675,7 @@ const MovieSequencer = {
     },
 
     _hideSubtitle() {
+        this._duck(false);
         for (const id of ['subText', 'subSpeaker', 'subPanel']) {
             const el = UI.get(id);
             if (el) el.show(false);

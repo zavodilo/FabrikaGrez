@@ -563,6 +563,36 @@ try {
             seq ? '«' + seq.title + '» №' + seq.num : 'сиквел не создался');
     } else bad('хит не получил права на сиквел');
 
+    // --- 11f. Polish: sidechain, hotkeys, procedural posters ---------------------------------------------
+    const duck = await st(() => {
+        if (typeof Sound3D === 'undefined' || !Sound3D._music) return { skip: true };
+        const g0 = Sound3D._music.gain ? Sound3D._music.gain.gain.value : null;
+        MovieSequencer._duck(true);
+        const g1 = Sound3D._music.gain ? Sound3D._music.gain.gain.value : null;
+        MovieSequencer._duck(false);
+        const g2 = Sound3D._music.gain ? Sound3D._music.gain.gain.value : null;
+        return { g0, g1, g2 };
+    });
+    if (!duck.skip) {
+        check('диалог приглушает музыку и возвращает её', duck.g1 < duck.g0 && Math.abs(duck.g2 - duck.g0) < 1e-6,
+            'громкость ' + duck.g0 + ' → ' + duck.g1 + ' → ' + duck.g2);
+    }
+    const week0 = await st(() => StudioManager.state.weekIdx);
+    await page.evaluate(() => app.game.showScreen('none'));
+    await sleep(200);
+    await page.evaluate(() => {
+        // A synthetic keydown: headless focus is not guaranteed, the wiring is what we test.
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW', bubbles: true, cancelable: true }));
+    });
+    await sleep(300);
+    check('горячая клавиша W листает неделю', await st((w0) => StudioManager.state.weekIdx === w0 + 1, week0));
+    await page.evaluate(() => app.game.showScreen('cinema'));
+    await sleep(300);
+    check('постеры собраны из палитры фильма', await st(() => {
+        const p = document.querySelector('.arc-ui .poster');
+        return !!p && /radial-gradient/.test(p.getAttribute('style') || '');
+    }));
+
     // --- 12. no console errors across the whole journey -------------------------------------------------------------
     await shot('11-back-to-studio');
     check('за весь прогон ни одной ошибки консоли', errors.length === 0, errors.slice(0, 5).join(' | '));

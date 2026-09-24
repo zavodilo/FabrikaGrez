@@ -13,6 +13,7 @@ const MovieData = {
     // SFX ids used by timeline beats -> asset paths (literals for the scanner).
     SFX: {
         cut: 'assets/sounds/cut.wav',
+        click: 'assets/sounds/click.wav',
         gunshot: 'assets/sounds/gunshot.wav',
         punch: 'assets/sounds/punch.wav',
         sword: 'assets/sounds/sword.wav',

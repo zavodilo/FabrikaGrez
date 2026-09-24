@@ -453,7 +453,7 @@ const ReleaseSystem = {
             const G = MovieData.GENRES[m.genre] || {};
             const badge = m.state === 'run' ? '<span class="tag blue">в прокате, нед. ' + m.takes.length + '</span>' : '<span class="tag">прокат завершён</span>';
             h += '<div class="card" style="cursor:default"><div class="row" style="align-items:flex-start">' +
-                '<div class="poster ' + m.genre + '"><div class="p-emoji">' + (G.emoji || '🎬') + '</div>' +
+                '<div class="poster ' + m.genre + '" ' + UIx.posterStyle(m) + '><div class="p-emoji">' + (G.emoji || '🎬') + '</div>' +
                 '<div class="p-score">' + m.score.toFixed(1) + '</div><div class="p-title">' + UIx.esc(m.title) + '</div></div>' +
                 '<div style="flex:1;min-width:220px">' +
                 '<div class="row tight"><span class="name">«' + UIx.esc(m.title) + '»</span><span class="tag">' + (G.ru || '') + '</span>' +

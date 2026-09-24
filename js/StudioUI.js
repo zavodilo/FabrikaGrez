@@ -28,6 +28,26 @@ const StudioUI = {
         return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     },
 
+    /**
+     * A poster is the film's own palette: the leads' costumes and hair light the card, so no two
+     * pictures in the filmography share a face. Pure inline CSS — the card stays a card.
+     */
+    posterStyle(m) {
+        const cast = (m && m.timeline && m.timeline.cast) || [];
+        const leads = cast.filter((c) => /^a/.test(c.id)).slice(0, 3);
+        const look = (i) => (leads[i] && leads[i].look) || {};
+        const c1 = look(0).shirt || '#3a4458';
+        const c2 = look(1).shirt || '#58443a';
+        const c3 = look(2).shirt || '#2e3a34';
+        const hair = look(0).hair || '#1a120c';
+        return 'style="background:' +
+            'radial-gradient(120% 80% at 50% 0%, #ffffff26 0%, transparent 55%),' +
+            'radial-gradient(90% 70% at 18% 100%, ' + c1 + 'cc 0%, transparent 62%),' +
+            'radial-gradient(90% 70% at 82% 100%, ' + c2 + 'bb 0%, transparent 62%),' +
+            'radial-gradient(60% 40% at 50% 78%, ' + c3 + '99 0%, transparent 70%),' +
+            'linear-gradient(180deg, ' + hair + ' 0%, #0b0e15 72%)"';
+    },
+
     avatar(p, size) {
         const L = p.look || {};
         const s = size || 46;
@@ -82,7 +102,8 @@ const StudioUI = {
             '<div class="h3">🏗 Декорации</div>' +
             '<p>Каждый жанр снимается в своих декорациях (вестерн-улица, космический корабль, особняк…). Построенная декорация поднимает качество сцен и остаётся у студии навсегда.</p>' +
             '<div class="h3">⌨ Горячие клавиши</div>' +
-            '<p>Пробел — пауза в кино, Esc — выйти из просмотра/закрыть экран. Колесо — зум студии, WASD — полёт камеры, ПКМ — осмотреться.</p></div>' +
+            '<p>Пробел — пауза в кино, Esc — выйти из просмотра/закрыть экран. Колесо — зум студии, WASD — полёт камеры, ПКМ — осмотреться.</p>' +
+            '<p>Горячие клавиши студии: <b>1</b> Студия, <b>2</b> Люди, <b>3</b> Снять фильм, <b>4</b> Кинотеатр, <b>5</b> Ещё, <b>W</b> — следующая неделя (когда экраны закрыты).</p></div>' +
             '</div>' +
             '<div class="row" style="margin-top:16px"><span class="btn" data-act="back">← Назад</span></div></div>';
     },
@@ -291,7 +312,7 @@ const StudioUI = {
         for (const m of s.released) {
             const g = MovieData.GENRES[m.genre] || {};
             list += '<div class="card" data-act="watch:' + m.id + '"><div class="row" style="align-items:flex-start">' +
-                '<div class="poster ' + m.genre + '"><div class="p-emoji">' + (g.emoji || '🎬') + '</div>' +
+                '<div class="poster ' + m.genre + '" ' + this.posterStyle(m) + '><div class="p-emoji">' + (g.emoji || '🎬') + '</div>' +
                 (m.score != null ? '<div class="p-score">' + m.score.toFixed(1) + '</div>' : '') +
                 '<div class="p-title">' + this.esc(m.title) + '</div></div>' +
                 '<div style="flex:1"><div class="row tight"><span class="name">«' + this.esc(m.title) + '»</span>' +
@@ -375,6 +396,14 @@ const StudioUI = {
     // --- the dispatcher ----------------------------------------------------------------------------
 
     onAction(game, act, el, screenEl) {
+        // A soft tap under every action: the interface answers the finger, not the eye.
+        if (typeof Sound3D !== 'undefined' && MovieData.SFX.click) {
+            const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+            if (!this._lastClick || now - this._lastClick > 70) {
+                this._lastClick = now;
+                Sound3D.play(MovieData.SFX.click, { volume: 0.25 });
+            }
+        }
         const S = StudioManager, s = S.state;
         const parts = String(act).split(':');
         game.uiState = game.uiState || {};

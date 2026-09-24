@@ -131,6 +131,12 @@ class Game {
                 return;
             }
             if (e.code === 'Escape' && this.screen !== 'none' && this.screen !== 'menu') this.showScreen('none');
+            // Hotkeys: 1..5 walk the five screens, W turns the week. Only when the lot is on
+            // screen and no film plays, so a typing player never loses a picture.
+            if (!this.started || MovieSequencer.playing) return;
+            const screens = { Digit1: 'studio', Digit2: 'people', Digit3: 'newmovie', Digit4: 'cinema', Digit5: 'more' };
+            if (screens[e.code]) { e.preventDefault(); this.showScreen(screens[e.code]); return; }
+            if (e.code === 'KeyW' && this.screen === 'none') { e.preventDefault(); this.nextWeek(); }
         });
     }
 

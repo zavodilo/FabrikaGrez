@@ -485,6 +485,18 @@ function musicWestern() {
 
 // --- SFX ----------------------------------------------------------------------------------
 
+// A soft UI click: a 50 ms filtered blip, quiet enough to live under everything.
+function sfxClick() {
+    const o = buf(0.05), lp = lowpass(0.7);
+    const rnd = noise(11);
+    for (let i = 0; i < o.length; i++) {
+        const t = i / RATE;
+        const env = Math.exp(-t * 180);
+        o[i] = lp(Math.sin(2 * Math.PI * 1500 * t) * 0.5 + rnd() * 0.22) * env;
+    }
+    return o;
+}
+
 function sfxCut() {                                     // a camera-cut whoosh
     const o = buf(0.32), lp = lowpass(0.5);
     const rnd = noise(5);
@@ -742,6 +754,7 @@ function buildMovieSounds() {
         'music_war.wav': writeWav(musicWar()),
         'music_adventure.wav': writeWav(musicAdventure()),
         // sfx
+        'click.wav': writeWav(sfxClick()),
         'cut.wav': writeWav(sfxCut()),
         'gunshot.wav': writeWav(sfxGunshot()),
         'punch.wav': writeWav(sfxPunch()),
