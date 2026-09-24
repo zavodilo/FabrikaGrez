@@ -162,6 +162,12 @@ try {
         };
     });
     check('кино играется через постобработку с жанровым LUT', demoPost.ok, demoPost.why || '');
+    const robot = await st(() => {
+        const glb = ActorRig3D.handles.filter((h) => h.glb);
+        return { n: glb.length, clips: glb.some((h) => h.clips), missing: glb.some((h) => h._glbMissing) };
+    });
+    check('CC0-актёр (RobotExpressive) играет в демо-фильме клипами', robot.n >= 1 && robot.clips && !robot.missing,
+        'glb-актёров ' + robot.n + ', клипы ' + robot.clips);
     await shot('02-demo-film');
     await st(() => { MovieSequencer.stop(false); });
     await sleep(600);

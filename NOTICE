@@ -30,3 +30,8 @@ Copyright (c) 2022 Jonas Wagner, MIT License.
 Antique Camera glTF model (assets/models/antique-camera.glb)
     (c) 2017-2018 UX3D, via KhronosGroup/glTF-Sample-Assets, license CC0-1.0
     (public domain). Texture copies downscaled at dev time; no other changes.
+
+RobotExpressive.glb (assets/models/RobotExpressive.glb)
+    Model by Tomas Laulhe, CC0-1.0 (public domain); modifications by Don McCurdy.
+    Obtained from the three.js example assets (examples/models/gltf/RobotExpressive).
+    Used unmodified as the studio's robot actors.

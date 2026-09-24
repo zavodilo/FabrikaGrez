@@ -103,7 +103,61 @@ const ActorRig3D = {
      * @param {{ x?: number, y?: number, h?: number, heading?: number, lod?: 'low' }} [opts]
      * @returns {ActorHandle}
      */
+    // A downloaded CC0 actor (RobotExpressive, see NOTICE) answers our action verbs with its
+    // own animation clips; anything unmapped rests in Idle while the subtitles do the talking.
+    CLIP_MAP: {
+        idle: 'Idle', walk: 'Walking', run: 'Running', talk: 'Idle', gesture: 'Yes', wave: 'Wave',
+        punch: 'Punch', kick: 'Punch', kiss: 'ThumbsUp', dance: 'Dance', sit: 'Sitting',
+        drive: 'Sitting', cheer: 'ThumbsUp', fall: 'Death', dead: 'Death', sneak: 'Walking',
+        ride: 'Sitting', look: 'Idle', crew: 'Standing',
+    },
+
+    /**
+     * A glTF actor: the same handle contract as spawn(), the skeleton and clips come from the
+     * file (loaded once per view, instantiated per actor). The root appears at once; the body
+     * pops in when the container resolves — a missing file leaves an invisible extra, never
+     * a crash (kit invariant 6).
+     */
+    spawnGlb(view, look, opts) {
+        const o = opts || {};
+        const L = ActorRig3D._normLook(look);
+        const root = new pc.Entity('actor-glb');
+        view.root.addChild(root);
+        const id = this._nextId++;
+        /** @type {any} */
+        const h = {
+            id: id, view: view, root: root, joints: null, parts: {}, look: L, glb: true,
+            x: o.x || 0, y: o.y || 0, h: o.h || 0, heading: o.heading || 0,
+            action: 'idle', t: 0, speedMul: 1, phase: id * 0.7, gesture: 0,
+            moveTarget: null, moveSpeed: 110, arriveAction: 'idle',
+            onArrive: null, onActionEnd: null, faceTarget: null, lookYaw: null, _done: false,
+        };
+        h.act = ActorRig3D._actFn(h);
+        h.walkTo = ActorRig3D._walkFn(h);
+        h.faceTo = ActorRig3D._faceFn(h);
+        h.setLook = (lk) => { h.look = ActorRig3D._normLook(lk); return h; };
+        this.handles.push(h);
+        World3D.addObject(view, root, 'actor');
+        const url = 'assets/models/RobotExpressive.glb';
+        Model3D.load(url, view).then((model) => {
+            if (h._dead) { try { Model3D.dispose(model, view); } catch (e) { /* noop */ } return; }
+            const built = Model3D.build(model, view, { name: 'actor' + id });
+            root.addChild(built);
+            h.clips = Model3D.clips(built);
+            h._built = built;
+            ActorRig3D._playClip(h, h.action);
+        }).catch(() => { h._glbMissing = true; });
+        return h;
+    },
+
+    _playClip(h, action) {
+        if (!h.clips) return;
+        const clip = this.CLIP_MAP[action] || 'Idle';
+        try { h.clips.play(clip); } catch (e) { /* a clip missing in the file: rest pose */ }
+    },
+
     spawn(view, look, opts) {
+        if (look && look.model === 'robot') return this.spawnGlb(view, look, opts);
         const low = !!(opts && opts.lod === 'low');
         const o = opts || {};
         const L = ActorRig3D._normLook(look);
@@ -230,6 +284,7 @@ const ActorRig3D = {
             gender: l.gender === 'f' ? 'f' : 'm',
             hairStyle: Math.max(0, Math.min(3, Math.round(Number(l.hairStyle) || 0))),
             scale: Math.max(0.6, Math.min(1.4, Number(l.scale) || 1)),
+            model: l.model === 'robot' ? 'robot' : '',
         };
     },
 
@@ -239,11 +294,11 @@ const ActorRig3D = {
         const p = pose || null;
         const bob = p && p.bob ? p.bob : 0;
         const tilt = p && p.tilt ? p.tilt * this.DEG : 0;
-        const s = h.look.scale;
+        const s = h.look.scale * (h.glb ? (h._glbF || 1) : 1);
         h.root.setPosition(-h.x, h.h + bob * s, h.y);
         h.root.setRotation(World3D.rotQuat(0, -h.heading * this.DEG, tilt));
         h.root.setLocalScale(s, s, s);
-        if (p) {
+        if (p && h.joints) {
             h.joints.hips.setLocalPosition(0, 86 + (p.hipsY || 0), 0);
             const j = p.j || {};
             for (const name of Object.keys(h.joints)) {
@@ -328,8 +383,36 @@ const ActorRig3D = {
         }
     },
 
+    /** glTF actors arrive in their own units: after the first rendered frame we measure the
+     *  world AABB once and normalize the height to the troupe's 170 px eye-line standard. */
+    _normalizeGlb(h) {
+        if (!h._built || (h._scaled && (h._passes || 0) >= 3)) return;
+        try {
+            const mis = [];
+            for (const rc of h.root.findComponents('render')) mis.push(...rc.meshInstances);
+            if (!mis.length || !mis[0].aabb) return;
+            let mn = 1e9, mx = -1e9;
+            for (const mi of mis) {
+                const b = mi.aabb;
+                mn = Math.min(mn, b.center.y - b.halfExtents.y);
+                mx = Math.max(mx, b.center.y + b.halfExtents.y);
+            }
+            const height = mx - mn;
+            if (!(height > 1)) return;
+            const target = 170 * (h.look.scale || 1);
+            const f = target / height;
+            h._passes = (h._passes || 0) + 1;
+            if (Math.abs(f - 1) > 0.05 && h._passes <= 3) {
+                h._glbF = (h._glbF || 1) * f;      // _place re-applies the scale every frame
+            } else {
+                h._scaled = true;
+            }
+        } catch (e) { h._scaled = true; }
+    },
+
     update(dt) {
         for (const h of this.handles) {
+            if (h.glb) this._normalizeGlb(h);
             // Movement along the map.
             if (h.moveTarget) {
                 const dx = h.moveTarget.x - h.x, dy = h.moveTarget.y - h.y;
@@ -439,11 +522,13 @@ const ActorRig3D = {
         if (h.action !== A || !keepClock) { h.action = A; h._done = false; if (!keepClock) h.t = 0; }
         if (opts && opts.speedMul != null) h.speedMul = opts.speedMul;
         if (opts && opts.onEnd) h.onActionEnd = opts.onEnd;
+        if (h.glb && (!keepClock || h._lastClip !== A)) { ActorRig3D._playClip(h, A); h._lastClip = A; }
     },
 
     despawn(h) {
         const i = this.handles.indexOf(h);
         if (i >= 0) this.handles.splice(i, 1);
+        h._dead = true;
         if (h.holdHandle && typeof SetPieces3D !== 'undefined') { SetPieces3D.dispose(h.holdHandle); h.holdHandle = null; }
         World3D.removeObject(h.view, h.root);
     },

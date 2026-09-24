@@ -146,3 +146,13 @@ test('пружина вторичного движения: сходится, к
     for (let i = 0; i < 1200; i++) s2 = A._swayStep(s2, 0.5, dt);
     assert.ok(Math.abs(s2.x - 0.5 / 42) < 0.01, 'статика пружины: ' + s2.x);
 });
+
+test('CLIP_MAP: каждое действие рига имеет клип в CC0-модели актёра', () => {
+    const CLIPS = ['Dance', 'Death', 'Idle', 'Jump', 'No', 'Punch', 'Running', 'Sitting', 'Standing', 'ThumbsUp', 'Walking', 'WalkJump', 'Wave', 'Yes'];
+    const actions = ['idle', 'walk', 'run', 'talk', 'gesture', 'wave', 'punch', 'kick', 'kiss', 'dance', 'sit', 'drive', 'cheer', 'fall', 'dead', 'sneak', 'ride', 'look', 'crew'];
+    for (const a of actions) {
+      const clip = ActorRig3D.CLIP_MAP[a];
+      assert.ok(clip, a + ': клип назначен');
+      assert.ok(CLIPS.includes(clip), a + ': клип ' + clip + ' есть в файле модели');
+    }
+});

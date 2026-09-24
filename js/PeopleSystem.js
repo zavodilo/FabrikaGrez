@@ -23,6 +23,9 @@ const PeopleSystem = {
             hairStyle: gender === 'f' ? r.range(1, 2) : r.range(0, 3),
             scale: r.float(0.92, 1.1),
             hat: '',
+            // A quarter of the troupe are the studio's CC0 robot actors (RobotExpressive):
+            // the same roles, a different body — clips instead of the procedural pose library.
+            model: r.chance(0.25) ? 'robot' : '',
         };
         if (gender === 'm') {
             look.shirt = r.pick(M.SHIRTS_M);

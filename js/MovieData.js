@@ -518,7 +518,7 @@ const MovieData = {
         seed: 7,
         cast: [
             { id: 'a1', role: 'Шериф Коул', name: 'Генри Мэлоун',
-                look: { skin: '#d9996b', hair: '#3a2a1a', shirt: '#4a6a8a', pants: '#3a3a44', shoes: '#2a1a0e', hat: '#6a4a2a', gender: 'm', hairStyle: 0, scale: 1.05 } },
+                look: { skin: '#d9996b', hair: '#3a2a1a', shirt: '#4a6a8a', pants: '#3a3a44', shoes: '#2a1a0e', hat: '#6a4a2a', gender: 'm', hairStyle: 0, scale: 1.05, model: 'robot' } },
             { id: 'a2', role: 'Блэк Джек', name: 'Клинт Уокер',
                 look: { skin: '#c07848', hair: '#1a120c', shirt: '#2a2a2e', pants: '#1a1a1e', shoes: '#1a1a1e', hat: '#2a2a2e', gender: 'm', hairStyle: 3, scale: 1.1 } },
             { id: 'a3', role: 'Роза', name: 'Мэри Фокс',

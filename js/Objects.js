@@ -15,5 +15,5 @@
 //   volume 0..1, loop: false — once instead of looped, falloffMin — px of full volume around the
 //   object, falloffMax — px, silent from there on (0 or absent — the common AUDIO_FALLOFF_*).
 const LOCATION_OBJECTS = [
-    { name: 'antique-camera', model: 'assets/models/antique-camera.glb', kind: 'prop', x: 810, y: 1040, h: 0, rot: [0, 105, 0], scale: [0.22, 0.22, 0.22], tag: 'lot-mascot' },
+    { name: 'antique-camera', model: 'assets/models/antique-camera.glb', kind: 'prop', x: 1000, y: 1240, h: 34, rot: [0, 90, 0], scale: [1, 1, 1], tag: 'lot-mascot' },
 ];
