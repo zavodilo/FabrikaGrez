@@ -292,6 +292,15 @@ const SKY_DOME_R = 6000;                // dome radius, px (inside the 9000 far 
 const SKY_CLOUDS = 9;                   // cloud density in the dome shader (0 — a cloudless world)
 const SKY_SUN_SIZE = 0.9975;            // cos of the disc's half-angle: bigger = a tighter sun
 const SKY_STARS = 1;                    // 1 — stars fade in with the night
+
+// --- Particles (Particles3D.js): pooled procedural sprites for the cinema. Fallers wrap
+// inside a column, throwers fly ballistically; every count is a pool size (0 — kind off). ---
+const PART_RAIN_N = 120;                // rain streaks over a night noir street
+const PART_SNOW_N = 80;                 // snowflakes
+const PART_DUST_N = 48;                 // dry dust over a western noon
+const PART_SPARKS_N = 36;               // sparks of a fire or a gunshot
+const PART_SMOKE_N = 18;                // smoke puffs (they grow as they rise)
+const PART_FIRE_N = 22;                 // fire tongues (they shrink and die)
 // Cinema color science: the sun, the sky and the ambient follow the scene's time of day, so a
 // night scene is lit by a cold moon and a sunset by a low golden key, not by the studio noon.
 const CINEMA_SUN_DAY = 0xffedc7;        // day key color

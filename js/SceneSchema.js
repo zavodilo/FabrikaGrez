@@ -1773,6 +1773,72 @@ const SCENE_SCHEMA = {
             "value": 1
         },
         {
+            "group": "particles",
+            "name": "PART_RAIN_N",
+            "min": 0,
+            "max": 400,
+            "step": 10,
+            "kind": "number",
+            "options": null,
+            "label": "Rain pool",
+            "value": 120
+        },
+        {
+            "group": "particles",
+            "name": "PART_SNOW_N",
+            "min": 0,
+            "max": 300,
+            "step": 10,
+            "kind": "number",
+            "options": null,
+            "label": "Snow pool",
+            "value": 80
+        },
+        {
+            "group": "particles",
+            "name": "PART_DUST_N",
+            "min": 0,
+            "max": 200,
+            "step": 8,
+            "kind": "number",
+            "options": null,
+            "label": "Dust pool",
+            "value": 48
+        },
+        {
+            "group": "particles",
+            "name": "PART_SPARKS_N",
+            "min": 0,
+            "max": 120,
+            "step": 6,
+            "kind": "number",
+            "options": null,
+            "label": "Sparks pool",
+            "value": 36
+        },
+        {
+            "group": "particles",
+            "name": "PART_SMOKE_N",
+            "min": 0,
+            "max": 80,
+            "step": 4,
+            "kind": "number",
+            "options": null,
+            "label": "Smoke pool",
+            "value": 18
+        },
+        {
+            "group": "particles",
+            "name": "PART_FIRE_N",
+            "min": 0,
+            "max": 80,
+            "step": 4,
+            "kind": "number",
+            "options": null,
+            "label": "Fire pool",
+            "value": 22
+        },
+        {
             "group": "postfx",
             "name": "GFX_QUALITY_DEFAULT",
             "min": null,

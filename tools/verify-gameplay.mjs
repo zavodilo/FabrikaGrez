@@ -401,6 +401,32 @@ try {
         }
     }
 
+    // --- 10c. particles: pooled sprites register, move and clean up -------------------------
+    const partId = await st(() => {
+        const view = app.location.view;
+        window.__sceneEm = Object.keys(Particles3D._em).length;
+        return Particles3D.start(view, 'rain', { x: 3200, y: 3200, h: 40, r: 300, seed: 7 });
+    });
+    await sleep(400);   // the layer's transparent composition rebuilds on the next render
+    const part = await st((id) => {
+        const view = app.location.view;
+        const em = Particles3D._em[id];
+        const mi = em.parts[0].e.render.meshInstances[0];
+        const layer = view.app.scene.layers.getLayerById(pc.LAYERID_WORLD);
+        const inLayer = (layer.meshInstances || []).indexOf(mi) >= 0;
+        const p0 = em.parts[3].e.getPosition().y;
+        Particles3D.update(0.05);
+        const p1 = em.parts[3].e.getPosition().y;
+        const blend = mi.material.blendType;
+        Particles3D.stop(id);
+        const gone = !Particles3D._em[id];
+        return { sceneEm: window.__sceneEm, id: !!id, n: em ? em.parts.length : 0, inLayer: inLayer, moved: Math.abs(p1 - p0) > 0.5, blend: blend, gone: gone };
+    }, partId);
+    check('партиклы: эмиттер регистрируется в слое и живет', part.id && part.n > 0 && part.inLayer,
+        'эмиттеров в сцене ' + part.sceneEm + ', пул ' + part.n + ', в слое ' + part.inLayer);
+        check('партиклы: пул движется и убирается за собой', part.moved && part.gone,
+        'смещение ' + part.moved + ', stop ' + part.gone + ', blend ' + part.blend);
+
     // Run the WHOLE picture deterministically: main.js clamps dt to 0.1 s and swiftshader gives a
     // handful of FPS, so wall-clock sampling would under-report. Driving update(dt) by hand plays
     // the film start to finish regardless of the renderer, which is a far stronger check.

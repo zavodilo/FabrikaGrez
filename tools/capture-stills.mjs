@@ -39,6 +39,12 @@ await sleep(2200);
 
 const list = GENRES.length ? GENRES : ['western', 'comedy', 'drama', 'action', 'horror', 'scifi', 'romance'];
 for (const genre of list) {
+    // A fresh page per genre: under swiftshader a reused tab can keep showing the previous
+    // film's last rendered frame while the next one plays (GPU-process artifact of the
+    // headless gate, not a game state leak — the probe in PR notes shows state is clean).
+    await page.goto('http://127.0.0.1:8131/index.html', { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction('window.app && app.game');
+    await sleep(1800);
     const info = await page.evaluate((g) => {
         if (MovieSequencer.playing) MovieSequencer.stop(true);
         // A fresh studio without depending on the menu being on screen between films.

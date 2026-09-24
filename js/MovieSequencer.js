@@ -86,6 +86,7 @@ const MovieSequencer = {
 
         // Cinema UI on, studio HUD off (Game listens through opts.ui hooks it wired once).
         this._uiCinema(true);
+        if (typeof Particles3D !== 'undefined') Particles3D.stopAll();   // a fresh picture, a fresh sky
         this._buildCast();
         CineCam3D.begin(app.camera);
         Sound3D.music(null);
@@ -139,6 +140,7 @@ const MovieSequencer = {
         const v = this._app && this._app.location && this._app.location.view;
         if (v && v.applyLighting && typeof World3D !== 'undefined') v.applyLighting(World3D.cfg());
         if (v && v.setCinemaRim) v.setCinemaRim(false);      // the rig leaves with the crew
+        if (typeof Particles3D !== 'undefined') Particles3D.stopAll();
         if (typeof Sky3D !== 'undefined' && Sky3D.attached) Sky3D.setLot();
         if (typeof CinePost3D !== 'undefined') {
             CinePost3D.setDofPlan('wide');     // deep focus: the lot has no rack
@@ -190,6 +192,7 @@ const MovieSequencer = {
         this._stepRides();
         this._stepFocus(t);
         this._stepPracticals();
+        if (typeof Particles3D !== 'undefined') Particles3D.update(t);
         this._stepFlash();
 
         if (this.state === 'intro') {
@@ -334,6 +337,7 @@ const MovieSequencer = {
             if (indoorSet) Sky3D.hide();
             else { Sky3D.show(); Sky3D.setLook(sc.timeOfDay, grade); }
         }
+        this._startParticles(sc);
         this._spawnBirds(sc);
         const genre = MovieData.GENRES[this.tl.genre] || {};
         Sound3D.music(MovieData.MUSIC[sc.music || genre.music || 'studio'] || null);
@@ -460,6 +464,37 @@ const MovieSequencer = {
         if (view.aimSun) view.aimSun(pose.az + plan.keyOff, plan.keyEl);
         if (view.setCinemaRim) view.setCinemaRim(plan.rimI > 0, pose.az + 180 - plan.side * plan.rimOff, plan.rimEl, plan.rimI, plan.rimColor);
         if (typeof Sky3D !== 'undefined' && Sky3D.attached && Sky3D.visible) Sky3D.setSun(pose.az + plan.keyOff, plan.keyEl);
+    },
+
+    /**
+     * The scene's weather and fire: pooled procedural sprites over the set. Rain follows the
+     * rain tint (and most noir nights), snow — a scene flag or a rare war night, dust — dry
+     * sunny exteriors of the open genres; fire and smoke live at the camp/forest fire pit.
+     * Everything is seeded, so a rewatch rains the same rain.
+     */
+    _startParticles(sc) {
+        if (typeof Particles3D === 'undefined') return;
+        Particles3D.stopAll();
+        const view = this._app && this._app.location && this._app.location.view;
+        if (!view) return;
+        const info = MovieData.SET_INFO[sc.set] || {};
+        const seed = ((this.tl && this.tl.seed) || 0) + this.si * 101;
+        const cx = this.base.x, cy = this.base.y;
+        const tod = sc.timeOfDay || 'day';
+        const roll = (typeof Rng !== 'undefined' && Rng.create) ? Rng.create('wx-' + seed).float(0, 1) : 0.5;
+        if (sc.tint === 'rain' || (this.tl.genre === 'noir' && tod === 'night' && roll < 0.7)) {
+            Particles3D.start(view, 'rain', { x: cx, y: cy, h: 40, r: 420, seed: seed });
+        } else if (sc.snow || (this.tl.genre === 'war' && tod === 'night' && roll < 0.25)) {
+            Particles3D.start(view, 'snow', { x: cx, y: cy, h: 60, r: 380, seed: seed });
+        } else if (!info.indoor && tod !== 'night' && roll < 0.6 &&
+            (this.tl.genre === 'western' || this.tl.genre === 'adventure' || this.tl.genre === 'war')) {
+            Particles3D.start(view, 'dust', { x: cx, y: cy, h: 4, r: 300, seed: seed });
+        }
+        if (sc.set === 'camp' || sc.set === 'forest') {
+            const fx = cx + (sc.set === 'camp' ? 220 : 0), fy = cy + (sc.set === 'camp' ? 60 : 0);
+            Particles3D.start(view, 'fire', { x: fx, y: fy, h: 30, r: 16, seed: seed });
+            Particles3D.start(view, 'smoke', { x: fx, y: fy, h: 60, r: 14, seed: seed + 1 });
+        }
     },
 
     /** Fires breathe and neon buzzes on the playback clock (deterministic rewatch). */

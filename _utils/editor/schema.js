@@ -600,6 +600,31 @@ const KIT_SCHEMA = [
               hint: { en: 'Procedural stars fade in with the night', ru: 'Процедурные звёзды проступают с ночью' } },
         ],
     },
+    // Particles (Particles3D.js): pooled procedural sprites of the cinema weather and fire.
+    {
+        id: 'particles',
+        label: { en: 'Particles', ru: 'Частицы' },
+        fields: [
+            { name: 'PART_RAIN_N', min: 0, max: 400, step: 10,
+              label: { en: 'Rain pool', ru: 'Пул дождя' },
+              hint: { en: 'Rain streaks over the scene (0 — off)', ru: 'Струи дождя над сценой (0 — выкл)' } },
+            { name: 'PART_SNOW_N', min: 0, max: 300, step: 10,
+              label: { en: 'Snow pool', ru: 'Пул снега' },
+              hint: { en: 'Snowflakes in the frame (0 — off)', ru: 'Снежинки в кадре (0 — выкл)' } },
+            { name: 'PART_DUST_N', min: 0, max: 200, step: 8,
+              label: { en: 'Dust pool', ru: 'Пул пыли' },
+              hint: { en: 'Dry dust over open sunny sets (0 — off)', ru: 'Сухая пыль над открытыми солнечными площадками (0 — выкл)' } },
+            { name: 'PART_SPARKS_N', min: 0, max: 120, step: 6,
+              label: { en: 'Sparks pool', ru: 'Пул искр' },
+              hint: { en: 'Sparks of fire and gunshots (0 — off)', ru: 'Искры огня и выстрелов (0 — выкл)' } },
+            { name: 'PART_SMOKE_N', min: 0, max: 80, step: 4,
+              label: { en: 'Smoke pool', ru: 'Пул дыма' },
+              hint: { en: 'Smoke puffs that grow as they rise (0 — off)', ru: 'Клубы дыма, растущие с высотой (0 — выкл)' } },
+            { name: 'PART_FIRE_N', min: 0, max: 80, step: 4,
+              label: { en: 'Fire pool', ru: 'Пул огня' },
+              hint: { en: 'Fire tongues over a campfire (0 — off)', ru: 'Языки пламени над костром (0 — выкл)' } },
+        ],
+    },
     // Post-processing (CinePost3D.js): the CameraFrame stack — tone mapping, bloom, SSAO,
     // vignette, fringing, the procedural genre/era LUT and volumetric fog.
     {
