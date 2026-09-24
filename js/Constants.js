@@ -228,6 +228,19 @@ const MOVIE_TITLE_SEC = 3.5;            // s: the title card holds
 const MOVIE_CREDITS_SPEED = 46;         // px/s: the end credits crawl
 const MOVIE_FOV_CLOSE = 40;             // °: FOV punch on close-ups (wide keeps CAMERA_FOV_DEG)
 const MOVIE_GRAIN = 1;                  // 1 — film grain/vignette overlay in the cinema, 0 — clean
+// Cinema color science: the sun, the sky and the ambient follow the scene's time of day, so a
+// night scene is lit by a cold moon and a sunset by a low golden key, not by the studio noon.
+const CINEMA_SUN_DAY = 0xffedc7;        // day key color
+const CINEMA_SUN_DAY_I = 0.85;          // day key intensity
+const CINEMA_SKY_DAY = 0x9fc4e0;        // day sky
+const CINEMA_SUN_SET = 0xff9a3c;        // sunset key color: low and golden
+const CINEMA_SUN_SET_I = 0.7;           // sunset key intensity
+const CINEMA_SKY_SET = 0x3a2438;        // sunset sky: violet hour
+const CINEMA_SUN_NIGHT = 0x8fa8ff;      // night key color: a cold moon
+const CINEMA_SUN_NIGHT_I = 0.32;        // night key intensity
+const CINEMA_SKY_NIGHT = 0x0a1030;      // night sky
+const CINEMA_HANDHELD = 0.12;           // degrees of handheld sway on the cinematic camera
+const CINEMA_BIRDS = 3;                 // birds circling outdoor day scenes (0 — none)
 
 // --- CAMERA (CameraControl.js): target on the map, azimuth, pitch and zoom. Zoom is
 // screen px per world px at the look-at point; distance is derived from it. Flight

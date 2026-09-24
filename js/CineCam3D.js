@@ -103,7 +103,13 @@ const CineCam3D = {
         const ch = (canvas && canvas.clientHeight) || 720;
         const fovRad = Math.max(12, Math.min(110, c.fov)) * this.DEG;
         const dist = ch / (2 * Math.tan(fovRad / 2) * Math.max(0.05, c.zoom));
-        const az = c.az * this.DEG, pitch = c.pitch * this.DEG;
+        // Handheld sway: the operator breathes, so the picture is never a locked-off still.
+        const U2 = 'undefined';
+        const sway = typeof CINEMA_HANDHELD !== U2 ? CINEMA_HANDHELD : 0.12;
+        const nowT = (typeof performance !== U2 ? performance.now() : Date.now()) / 1000;
+        const dAz = sway > 0 ? (Math.sin(nowT * 0.9) + Math.sin(nowT * 2.3 + 1.7) * 0.4) * sway * this.DEG : 0;
+        const dPitch = sway > 0 ? Math.sin(nowT * 1.3 + 0.5) * sway * 0.6 * this.DEG : 0;
+        const az = c.az * this.DEG + dAz, pitch = c.pitch * this.DEG + dPitch;
         let ex = c.x - Math.cos(az) * Math.cos(pitch) * dist;
         let ey = c.y - Math.sin(az) * Math.cos(pitch) * dist;
         let eh = c.h + Math.sin(pitch) * dist;

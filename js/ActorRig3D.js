@@ -130,7 +130,7 @@ const ActorRig3D = {
         const shinR = joint(legR, 'shinR', 0, -38, 0);
 
         /** @type {Record<string, pc.MeshInstance[]>} */
-        const byRole = { skin: [], hair: [], shirt: [], pants: [], shoes: [], hat: [], eyes: [] };
+        const byRole = { skin: [], hair: [], shirt: [], pants: [], shoes: [], hat: [], eyes: [], mouth: [] };
         const P = (/** @type {pc.Entity} */ parent, /** @type {string} */ role,
             /** @type {number} */ cx, /** @type {number} */ cy, /** @type {number} */ cz,
             /** @type {number} */ sx, /** @type {number} */ sy, /** @type {number} */ sz, /** @type {string} */ hex) => {
@@ -146,6 +146,7 @@ const ActorRig3D = {
         P(head, 'skin', 0, 12, 0, 24, 26, 24, L.skin);
         P(head, 'eyes', -12, 15, -6, 2.5, 4.5, 4.5, '#2a1d14');
         P(head, 'eyes', -12, 15, 6, 2.5, 4.5, 4.5, '#2a1d14');
+        P(head, 'mouth', -13.5, 6.5, 0, 2, 1.8, 7, '#4a2320');
         if (L.hairStyle !== 3) {
             P(head, 'hair', 0, 24.5, 0, 25.5, 7, 25.5, L.hair);
             if (L.hairStyle === 0) P(head, 'hair', 10, 15, 0, 6, 16, 25.5, L.hair);
@@ -195,6 +196,9 @@ const ActorRig3D = {
             onArrive: null,
             onActionEnd: null,
             faceTarget: null,
+            blinkIn: 1.2 + (id % 5) * 0.8,   // staggered: the cast never blinks in unison
+            blinkHold: 0,
+            mouthBase: { x: 2, y: 1.8, z: 7 },
             lookYaw: null,
             _done: false,
         };
@@ -246,6 +250,33 @@ const ActorRig3D = {
         }
     },
 
+    // Eyes and mouth that live: a staggered blink, a closed eye on a corpse, and a mouth that
+    // opens with the line. Base scales mirror the parts built in spawn() (eyes 2.5/4.5/4.5,
+    // mouth 2/1.8/7) — change one and you must change the other.
+    _face(h, dt) {
+        const eyes = h.parts && h.parts.eyes;
+        const mouth = h.parts && h.parts.mouth;
+        if (eyes && eyes.length) {
+            const dead = h.action === 'dead';
+            if (dead) h.blinkHold = 1;
+            else if (h.blinkHold > 0) h.blinkHold -= dt;
+            else {
+                h.blinkIn -= dt;
+                if (h.blinkIn <= 0) {
+                    h.blinkHold = 0.12;
+                    h.blinkIn = 2.2 + (Math.sin(h.phase * 13.7) * 0.5 + 0.5) * 3.4;
+                }
+            }
+            const k = h.blinkHold > 0 ? 0.1 : 1;
+            for (const mi of eyes) { if (mi.node && mi.node.setLocalScale) mi.node.setLocalScale(2.5, 4.5 * k, 4.5); }
+        }
+        if (mouth && mouth.length) {
+            const b = h.mouthBase || { x: 2, y: 1.8, z: 7 };
+            const k = h.action === 'talk' ? 0.55 + Math.abs(Math.sin(h.t * 13)) * 2.1 : 1;
+            for (const mi of mouth) { if (mi.node && mi.node.setLocalScale) mi.node.setLocalScale(b.x, b.y * k, b.z); }
+        }
+    },
+
     update(dt) {
         for (const h of this.handles) {
             // Movement along the map.
@@ -277,6 +308,7 @@ const ActorRig3D = {
             }
             // Animation clock.
             h.t += dt * (h.speedMul || 1);
+            ActorRig3D._face(h, dt);
             const A = ActorRig3D.ACTIONS[h.action] || ActorRig3D.ACTIONS['idle'];
             if (!A.loop) {
                 if (h.t >= A.dur) {
@@ -336,7 +368,9 @@ const ActorRig3D = {
             const L = ActorRig3D._normLook(Object.assign({}, h.look, look || {}));
             h.look = L;
             for (const role of Object.keys(h.parts)) {
-                const hex = /** @type {string} */ (role === 'eyes' ? '#2a1d14' : (/** @type {any} */ (L))[role] || '#808080');
+                const hex = /** @type {string} */ (role === 'eyes' ? '#2a1d14'
+                    : role === 'mouth' ? '#4a2320'
+                    : (/** @type {any} */ (L))[role] || '#808080');
                 if (role === 'hat' && !L.hat) { for (const mi of h.parts[role]) mi.enabled = false; continue; }
                 if (role === 'hat') { for (const mi of h.parts[role]) mi.enabled = true; }
                 if (role === 'hair' && L.hairStyle === 3) { for (const mi of h.parts[role]) mi.enabled = false; continue; }

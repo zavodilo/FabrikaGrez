@@ -132,6 +132,9 @@ const MovieSequencer = {
 
     _teardown() {
         this._duck(false);
+        this._killBirds();
+        const v = this._app && this._app.location && this._app.location.view;
+        if (v && v.applyLighting && typeof World3D !== 'undefined') v.applyLighting(World3D.cfg());
         Sound3D.music(null);
         if (this._proj) { this._proj.stop(); this._proj = null; }
         for (const id of Object.keys(this.props)) SetPieces3D.dispose(this.props[id]);
@@ -168,6 +171,7 @@ const MovieSequencer = {
         this.t += t;
 
         this._stepFade(t);
+        this._stepBirds(t);
         this._stepPending();
         this._stepProps(t);
         this._stepRides();
@@ -225,6 +229,25 @@ const MovieSequencer = {
         return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
     },
 
+    /** The light of the scene's time of day: pure, so tests can hold it in their hands. */
+    gradeFor(tod) {
+        const U = 'undefined';
+        const n = (k, fb) => (typeof globalThis !== U && globalThis[k] !== undefined ? globalThis[k] : fb);
+        if (tod === 'night') {
+            return { sunColor: n('CINEMA_SUN_NIGHT', 0x8fa8ff), sunIntensity: n('CINEMA_SUN_NIGHT_I', 0.32), sky: n('CINEMA_SKY_NIGHT', 0x0a1030) };
+        }
+        if (tod === 'sunset') {
+            return { sunColor: n('CINEMA_SUN_SET', 0xff9a3c), sunIntensity: n('CINEMA_SUN_SET_I', 0.7), sky: n('CINEMA_SKY_SET', 0x3a2438) };
+        }
+        return { sunColor: n('CINEMA_SUN_DAY', 0xffedc7), sunIntensity: n('CINEMA_SUN_DAY_I', 0.85), sky: n('CINEMA_SKY_DAY', 0x9fc4e0) };
+    },
+
+    /** The film stock of the decade: silver stock scratches, color stock grains, modern is clean. */
+    eraClass(year) {
+        const y = year || 1950;
+        return y < 1965 ? 'era-silver' : y < 1982 ? 'era-color' : 'era-clean';
+    },
+
     // --- scenes & shots ---------------------------------------------------------------------
 
     _enterScene(i, first) {
@@ -275,7 +298,13 @@ const MovieSequencer = {
             }
         }
         for (const e of sc.enter || []) this._stage(e.who, e);
-        // Atmosphere.
+        // Atmosphere: the light follows the scene's hour, and the stock follows the decade.
+        const grade = this.gradeFor(sc.timeOfDay);
+        const view0 = this._app.location.view;
+        if (view0 && view0.applyLighting && typeof World3D !== 'undefined') {
+            view0.applyLighting(Object.assign({}, World3D.cfg(), grade));
+        }
+        this._spawnBirds(sc);
         const genre = MovieData.GENRES[this.tl.genre] || {};
         Sound3D.music(MovieData.MUSIC[sc.music || genre.music || 'studio'] || null);
         this._rebuildFx(sc.tint, sc.timeOfDay);
@@ -392,6 +421,47 @@ const MovieSequencer = {
         if (cam.fov != null) p.fov = cam.fov;
         if (cam.az != null && (type === 'medium' || type === 'close')) p.az = cam.az;
         return p;
+    },
+
+    // --- ambient life: birds over outdoor day scenes ---------------------------------------------
+    _spawnBirds(sc) {
+        this._killBirds();
+        const U = 'undefined';
+        const n = typeof CINEMA_BIRDS !== U ? CINEMA_BIRDS : 3;
+        if (!n || !sc || (MovieData.SET_INFO[sc.set] || {}).indoor) return;
+        if (sc.timeOfDay === 'night') return;
+        if (typeof pc === U || !this._app) return;
+        this._birds = [];
+        for (let i = 0; i < n; i++) {
+            const e = new pc.Entity('bird' + i);
+            this._app.location.view.root.addChild(e);
+            e.addComponent('render', { layers: [pc.LAYERID_WORLD] });
+            const mi = new pc.MeshInstance(ActorRig3D.unitBox(this._app.location.view), ActorRig3D.mat('#2a2a30'), e);
+            e.render.meshInstances = [mi];
+            e.setLocalScale(14, 2, 4);
+            this._birds.push({ e: e, a: (i / n) * Math.PI * 2, r: 260 + i * 60, h: 240 + i * 30 });
+        }
+    },
+
+    _killBirds() {
+        if (!this._birds) return;
+        for (const b of this._birds) {
+            if (b.e.parent) b.e.parent.removeChild(b.e);
+            b.e.destroy();
+        }
+        this._birds = null;
+    },
+
+    _stepBirds(dt) {
+        if (!this._birds) return;
+        const bx = this.base.x, by = this.base.y;
+        for (const b of this._birds) {
+            b.a += dt * 0.35;
+            const x = bx + Math.cos(b.a) * b.r;
+            const y = by + Math.sin(b.a) * b.r * 0.6;
+            b.e.setPosition(-x, b.h + Math.sin(b.a * 3) * 8, y);
+            b.e.setEulerAngles(0, -b.a * 180 / Math.PI, Math.sin(b.a * 6) * 12);
+        }
     },
 
     // --- beats ------------------------------------------------------------------------------
@@ -646,12 +716,19 @@ const MovieSequencer = {
         const sc = this.tl && this.tl.scenes ? this.tl.scenes[this.si] : null;
         const t = tint != null ? tint : (sc ? sc.tint : null);
         const tod = timeOfDay || (sc ? sc.timeOfDay : 'day');
-        let html = '<div class="cine-click" data-act="toggle"></div>';
+        const era = this.eraClass(this.tl ? this.tl.year : 1950);
+        let html = '<div class="cine-click ' + era + '" data-act="toggle"></div>';
         if (t === 'night' || tod === 'night') html += '<div class="tint-night"></div>';
         else if (t === 'sunset' || tod === 'sunset') html += '<div class="tint-sunset"></div>';
         if (t === 'rain') html += '<div class="tint-rain"></div>';
         html += '<div class="cine-vignette"></div>';
         if (c.grain) html += '<div class="cine-grain"></div>';
+        if (era === 'era-silver') html += '<div class="cine-scratches"></div>';
+        const pic = UI.get('cineC');
+        if (pic && pic.classList) {
+            if (era === 'era-silver') pic.classList.add('gate-weave');
+            else pic.classList.remove('gate-weave');
+        }
         if (this.flashUntil > 0 && this.t <= this.flashUntil) html += '<div class="cine-flash"></div>';
         el.setHTML(html);
     },
@@ -685,7 +762,8 @@ const MovieSequencer = {
     _card(t1, t2, t3, small) {
         const el = UI.get('cineCard');
         if (!el) return;
-        el.setHTML('<div class="cine-title fadein">' +
+        const era = this.eraClass(this.tl ? this.tl.year : 1950);
+        el.setHTML('<div class="cine-title fadein ' + era + '">' +
             (t1 ? '<div class="t1">' + t1 + '</div>' : '') +
             (t2 ? '<div class="t2"' + (small ? ' style="font-size:30px"' : '') + '>' + t2 + '</div>' : '') +
             (t3 ? '<div class="t3">' + t3 + '</div>' : '') + '</div>');

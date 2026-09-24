@@ -134,6 +134,26 @@ label.fld { display: block; color: #9aa4b8; font-size: 12.5px; margin: 8px 0 3px
   animation: cine-grain .8s steps(4) infinite; }
 @keyframes cine-grain { 0% { transform: translate(0,0);} 25% { transform: translate(-40px,26px);}
   50% { transform: translate(26px,-38px);} 75% { transform: translate(-24px,-22px);} 100% { transform: translate(38px,30px);} }
+/* The stock of the decade: silver nitrate scratches and gate weave, color stock grain, clean modern. */
+#cineFx .era-silver ~ .cine-grain { opacity: .9; }
+#cineFx .era-color ~ .cine-grain { opacity: .55; }
+#cineFx .era-clean ~ .cine-grain { opacity: .2; }
+.cine-scratches { position: absolute; inset: -40px; pointer-events: none; opacity: .34;
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,.16) 0 1px, transparent 1px 27px),
+              repeating-linear-gradient(90deg, rgba(0,0,0,.2) 0 2px, transparent 2px 61px);
+  animation: cine-scratch 1.1s steps(3) infinite; }
+@keyframes cine-scratch { 0% { transform: translate(0,0);} 33% { transform: translate(-18px,7px);}
+  66% { transform: translate(14px,-9px);} 100% { transform: translate(0,0);} }
+#cineC.gate-weave { animation: cine-gate 1.6s steps(5) infinite; }
+@keyframes cine-gate { 0% { transform: translate(0,0) scale(1.004);} 25% { transform: translate(-1px,1px) scale(1.007);}
+  50% { transform: translate(1px,-1px) scale(1.004);} 75% { transform: translate(0,1px) scale(1.008);}
+  100% { transform: translate(0,0) scale(1.004);} }
+/* Title typography follows the decade too. */
+.cine-title.era-silver .t2 { font-family: Georgia, 'Times New Roman', serif; letter-spacing: .22em;
+  color: #f2e3b6; text-shadow: 0 2px 0 #000, 0 0 22px rgba(240,214,140,.35); }
+.cine-title.era-color .t2 { font-family: Georgia, serif; letter-spacing: .12em; color: #ffe7bd; }
+.cine-title.era-clean .t2 { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  letter-spacing: .05em; font-weight: 300; color: #f1f4f9; }
 .tint-night { position: absolute; inset: 0; pointer-events: none; background: rgba(10,18,58,.44); }
 .tint-sunset { position: absolute; inset: 0; pointer-events: none; background: rgba(96,40,8,.28); }
 .tint-rain { position: absolute; inset: 0; pointer-events: none; opacity: .5;

@@ -943,17 +943,6 @@ const SCENE_SCHEMA = {
         },
         {
             "group": "game",
-            "name": "WORLD3D_CINEMA_FILL",
-            "min": 0,
-            "max": 1.5,
-            "step": 0.05,
-            "kind": "number",
-            "options": null,
-            "label": "Cinema fill light",
-            "value": 0.5
-        },
-        {
-            "group": "game",
             "name": "META_EVENT_CHANCE",
             "min": 0,
             "max": 1,
@@ -1127,6 +1116,180 @@ const SCENE_SCHEMA = {
             "options": null,
             "label": "Cinema camera glide (1/s)",
             "value": 6
+        },
+        {
+            "group": "cinema",
+            "name": "MOVIE_GRAIN",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "no"
+                },
+                {
+                    "value": 1,
+                    "label": "yes"
+                }
+            ],
+            "label": "Film stock (grain + vignette)",
+            "value": 1
+        },
+        {
+            "group": "cinema",
+            "name": "MOVIE_FOV_CLOSE",
+            "min": 10,
+            "max": 70,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "Lens for close-ups (°)",
+            "value": 40
+        },
+        {
+            "group": "cinema",
+            "name": "CINEMA_HANDHELD",
+            "min": 0,
+            "max": 1,
+            "step": 0.01,
+            "kind": "number",
+            "options": null,
+            "label": "Handheld sway (°)",
+            "value": 0.12
+        },
+        {
+            "group": "cinema",
+            "name": "CINEMA_BIRDS",
+            "min": 0,
+            "max": 8,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "Birds over outdoor scenes",
+            "value": 3
+        },
+        {
+            "group": "cinema",
+            "name": "CINEMA_SUN_DAY",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "color",
+            "options": null,
+            "label": "Day key color",
+            "value": 16772551
+        },
+        {
+            "group": "cinema",
+            "name": "CINEMA_SUN_DAY_I",
+            "min": 0,
+            "max": 2,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Day key strength",
+            "value": 0.85
+        },
+        {
+            "group": "cinema",
+            "name": "CINEMA_SKY_DAY",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "color",
+            "options": null,
+            "label": "Day sky",
+            "value": 10470624
+        },
+        {
+            "group": "cinema",
+            "name": "CINEMA_SUN_SET",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "color",
+            "options": null,
+            "label": "Sunset key color",
+            "value": 16751164
+        },
+        {
+            "group": "cinema",
+            "name": "CINEMA_SUN_SET_I",
+            "min": 0,
+            "max": 2,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Sunset key strength",
+            "value": 0.7
+        },
+        {
+            "group": "cinema",
+            "name": "CINEMA_SKY_SET",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "color",
+            "options": null,
+            "label": "Sunset sky",
+            "value": 3810360
+        },
+        {
+            "group": "cinema",
+            "name": "CINEMA_SUN_NIGHT",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "color",
+            "options": null,
+            "label": "Night key color",
+            "value": 9414911
+        },
+        {
+            "group": "cinema",
+            "name": "CINEMA_SUN_NIGHT_I",
+            "min": 0,
+            "max": 2,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Night key strength",
+            "value": 0.32
+        },
+        {
+            "group": "cinema",
+            "name": "CINEMA_SKY_NIGHT",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "color",
+            "options": null,
+            "label": "Night sky",
+            "value": 659504
+        },
+        {
+            "group": "cinema",
+            "name": "WORLD3D_CINEMA_FILL",
+            "min": 0,
+            "max": 1.5,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Fill light strength",
+            "value": 0.5
+        },
+        {
+            "group": "cinema",
+            "name": "WORLD3D_CINEMA_FILL_COLOR",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "color",
+            "options": null,
+            "label": "Fill light color",
+            "value": 16771535
         },
         {
             "group": "audio-mixer",
