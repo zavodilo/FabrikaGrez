@@ -148,6 +148,19 @@ label.fld { display: block; color: #9aa4b8; font-size: 12.5px; margin: 8px 0 3px
 @keyframes cine-gate { 0% { transform: translate(0,0) scale(1.004);} 25% { transform: translate(-1px,1px) scale(1.007);}
   50% { transform: translate(1px,-1px) scale(1.004);} 75% { transform: translate(0,1px) scale(1.008);}
   100% { transform: translate(0,0) scale(1.004);} }
+/* The lens glass: anamorphic streaks and dust, baked from the film's seed (data-URI bgs). */
+.cine-flare { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen;
+  background-repeat: no-repeat; background-size: 100% 100%; opacity: .85;
+  animation: cine-flare 7.5s ease-in-out infinite alternate; }
+@keyframes cine-flare { from { transform: translateX(-10px) scaleY(1); } to { transform: translateX(12px) scaleY(1.08); } }
+.cine-dirt { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: soft-light;
+  background-repeat: no-repeat; background-size: 100% 100%; opacity: .8; }
+/* The projector lamp: older stocks breathe in brightness; the clean modern one does not. */
+.cine-flicker { position: absolute; inset: 0; pointer-events: none; background: #000; opacity: 0;
+  animation: cine-flicker 1.1s steps(5) infinite; }
+.cine-flicker.era-color { animation-duration: 2.3s; }
+@keyframes cine-flicker { 0% { opacity: .05; } 25% { opacity: .012; } 50% { opacity: .04; }
+  75% { opacity: 0; } 100% { opacity: .028; } }
 /* Title typography follows the decade too. */
 .cine-title.era-silver .t2 { font-family: Georgia, 'Times New Roman', serif; letter-spacing: .22em;
   color: #f2e3b6; text-shadow: 0 2px 0 #000, 0 0 22px rgba(240,214,140,.35); }

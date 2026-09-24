@@ -24,6 +24,10 @@ const CinePost3D = {
     view: null,
     /** The grade in force (gradeFor result) — reapplied when the preset changes. */
     _grade: null,
+    /** The DoF plan in force (dofFor result) — reapplied when the preset changes. */
+    _dof: null,
+    /** Live focus distance (px from the eye) the rack pulls toward. */
+    _focus: 300,
     /** LUT texture cache: lutKey → pc.Texture. */
     _luts: {},
     _adaptScale: 1,
@@ -50,6 +54,11 @@ const CinePost3D = {
             fogWar: typeof POSTFX_FOG_WAR !== U ? POSTFX_FOG_WAR : 0.004,
             sharpness: typeof POSTFX_SHARPNESS !== U ? POSTFX_SHARPNESS : 0.55,
             adaptive: typeof POSTFX_ADAPTIVE !== U ? POSTFX_ADAPTIVE : 1,
+            dof: typeof CINE_DOF !== U ? CINE_DOF : 1,
+            dofRangeClose: typeof CINE_DOF_RANGE_CLOSE !== U ? CINE_DOF_RANGE_CLOSE : 55,
+            dofRangeMid: typeof CINE_DOF_RANGE_MID !== U ? CINE_DOF_RANGE_MID : 170,
+            dofRadius: typeof CINE_DOF_RADIUS !== U ? CINE_DOF_RADIUS : 4,
+            dofNear: typeof CINE_DOF_NEAR !== U ? CINE_DOF_NEAR : 1,
         };
     },
 
@@ -135,6 +144,21 @@ const CinePost3D = {
             toneMapping: c.tonemap,
         };
         return grade;
+    },
+
+    /**
+     * The DoF plan of a shot tag (pure — no engine): wides run deep focus like a master,
+     * middles get a working range, close-ups a narrow sharp zone with the foreground blurred.
+     * MovieSequencer._beginShot calls setDofPlan(tag) with the shot's semantic framing.
+     * @param {string | null} tag 'close' | 'dutch' | 'medium' | 'duo' | 'over' | 'low' | 'wide' | 'crane' | 'fixed'
+     */
+    dofFor(tag) {
+        const c = this.cfg();
+        const plan = (typeof MovieData !== 'undefined' && MovieData.planSize) ? MovieData.planSize(tag) : 'mid';
+        if (!c.dof) return { on: false, range: 0, radius: 0, near: false };
+        if (plan === 'close') return { on: true, range: c.dofRangeClose, radius: c.dofRadius, near: !!c.dofNear };
+        if (plan === 'mid') return { on: true, range: c.dofRangeMid, radius: Math.max(2, c.dofRadius - 1), near: false };
+        return { on: false, range: 0, radius: 0, near: false };   // deep focus on the masters
     },
 
     /**
@@ -258,6 +282,7 @@ const CinePost3D = {
         f.ssao.blurEnabled = q < 3;        // ultra: randomized sampling, TAA smooths it out
         f.ssao.randomize = q >= 3;
         this.apply(this._grade || this.gradeFor(null, null, 'day'));
+        this._applyDof();
     },
 
     /** The cinema grade: genre × era stock × the scene's hour (MovieSequencer calls it). */
@@ -268,6 +293,40 @@ const CinePost3D = {
     /** The neutral grade of the studio lot. */
     setStudio() {
         this.apply(this.gradeFor(null, null, 'day'));
+    },
+
+    // --- depth of field: the rack focus lives here, the pull runs in MovieSequencer -----------
+
+    /** Switch the lens to a shot's plan (MovieSequencer._beginShot). 'wide' — deep focus. */
+    setDofPlan(tag) {
+        this._dof = this.dofFor(tag);
+        this._applyDof();
+    },
+
+    /** The focus distance (px from the eye) — MovieSequencer writes it while a line is spoken. */
+    setFocus(dist) {
+        const d = Number(dist);
+        if (!Number.isFinite(d) || d <= 1) return;
+        this._focus = Math.max(20, Math.min(6000, d));
+        const f = this.frame;
+        if (f && f.enabled && f.dof && f.dof.enabled) f.dof.focusDistance = this._focus;
+    },
+
+    /** Write the DoF plan into the frame: high/ultra presets only, wide plans stay deep. */
+    _applyDof() {
+        const f = this.frame;
+        if (!f || !f.dof) return;
+        const plan = this._dof;
+        const on = !!plan && plan.on && f.enabled && this.quality >= 2;
+        f.dof.enabled = on;
+        if (!on) return;
+        f.dof.focusDistance = this._focus;
+        f.dof.focusRange = plan.range;
+        f.dof.blurRadius = plan.radius;
+        f.dof.nearBlur = plan.near;
+        f.dof.highQuality = this.quality >= 3;
+        f.dof.blurRings = this.quality >= 3 ? 4 : 3;
+        f.dof.blurRingPoints = this.quality >= 3 ? 6 : 5;
     },
 
     /**
@@ -352,6 +411,8 @@ const CinePost3D = {
         this._luts = {};
         this.view = null;
         this._grade = null;
+        this._dof = null;
+        this._focus = 300;
     },
 
     /** The number of POSTFX_TONEMAP → the engine constant (0 linear … 5 neutral). */

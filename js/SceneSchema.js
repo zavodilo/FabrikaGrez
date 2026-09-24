@@ -1139,14 +1139,261 @@ const SCENE_SCHEMA = {
         },
         {
             "group": "cinema",
-            "name": "MOVIE_FOV_CLOSE",
-            "min": 10,
-            "max": 70,
+            "name": "CINE_LENS_SENSOR_MM",
+            "min": 12,
+            "max": 36,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "Sensor gate (mm)",
+            "value": 24.9
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_LENS_WIDE_MM",
+            "min": 12,
+            "max": 60,
             "step": 1,
             "kind": "number",
             "options": null,
-            "label": "Lens for close-ups (°)",
+            "label": "Wide lens (mm)",
+            "value": 24
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_LENS_MED_MM",
+            "min": 24,
+            "max": 100,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "Medium lens (mm)",
+            "value": 50
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_LENS_DUO_MM",
+            "min": 24,
+            "max": 100,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "Two-shot lens (mm)",
             "value": 40
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_LENS_CLOSE_MM",
+            "min": 40,
+            "max": 135,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "Portrait lens (mm)",
+            "value": 85
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_LENS_LOW_MM",
+            "min": 14,
+            "max": 60,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "Low-angle lens (mm)",
+            "value": 28
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_DOF",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "no"
+                },
+                {
+                    "value": 1,
+                    "label": "yes"
+                }
+            ],
+            "label": "Depth of field",
+            "value": 1
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_DOF_RANGE_CLOSE",
+            "min": 10,
+            "max": 400,
+            "step": 5,
+            "kind": "number",
+            "options": null,
+            "label": "Sharp zone, close-up (px)",
+            "value": 55
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_DOF_RANGE_MID",
+            "min": 40,
+            "max": 800,
+            "step": 10,
+            "kind": "number",
+            "options": null,
+            "label": "Sharp zone, middle (px)",
+            "value": 170
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_DOF_RADIUS",
+            "min": 2,
+            "max": 10,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "Blur radius",
+            "value": 4
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_DOF_NEAR",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "no"
+                },
+                {
+                    "value": 1,
+                    "label": "yes"
+                }
+            ],
+            "label": "Near blur",
+            "value": 1
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_RACK_SPEED",
+            "min": 0.5,
+            "max": 8,
+            "step": 0.1,
+            "kind": "number",
+            "options": null,
+            "label": "Rack focus speed (1/s)",
+            "value": 2.2
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_SHADOW_PCSS",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "no"
+                },
+                {
+                    "value": 1,
+                    "label": "yes"
+                }
+            ],
+            "label": "PCSS soft shadows",
+            "value": 1
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_SHADOW_MAP_CLOSE",
+            "min": 512,
+            "max": 4096,
+            "step": 512,
+            "kind": "number",
+            "options": null,
+            "label": "Shadow map, close-up",
+            "value": 4096
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_SHADOW_MAP_MID",
+            "min": 512,
+            "max": 4096,
+            "step": 512,
+            "kind": "number",
+            "options": null,
+            "label": "Shadow map, middle",
+            "value": 2048
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_SHADOW_MAP_WIDE",
+            "min": 512,
+            "max": 4096,
+            "step": 512,
+            "kind": "number",
+            "options": null,
+            "label": "Shadow map, wide",
+            "value": 1024
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_SHADOW_SAMPLES",
+            "min": 4,
+            "max": 32,
+            "step": 2,
+            "kind": "number",
+            "options": null,
+            "label": "PCSS samples",
+            "value": 16
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_SHADOW_BLOCKERS",
+            "min": 0,
+            "max": 32,
+            "step": 2,
+            "kind": "number",
+            "options": null,
+            "label": "PCSS blocker samples",
+            "value": 8
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_SHADOW_PENUMBRA",
+            "min": 1,
+            "max": 60,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "PCSS penumbra (px)",
+            "value": 10
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_FLARE",
+            "min": 0,
+            "max": 1,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Anamorphic flare",
+            "value": 0.5
+        },
+        {
+            "group": "cinema",
+            "name": "CINE_DIRT",
+            "min": 0,
+            "max": 1,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Lens dirt",
+            "value": 0.55
         },
         {
             "group": "cinema",

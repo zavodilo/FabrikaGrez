@@ -226,8 +226,41 @@ const META_GOAL_EMPIRE_GROSS = 100000000; // $ lifetime gross of the «Импе�
 const MOVIE_CAM_LERP = 6;               // 1/s: camera glide speed toward the shot pose
 const MOVIE_TITLE_SEC = 3.5;            // s: the title card holds
 const MOVIE_CREDITS_SPEED = 46;         // px/s: the end credits crawl
-const MOVIE_FOV_CLOSE = 40;             // °: FOV punch on close-ups (wide keeps CAMERA_FOV_DEG)
 const MOVIE_GRAIN = 1;                  // 1 — film grain/vignette overlay in the cinema, 0 — clean
+
+// --- Cinema lenses (MovieData.lensFor/lensFov): a focal length per semantic shot size.
+// Vertical FOV = 2·atan(sensor / (2·f)); zoom still sets the subject size on screen, so a
+// longer lens pulls the camera back and flattens the face — real set optics, per shot. ---
+const CINE_LENS_SENSOR_MM = 24.9;       // vertical Super35 sensor height, mm
+const CINE_LENS_WIDE_MM = 24;           // establishing shots: deep perspective
+const CINE_LENS_MED_MM = 50;            // the standard middle shot
+const CINE_LENS_DUO_MM = 40;            // two-shots and over-the-shoulder
+const CINE_LENS_CLOSE_MM = 85;          // portraits: compressed and flattering
+const CINE_LENS_LOW_MM = 28;            // low angles keep a wide glass
+
+// --- Depth of field (pc.CameraFrame.dof): rack focus onto the speaking actor.
+// Wide shots stay in deep focus; the closer the plan, the narrower the sharp zone. ---
+const CINE_DOF = 1;                     // 1 — depth of field in the cinema (high/ultra presets)
+const CINE_DOF_RANGE_CLOSE = 55;        // px of sharp zone around the focus point on close-ups
+const CINE_DOF_RANGE_MID = 170;         // px of sharp zone on middle shots
+const CINE_DOF_RADIUS = 4;              // blur radius, engine range 2..10
+const CINE_DOF_NEAR = 1;                // 1 — blur the foreground too (near blur)
+const CINE_RACK_SPEED = 2.2;            // 1/s: how fast the focus pulls toward the speaker
+
+// --- Cinema shadows (View3D.setCinemaShadows): PCSS contact hardening and a shadow map
+// sized by the plan: a close-up wants 4096 texels, a wide master survives 1024. ---
+const CINE_SHADOW_PCSS = 1;             // 1 — PCSS soft shadows in the cinema (high preset and up)
+const CINE_SHADOW_MAP_CLOSE = 4096;     // shadow map texels on close-ups
+const CINE_SHADOW_MAP_MID = 2048;       // ...on middle shots
+const CINE_SHADOW_MAP_WIDE = 1024;      // ...on wides
+const CINE_SHADOW_SAMPLES = 16;         // PCSS penumbra samples
+const CINE_SHADOW_BLOCKERS = 8;         // PCSS blocker-search samples (0 — constant softness)
+const CINE_SHADOW_PENUMBRA = 10;        // PCSS light area size in world px: bigger = softer
+
+// --- The lens glass (MovieSequencer._rebuildFx): anamorphic streaks and dirt, baked
+// procedurally from the film's seed — every picture scratches its own copy of the glass. ---
+const CINE_FLARE = 0.5;                 // 0..1 anamorphic flare strength (0 — clean glass)
+const CINE_DIRT = 0.55;                 // 0..1 lens dirt: specks and hairs (old stocks add more)
 // Cinema color science: the sun, the sky and the ambient follow the scene's time of day, so a
 // night scene is lit by a cold moon and a sunset by a low golden key, not by the studio noon.
 const CINEMA_SUN_DAY = 0xffedc7;        // day key color

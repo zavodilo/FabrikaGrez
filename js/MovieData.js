@@ -8,6 +8,14 @@
 const MovieData = {
     /** Genre heat 1..10 for a year (assigned below). @type {((genre: string, year: number) => number) | null} */
     heat: null,
+    /** Focal length (mm) of a semantic shot size (assigned below). @type {((shotType: string) => number) | null} */
+    lensMm: null,
+    /** Vertical FOV (deg) of a focal length on the cine gate (assigned below). @type {((mm: number) => number) | null} */
+    lensFov: null,
+    /** The lens of a shot size, straight in degrees of vertical FOV (assigned below). @type {((shotType: string) => number) | null} */
+    fovFor: null,
+    /** Coarse plan class for DoF/shadows/lighting: 'close'|'mid'|'wide' (assigned below). @type {((tag: string) => string) | null} */
+    planSize: null,
 
     // --- sound -------------------------------------------------------------------------
     // SFX ids used by timeline beats -> asset paths (literals for the scanner).
@@ -681,4 +689,46 @@ MovieData.heat = function (genre, year) {
     const k = (year - lo) / (hi - lo);
     const a = MovieData.ERAS[lo][genre], b = MovieData.ERAS[hi][genre];
     return Math.round((a + (b - a) * k) * 10) / 10;
+};
+
+// --- cinema optics (pure): the lens table every solver reads ---------------------------------
+// A shot size means a focal length; a focal length means a vertical FOV for the Super35 gate.
+// The rig solver (ScriptGenerator._rig) derives zoom from the FOV so the camera lands exactly
+// on its spot, and MovieSequencer._poseFor defaults the same FOVs on hand-written poses — one
+// table, two readers, no drift. Numbers come from Constants.js (CINE_LENS_*).
+MovieData.lensMm = function (shotType) {
+    const U = 'undefined';
+    const wide = typeof CINE_LENS_WIDE_MM !== U ? CINE_LENS_WIDE_MM : 24;
+    const med = typeof CINE_LENS_MED_MM !== U ? CINE_LENS_MED_MM : 50;
+    const duo = typeof CINE_LENS_DUO_MM !== U ? CINE_LENS_DUO_MM : 40;
+    const close = typeof CINE_LENS_CLOSE_MM !== U ? CINE_LENS_CLOSE_MM : 85;
+    const low = typeof CINE_LENS_LOW_MM !== U ? CINE_LENS_LOW_MM : 28;
+    switch (shotType) {
+        case 'wide': case 'crane': return wide;
+        case 'duo': case 'over': return duo;
+        case 'close': case 'dutch': return close;
+        case 'low': return low;
+        case 'medium': case 'fixed': default: return med;
+    }
+};
+
+/** Vertical FOV (deg) of a focal length on the cine gate: 2·atan(sensor / (2·f)). */
+MovieData.lensFov = function (mm) {
+    const U = 'undefined';
+    const sensor = Math.max(4, typeof CINE_LENS_SENSOR_MM !== U ? CINE_LENS_SENSOR_MM : 24.9);
+    const f = Math.max(4, Number(mm) || 50);
+    return 2 * Math.atan(sensor / (2 * f)) * 180 / Math.PI;
+};
+
+/** The lens of a semantic shot size, straight in degrees of vertical FOV. */
+MovieData.fovFor = function (shotType) { return MovieData.lensFov(MovieData.lensMm(shotType)); };
+
+/** The coarse plan class of a shot tag: what DoF, shadows and lighting key off. */
+MovieData.planSize = function (tag) {
+    switch (tag) {
+        case 'close': case 'dutch': return 'close';
+        case 'medium': case 'duo': case 'over': case 'low': return 'mid';
+        case 'wide': case 'crane': case 'fixed': return 'wide';
+        default: return 'mid';
+    }
 };

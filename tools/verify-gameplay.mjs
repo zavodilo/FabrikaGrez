@@ -332,6 +332,48 @@ try {
     check('панель управления скрыта под плёнкой', panel.playing ? panel.hidden : true,
         panel.playing ? 'иначе экран кастинга лежит поверх картины' : 'фильм короче захвата кадра — нечего проверять');
 
+    // --- 10b. the optics block: lens, rack focus, PCSS shadows, the glass ---------------------
+    if (panel.playing) {
+        const optics = await st(() => {
+            const f = CinePost3D.frame;
+            const view = app.location.view;
+            const sc = MovieSequencer.tl && MovieSequencer.tl.scenes[MovieSequencer.si];
+            const sh = sc && (sc.shots || [])[MovieSequencer.shot];
+            const tag = sh ? (sh.tag || (sh.cam && sh.cam.type) || 'wide') : 'wide';
+            const a = MovieSequencer._speaker != null ? MovieSequencer.actors[MovieSequencer._speaker] : null;
+            return {
+                tag: tag,
+                fov: CineCam3D.tgt ? CineCam3D.tgt.fov : -1,
+                zoom: CineCam3D.tgt ? CineCam3D.tgt.zoom : -1,
+                dofOn: f && f.enabled ? !!f.dof.enabled : false,
+                focus: f && f.enabled && f.dof.enabled ? f.dof.focusDistance : -1,
+                focusRange: f && f.enabled && f.dof.enabled ? f.dof.focusRange : -1,
+                speakerDist: a ? CineCam3D.distTo(a.x, a.y, a.h + 150) : -1,
+                pcss: view.sun.shadowType === pc.SHADOW_PCSS_32F,
+                shadowMap: view.sun.shadowResolution,
+                flare: !!document.querySelector('.cine-flare'),
+                dirt: !!document.querySelector('.cine-dirt'),
+                flicker: !!document.querySelector('.cine-flicker'),
+                era: MovieSequencer.eraClass(MovieSequencer.tl.year),
+                quality: CinePost3D.quality,
+            };
+        });
+        const planSize = { close: 'close', dutch: 'close', medium: 'mid', duo: 'mid', over: 'mid', low: 'mid', wide: 'wide', crane: 'wide', fixed: 'wide' }[optics.tag] || 'mid';
+        check('оптика: кадр несёт киношный объектив', optics.fov >= 12 && optics.fov <= 110 && optics.zoom >= 0.5 && optics.zoom <= 30,
+            'план ' + optics.tag + ', fov ' + optics.fov + '°, zoom ' + optics.zoom);
+        check('оптика: DoF по плану — средний/крупный в фокусе, общий в гиперфокусе',
+            planSize === 'wide' ? !optics.dofOn : (optics.dofOn && optics.focus > 20 && Number.isFinite(optics.focus)),
+            'план ' + planSize + ', dof ' + optics.dofOn + ', фокус ' + (optics.focus > 0 ? optics.focus.toFixed(0) + 'px' : '—') + ', пресет ' + optics.quality);
+        if (planSize !== 'wide' && optics.dofOn && optics.speakerDist > 0) {
+            check('оптика: rack-focus тянется к говорящему', Math.abs(optics.focus - optics.speakerDist) < optics.speakerDist * 0.5 + 60,
+                'фокус ' + optics.focus.toFixed(0) + 'px при говорящем в ' + optics.speakerDist.toFixed(0) + 'px');
+        }
+        check('оптика: PCSS-тени и карта по крупности плана', optics.pcss && optics.shadowMap >= 1024 && optics.shadowMap <= 4096,
+            'pcss ' + optics.pcss + ', карта ' + optics.shadowMap);
+        check('оптика: стекло объектива — flare и плёночные слои эпохи', optics.flare && (optics.era === 'era-clean' || (optics.dirt && optics.flicker)),
+            'эпоха ' + optics.era + ', flare ' + optics.flare + ', dirt ' + optics.dirt + ', flicker ' + optics.flicker);
+    }
+
     // Run the WHOLE picture deterministically: main.js clamps dt to 0.1 s and swiftshader gives a
     // handful of FPS, so wall-clock sampling would under-report. Driving update(dt) by hand plays
     // the film start to finish regardless of the renderer, which is a far stronger check.
@@ -373,6 +415,21 @@ try {
     check('актёры на площадке и они двигаются', run.maxActors >= 3 && run.moved > 10, 'в кадре ' + run.maxActors + ', перемещений ' + run.moved);
     check('декорация построена в каждой сцене', run.setsBuilt);
     await shot('09-watching-scene');
+
+    // The optics must not leak out of the cinema: DoF off, the glass off, the sun's shadow
+    // budget back to the kit's default (applyLighting on teardown restores the PCF ladder).
+    const opticsAfter = await st(() => {
+        const view = app.location.view;
+        return {
+            dofOn: CinePost3D.frame && CinePost3D.frame.enabled ? !!CinePost3D.frame.dof.enabled : false,
+            flare: !!document.querySelector('.cine-flare'),
+            pcss: view.sun.shadowType === pc.SHADOW_PCSS_32F,
+            map: view.sun.shadowResolution,
+        };
+    });
+    check('оптика: после кино DoF выключен, стекло снято, тени вернулись к дефолту',
+        !opticsAfter.dofOn && !opticsAfter.flare && !opticsAfter.pcss && opticsAfter.map <= 2048,
+        'dof ' + opticsAfter.dofOn + ', flare ' + opticsAfter.flare + ', pcss ' + opticsAfter.pcss + ', карта ' + opticsAfter.map);
 
     // --- 11. dailies: watch a single scene straight from the script ---------------------------------------------
     await st(() => { if (MovieSequencer.playing) MovieSequencer.stop(true); });

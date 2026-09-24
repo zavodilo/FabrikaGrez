@@ -54,7 +54,6 @@ const MovieSequencer = {
         return {
             titleSec: typeof MOVIE_TITLE_SEC !== U ? MOVIE_TITLE_SEC : 3.5,
             creditsSpeed: typeof MOVIE_CREDITS_SPEED !== U ? MOVIE_CREDITS_SPEED : 46,
-            fovClose: typeof MOVIE_FOV_CLOSE !== U ? MOVIE_FOV_CLOSE : 40,
             camLerp: typeof MOVIE_CAM_LERP !== U ? MOVIE_CAM_LERP : 6,
             grain: typeof MOVIE_GRAIN !== U ? MOVIE_GRAIN : 1,
             backX: typeof STUDIO_BACKLOT_X !== U ? STUDIO_BACKLOT_X : 3200,
@@ -139,7 +138,14 @@ const MovieSequencer = {
         this._killBirds();
         const v = this._app && this._app.location && this._app.location.view;
         if (v && v.applyLighting && typeof World3D !== 'undefined') v.applyLighting(World3D.cfg());
-        if (typeof CinePost3D !== 'undefined') CinePost3D.setStudio();
+        if (typeof CinePost3D !== 'undefined') {
+            CinePost3D.setDofPlan('wide');     // deep focus: the lot has no rack
+            CinePost3D.setStudio();
+        }
+        this._speaker = null;
+        this._focusDist = null;
+        this._focusSnap = false;
+        this._glass = null;
         Sound3D.music(null);
         if (this._proj) { this._proj.stop(); this._proj = null; }
         for (const id of Object.keys(this.props)) SetPieces3D.dispose(this.props[id]);
@@ -180,6 +186,7 @@ const MovieSequencer = {
         this._stepPending();
         this._stepProps(t);
         this._stepRides();
+        this._stepFocus(t);
         this._stepFlash();
 
         if (this.state === 'intro') {
@@ -357,8 +364,46 @@ const MovieSequencer = {
             this._camSnap = true;
         } else this._camSnap = !!snap;
         this._camera(sh, true);
+        // The shot's optics: the tag is the semantic framing ('close', 'wide'…) even when the
+        // rig realised the pose as a 'fixed' solve. DoF plan, shadow budget and the focus snap
+        // all key off it — a cut pulls focus with the frame, a fade lets it drift.
+        const tag = sh.tag || (sh.cam && sh.cam.type) || 'wide';
+        this._focusSnap = sh.trans === 'cut' || !!snap;
+        if (typeof CinePost3D !== 'undefined') CinePost3D.setDofPlan(tag);
+        this._shadowsFor(tag);
         const cs = UI.get('cineScene');
         if (cs && this.tl.scenes[this.si]) cs.setText(this.tl.scenes[this.si].label || '');
+    },
+
+    /**
+     * The shadow budget of a shot tag (pure — tests hold it in their hands): the map size by
+     * the plan and whether PCSS is allowed for this device and preset.
+     * @returns {{ map: number, pcss: boolean }}
+     */
+    shadowPlanFor(tag, mobile, quality) {
+        const U = 'undefined';
+        const closeM = typeof CINE_SHADOW_MAP_CLOSE !== U ? CINE_SHADOW_MAP_CLOSE : 4096;
+        const midM = typeof CINE_SHADOW_MAP_MID !== U ? CINE_SHADOW_MAP_MID : 2048;
+        const wideM = typeof CINE_SHADOW_MAP_WIDE !== U ? CINE_SHADOW_MAP_WIDE : 1024;
+        const want = typeof CINE_SHADOW_PCSS !== U ? CINE_SHADOW_PCSS : 1;
+        const plan = (typeof MovieData !== 'undefined' && MovieData.planSize) ? MovieData.planSize(tag) : 'mid';
+        let map = plan === 'close' ? closeM : (plan === 'mid' ? midM : wideM);
+        if (mobile) map = Math.min(2048, map);
+        return { map: map, pcss: !!want && !mobile && (quality == null ? true : quality >= 2) };
+    },
+
+    /** Write the shot's shadow budget onto the view's sun (PCSS + map size by the plan). */
+    _shadowsFor(tag) {
+        const view = this._app && this._app.location && this._app.location.view;
+        if (!view || !view.setCinemaShadows) return;
+        const U = 'undefined';
+        const mob = typeof IS_MOBILE !== U && IS_MOBILE;
+        const q = typeof CinePost3D !== 'undefined' ? CinePost3D.quality : 0;
+        const plan = this.shadowPlanFor(tag, mob, q);
+        const samples = typeof CINE_SHADOW_SAMPLES !== U ? CINE_SHADOW_SAMPLES : 16;
+        const blockers = typeof CINE_SHADOW_BLOCKERS !== U ? CINE_SHADOW_BLOCKERS : 8;
+        const penumbra = typeof CINE_SHADOW_PENUMBRA !== U ? CINE_SHADOW_PENUMBRA : 10;
+        view.setCinemaShadows(plan.map, plan.pcss, { samples: samples, blockers: blockers, penumbra: penumbra });
     },
 
     _camera(sh, forceSnap) {
@@ -376,13 +421,15 @@ const MovieSequencer = {
 
     _poseFor(cam, sh) {
         const D = Math.PI / 180;
-        const def = { roll: 0, fov: 52 };
         const type = cam.type || 'wide';
+        // The shot's cine lens: 24 mm wides, 50 mm middles, 85 mm portraits (MovieData table).
+        // zoom still frames the subject, so a longer lens pulls the eye back and flattens it.
+        const defFov = Math.round((typeof MovieData !== 'undefined' ? MovieData.fovFor(type) : 52) * 10) / 10;
         const at = (id) => {
             const a = this.actors[id];
             return a ? { x: a.x, y: a.y, h: a.h, heading: a.heading } : null;
         };
-        let p = { x: this.base.x, y: this.base.y, h: 60, az: -90, pitch: 50, zoom: 0.9, roll: 0, fov: 52 };
+        let p = { x: this.base.x, y: this.base.y, h: 60, az: -90, pitch: 50, zoom: 0.9, roll: 0, fov: defFov };
         if (type === 'wide' || type === 'crane') {
             const pt = cam.anchor != null ? this._resolvePoint(cam.anchor) : { x: this.base.x, y: this.base.y, heading: 0, h: 0 };
             p.x = pt.x; p.y = pt.y; p.h = pt.h + (cam.h != null ? cam.h : 60);
@@ -397,7 +444,6 @@ const MovieSequencer = {
             p.az = cam.az != null ? cam.az : a.heading + 180;
             p.pitch = cam.pitch != null ? cam.pitch : (type === 'close' || type === 'dutch' ? 6 : type === 'low' ? -6 : 12);
             p.zoom = cam.zoom != null ? cam.zoom : (type === 'close' || type === 'dutch' ? 4.2 : type === 'low' ? 2.6 : 2.1);
-            if ((type === 'close' || type === 'dutch') && cam.fov == null) p.fov = this.cfg().fovClose;
             if (type === 'dutch' && cam.roll == null) p.roll = 9;
         } else if (type === 'duo') {
             const a = at(cam.who), b = at(cam.who2);
@@ -498,6 +544,8 @@ const MovieSequencer = {
         }
         if (b.say != null) {
             this._subtitle(a ? b.who : null, b.say, b.dur || 2.5);
+            // The lens racks onto whoever speaks: the focus target of the shot.
+            this._speaker = a ? b.who : null;
             if (a) {
                 if (a.action !== 'kiss' && a.action !== 'fall' && a.action !== 'ride') a.act('talk');
                 this.pending.push({ t: this.t + (b.dur || 2.5), fn: () => { if (a.action === 'talk') a.act('idle'); } });
@@ -650,6 +698,31 @@ const MovieSequencer = {
         }
     },
 
+    /**
+     * Rack focus: the sharp plane pulls toward the speaking actor's eyes, and when nobody
+     * talks — toward the shot's look-at point. The pull is exponential (CINE_RACK_SPEED),
+     * a hard cut snaps it. CinePost3D writes the distance into the frame's DoF.
+     */
+    _stepFocus(dt) {
+        if (typeof CinePost3D === 'undefined' || typeof CineCam3D === 'undefined' || !CineCam3D.isActive()) return;
+        const a = this._speaker != null ? this.actors[this._speaker] : null;
+        let target;
+        if (a) target = CineCam3D.distTo(a.x, a.y, a.h + 150);      // the rig's eye line
+        else {
+            const c = CineCam3D.cur;
+            target = c ? CineCam3D.distTo(c.x, c.y, c.h) : 0;
+        }
+        if (!Number.isFinite(target) || target <= 1) return;
+        if (this._focusSnap || this._focusDist == null) { this._focusDist = target; this._focusSnap = false; }
+        else {
+            const U = 'undefined';
+            const rate = typeof CINE_RACK_SPEED !== U ? CINE_RACK_SPEED : 2.2;
+            const k = 1 - Math.exp(-Math.max(0.1, rate) * Math.max(0, dt));
+            this._focusDist += (target - this._focusDist) * k;
+        }
+        CinePost3D.setFocus(this._focusDist);
+    },
+
     _stepPending() {
         for (let i = this.pending.length - 1; i >= 0; i--) {
             if (this.pending[i].t <= this.t) {
@@ -710,6 +783,10 @@ const MovieSequencer = {
                 const el = UI.get(id);
                 if (el) el.show(false);
             }
+            // Take the glass and the stock layers off the DOM: their data-URI textures are
+            // per-film, and a hidden overlay must not keep them (or the flare) alive.
+            const fx = UI.get('cineFx');
+            if (fx) fx.setHTML('');
         } else {
             this._rebuildFx();
             const sp = UI.get('btnCineSpeed');
@@ -732,6 +809,12 @@ const MovieSequencer = {
         html += '<div class="cine-vignette"></div>';
         if (c.grain) html += '<div class="cine-grain"></div>';
         if (era === 'era-silver') html += '<div class="cine-scratches"></div>';
+        // The lens glass and the projector lamp: flare rides the anamorphic streaks, dirt and
+        // flicker belong to the older stocks (both baked from the film's seed — see _glassFx).
+        const glass = this._glassFx();
+        if (glass && glass.flare) html += '<div class="cine-flare" style="background-image:url(' + glass.flare + ')"></div>';
+        if (c.grain && glass && glass.dirt) html += '<div class="cine-dirt" style="background-image:url(' + glass.dirt + ')"></div>';
+        if (c.grain && era !== 'era-clean') html += '<div class="cine-flicker ' + era + '"></div>';
         const pic = UI.get('cineC');
         if (pic && pic.classList) {
             if (era === 'era-silver') pic.classList.add('gate-weave');
@@ -739,6 +822,81 @@ const MovieSequencer = {
         }
         if (this.flashUntil > 0 && this.t <= this.flashUntil) html += '<div class="cine-flash"></div>';
         el.setHTML(html);
+    },
+
+    /**
+     * The lens glass, baked procedurally from the film's seed: anamorphic streaks (flare) and
+     * dust/fibres on the glass (dirt) as data-URI backgrounds for the cine overlay. Every
+     * picture scratches its own copy of the glass — deterministic, zero assets. Without a DOM
+     * (logic tests) it returns empty textures instead of throwing.
+     */
+    _glassFx() {
+        const U = 'undefined';
+        const flareK = typeof CINE_FLARE !== U ? CINE_FLARE : 0.5;
+        const dirtK = typeof CINE_DIRT !== U ? CINE_DIRT : 0.55;
+        const era = this.eraClass(this.tl ? this.tl.year : 1950);
+        const seedKey = String((this.tl && this.tl.seed) || 0) + '|' + era + '|' + flareK + '|' + dirtK;
+        if (this._glass && this._glass.seed === seedKey) return this._glass;
+        const none = { seed: seedKey, flare: null, dirt: null };
+        if (typeof document === U || !document.createElement) { this._glass = none; return none; }
+        const W = 640, H = 360;
+        const r = (typeof Rng !== U && Rng.create) ? Rng.create('glass-' + seedKey) : null;
+        const rnd = r ? () => r.float(0, 1) : Math.random;
+        let flare = null, dirt = null;
+        if (flareK > 0) {
+            const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+            const g = cv.getContext('2d');
+            if (g) {
+                const n = 3 + Math.floor(rnd() * 3);
+                for (let i = 0; i < n; i++) {          // horizontal anamorphic streaks
+                    const y = Math.round(H * (0.16 + rnd() * 0.68));
+                    const h = 2 + rnd() * 5;
+                    const a = (0.10 + rnd() * 0.16) * flareK;
+                    const hue = Math.round(190 + rnd() * 30);
+                    const grad = g.createLinearGradient(0, y - h * 3, 0, y + h * 3);
+                    grad.addColorStop(0, 'hsla(' + hue + ',95%,70%,0)');
+                    grad.addColorStop(0.5, 'hsla(' + hue + ',95%,72%,' + a.toFixed(3) + ')');
+                    grad.addColorStop(1, 'hsla(' + hue + ',95%,70%,0)');
+                    g.fillStyle = grad;
+                    g.fillRect(0, y - h * 3, W, h * 6);
+                }
+                for (let i = 0; i < 2; i++) {          // hot spots where a streak crosses
+                    const x = W * (0.2 + rnd() * 0.6), y = H * (0.25 + rnd() * 0.5), rad = 30 + rnd() * 60;
+                    const rg = g.createRadialGradient(x, y, 0, x, y, rad);
+                    rg.addColorStop(0, 'hsla(196,90%,80%,' + (0.14 * flareK).toFixed(3) + ')');
+                    rg.addColorStop(1, 'hsla(196,90%,80%,0)');
+                    g.fillStyle = rg;
+                    g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+                }
+                flare = cv.toDataURL();
+            }
+        }
+        if (dirtK > 0 && era !== 'era-clean') {
+            const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+            const g = cv.getContext('2d');
+            if (g) {
+                const mul = era === 'era-silver' ? 1.4 : 1;
+                const n = Math.round((50 + 70 * dirtK) * mul);
+                for (let i = 0; i < n; i++) {          // dust: dark specks and bright fibres
+                    const x = rnd() * W, y = rnd() * H, rad = 0.4 + rnd() * 1.9;
+                    const light = rnd() < 0.3;
+                    g.fillStyle = light ? 'rgba(255,255,255,' + (0.05 + rnd() * 0.10) * dirtK + ')'
+                        : 'rgba(0,0,0,' + (0.06 + rnd() * 0.14) * dirtK + ')';
+                    g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill();
+                }
+                for (let i = 0; i < 5; i++) {          // hairs across the gate
+                    const x = rnd() * W, y = rnd() * H;
+                    g.strokeStyle = 'rgba(0,0,0,' + (0.05 + rnd() * 0.07) * dirtK + ')';
+                    g.lineWidth = 0.8;
+                    g.beginPath(); g.moveTo(x, y);
+                    g.quadraticCurveTo(x + (rnd() * 30 - 15), y + rnd() * 14, x + rnd() * 40 - 20, y + rnd() * 26);
+                    g.stroke();
+                }
+                dirt = cv.toDataURL();
+            }
+        }
+        this._glass = { seed: seedKey, flare: flare, dirt: dirt };
+        return this._glass;
     },
 
     /** The score steps back while a line is on screen: voices own the mix. */
@@ -761,6 +919,7 @@ const MovieSequencer = {
 
     _hideSubtitle() {
         this._duck(false);
+        this._speaker = null;      // the line is over: the focus returns to the shot's look-at
         for (const id of ['subText', 'subSpeaker', 'subPanel']) {
             const el = UI.get(id);
             if (el) el.show(false);
@@ -843,6 +1002,14 @@ const MovieSequencer = {
     _beatIdx: 0,
     _camSnap: false,
     _fadeDur: 0.7,
+    // --- optics state: the rack focus and the lens glass ---------------------------------------
+    /** @type {string | null} the actor id whose line is on screen (the focus target). */
+    _speaker: null,
+    /** @type {number | null} the current focus distance, px from the eye. */
+    _focusDist: null,
+    _focusSnap: false,
+    /** @type {{ seed: string, flare: string | null, dirt: string | null } | null} glass cache. */
+    _glass: null,
 };
 
 // The beat cursor resets on every shot switch — hook into _beginShot.

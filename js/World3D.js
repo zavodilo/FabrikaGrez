@@ -941,6 +941,26 @@ class View3D {
         void c;
     }
 
+    /**
+     * Cinema shadows for a shot: a shadow map sized by the plan (a close-up wants 4096 texels,
+     * a wide master survives 1024) and PCSS contact hardening (SHADOW_PCSS_32F) when asked.
+     * The caller gates on the preset and mobile; applyLighting() restores the kit's ladder.
+     * opts: { samples, blockers, penumbra } — the PCSS kernel.
+     */
+    setCinemaShadows(mapSize, pcss, opts) {
+        const sg = this.sun;
+        if (!sg || typeof pc === 'undefined') return;
+        const o = opts || {};
+        const size = Math.max(512, Math.min(4096, Math.round(mapSize) || this._mapSize));
+        if (sg.shadowResolution !== size) sg.shadowResolution = size;
+        if (pcss && pc.SHADOW_PCSS_32F != null) {
+            sg.shadowType = pc.SHADOW_PCSS_32F;
+            sg.shadowSamples = Math.max(1, Math.round(o.samples != null ? o.samples : 16));
+            sg.shadowBlockerSamples = Math.max(0, Math.round(o.blockers != null ? o.blockers : 8));
+            sg.penumbraSize = Math.max(0.01, Number(o.penumbra != null ? o.penumbra : 10));
+        }
+    }
+
     applyLighting(c) {
         c = c || World3D.cfg();
         const o = this.opts || {};

@@ -60,6 +60,25 @@ const CineCam3D = {
         if (snap) this.cur = Object.assign({}, this.tgt);
     },
 
+    /**
+     * World distance (px) from the current eye to a map-space point — the rack-focus measure.
+     * The world is the X mirror of the map, but a distance does not care about the sign.
+     */
+    distTo(x, y, h) {
+        const c = this.cur;
+        if (!c) return 0;
+        const view = this.view;
+        const canvas = view && view.world ? view.world.canvas : null;
+        const ch = (canvas && canvas.clientHeight) || 720;
+        const fovRad = Math.max(12, Math.min(110, c.fov)) * this.DEG;
+        const dist = ch / (2 * Math.tan(fovRad / 2) * Math.max(0.05, c.zoom));
+        const az = c.az * this.DEG, pitch = c.pitch * this.DEG;
+        const ex = c.x - Math.cos(az) * Math.cos(pitch) * dist;
+        const ey = c.y - Math.sin(az) * Math.cos(pitch) * dist;
+        const eh = c.h + Math.sin(pitch) * dist;
+        return Math.hypot((x || 0) - ex, (h || 0) - eh, (y || 0) - ey);
+    },
+
     /** Action shake: intensity — fraction of the frame (0.02 light, 0.1 heavy). */
     shake(ms, intensity) {
         this._shakeAmp = Math.max(this._shakeAmp, Math.min(60, (intensity || 0.02) * 600));

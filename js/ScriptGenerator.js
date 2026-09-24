@@ -886,9 +886,17 @@ const ScriptGenerator = {
             const xy = name ? ((MovieData.ANCHOR_XY[sc.set] || {})[name]) : null;
             if (xy) {
                 const sfx = { horse: 'hooves', car: 'carhorn', robot: 'laser', coffin: 'thunder', tomb: 'thunder', saucer: 'laser' }[prop];
+                // The insert is a detail: the portrait lens close on the prop. Indoors the spot
+                // stays inside the room and the glass widens to the zoom floor, outdoors the
+                // 85 mm gets its distance — the old canned pose parked the eye outside the
+                // four walls and handed the frame to a wall face.
+                const cxyI = this._slotXY(sc.set, S, 'center') || this._slotXY(sc.set, S, 'wide');
+                const from = cxyI || [xy[0] + 120, xy[1]];
+                const spot = this._toward([xy[0], xy[1], indoor ? 140 : 120], from, indoor ? 105 : 240);
+                const cam = this._rig([xy[0], xy[1], 60], spot, { fov: MovieData.fovFor('close'), zoom: indoor ? 9 : 10.2 });
                 shots.splice(2, 0, {
                     dur: 1.3, trans: 'cut', tag: 'fixed', role: 'insert', sayWho: null,
-                    cam: { type: 'fixed', local: true, x: Math.round(xy[0]), y: Math.round(xy[1]), h: 70, az: Math.round(90 * side), pitch: 16, zoom: 4.6, fov: 40 },
+                    cam: cam,
                     beats: sfx ? [{ t: 0.2, sfx: sfx, vol: 0.5 }] : [],
                 });
             }
@@ -906,27 +914,43 @@ const ScriptGenerator = {
     // The engine derives camera DISTANCE from zoom (zoom = screen px per world px at the look-at
     // point), so a pose is fully determined by look-at + az + pitch + zoom. The rig below picks a
     // camera SPOT first (always inside the four walls of an interior), then solves az/pitch/zoom
-    // so the lens lands exactly there. K = distance·zoom for a given vertical fov on a 720 px
-    // tall layout frame: K(52°) ≈ 738, K(40°) ≈ 989.
-    RIG_K52: 738,
-    RIG_K40: 989,
+    // so the lens lands exactly there — on the shot's CINE LENS (MovieData.fovFor): a portrait
+    // gets its 85 mm compression outdoors, and indoors, where the spot cannot back up, the glass
+    // widens just enough to hold the framing (zoom) the shot size asks for. K = distance·zoom
+    // for a vertical fov on a 720 px tall layout frame: K(fov) = 720 / (2·tan(fov/2));
+    // K(52°) ≈ 738, K(40°) ≈ 989, K(85 mm) ≈ 2457.
+    rigK(fovDeg) {
+        const f = Math.max(8, Math.min(110, Number(fovDeg) || 52));
+        return 720 / (2 * Math.tan(f * Math.PI / 360));
+    },
 
-    /** Solve a pose that puts the camera at `spot` looking at `look` (both set-local, h in px). */
+    /** The widest FOV (deg) that still holds zoom ≤ maxZoom at `dist` px on the 720 px frame. */
+    _fovFloor(dist, maxZoom) {
+        const d = Math.max(12, Number(dist) || 100), z = Math.max(0.5, Number(maxZoom) || 9);
+        return 2 * Math.atan(720 / (2 * d * z)) * 180 / Math.PI;
+    },
+
+    /**
+     * Solve a pose that puts the camera at `spot` looking at `look` (both set-local, h in px).
+     * opts: { fov — the wanted cine lens in deg, zoom — the framing the shot size asks for,
+     * roll }. When the spot is too close for the lens, the FOV widens to the zoom floor.
+     */
     _rig(look, spot, opts) {
         const o = opts || {};
         const dx = look[0] - spot[0], dy = look[1] - spot[1];
         const hd = Math.max(24, Math.hypot(dx, dy));
         const vd = (spot[2] != null ? spot[2] : 140) - (look[2] != null ? look[2] : 120);
         const dist = Math.max(40, Math.hypot(hd, vd));
-        const K = o.fov === 40 ? this.RIG_K40 : this.RIG_K52;
+        const fov = Math.max(o.fov || 52, this._fovFloor(dist, o.zoom || 9));
+        const zoom = Math.max(1.05, Math.min(30, this.rigK(fov) / dist));
         const cam = {
             type: 'fixed', local: true,
             x: Math.round(look[0]), y: Math.round(look[1]), h: Math.round(look[2] != null ? look[2] : 120),
             az: Math.round(Math.atan2(dy, dx) * 180 / Math.PI),
             pitch: Math.round(Math.atan2(vd, hd) * 180 / Math.PI),
-            zoom: Math.round(Math.max(1.1, Math.min(9, K / dist)) * 100) / 100,
+            zoom: Math.round(zoom * 100) / 100,
+            fov: Math.round(fov * 10) / 10,
         };
-        if (o.fov) cam.fov = o.fov;
         if (o.roll) cam.roll = o.roll;
         return cam;
     },
@@ -964,14 +988,20 @@ const ScriptGenerator = {
         const openXY = pxy || this._slotXY(set, S, 'enter') || this._slotXY(set, S, 'wide') || cxy;
         if (type === 'close' || type === 'dutch') {
             // In front of the speaker: a clean single, the partner (or the room) behind the lens.
-            const spot = this._toward(sxy, openXY, 105, 152);
-            return this._rig([sxy[0], sxy[1], H], spot, { fov: 40, roll: type === 'dutch' ? 9 : 0 });
+            // Outdoors the portrait lens gets its working distance (the 85 mm wants ~530 px for
+            // the classic framing); indoors the spot stays inside the room and _rig widens the
+            // glass to hold the face — exactly what a real unit does in a tight interior.
+            const lens = MovieData.fovFor(type);
+            const back = Math.min(620, Math.round(this.rigK(lens) / 4.6));
+            const spot = this._toward(sxy, openXY, indoor ? 105 : back, 152);
+            return this._rig([sxy[0], sxy[1], H], spot, { fov: lens, zoom: indoor ? 9 : 4.6, roll: type === 'dutch' ? 9 : 0 });
         }
         if (type === 'medium' || type === 'low') {
             const low = type === 'low';
-            const d = indoor ? (low ? 150 : 195) : (low ? 190 : 235);
+            const lens = MovieData.fovFor(type);
+            const d = indoor ? (low ? 150 : 195) : (low ? 190 : Math.min(560, Math.round(this.rigK(lens) / 3.1)));
             const spot = this._toward(sxy, openXY, d, low ? (indoor ? 70 : 60) : 150);
-            return this._rig([sxy[0], sxy[1], low ? 110 : 128], spot, {});
+            return this._rig([sxy[0], sxy[1], low ? 110 : 128], spot, { fov: lens, zoom: low ? 4.8 : 3.8 });
         }
         if (type === 'over' || type === 'duo') {
             if (!pxy) return this._rigScene('medium', subj, A, B, S, set, xyOf, indoor);
@@ -979,18 +1009,18 @@ const ScriptGenerator = {
             // a third of the way along the axis, so the shoulder edges the frame.
             const gap = Math.hypot(pxy[0] - sxy[0], pxy[1] - sxy[1]) || 140;
             const spot = this._toward(sxy, pxy, Math.min(indoor ? 55 : 70, gap * 0.35), 165);
-            return this._rig([pxy[0], pxy[1], 140], spot, {});
+            return this._rig([pxy[0], pxy[1], 140], spot, { fov: MovieData.fovFor('over'), zoom: 9 });
         }
         // wide / crane: indoors a dollhouse master from the door side above the walls; outdoors
         // a classic establishing shot from the entrance side at eye-and-a-half height.
         if (indoor) {
             const spot = this._toward(cxy, dxy, 150, 330);
-            const cam = this._rig([cxy[0], cxy[1], 70], spot, {});
+            const cam = this._rig([cxy[0], cxy[1], 70], spot, { fov: MovieData.fovFor(type), zoom: 2.2 });
             if (type === 'crane') cam.to = { pitch: cam.pitch + 12, zoom: Math.max(1.1, Math.round(cam.zoom * 0.72 * 100) / 100), h: 130 };
             return cam;
         }
         const spot = this._toward(cxy, dxy, 620, 430);
-        const cam = this._rig([cxy[0], cxy[1], 80], spot, {});
+        const cam = this._rig([cxy[0], cxy[1], 80], spot, { fov: MovieData.fovFor(type), zoom: 2.2 });
         if (type === 'crane') cam.to = { pitch: Math.max(18, cam.pitch - 16), zoom: Math.max(0.6, Math.round(cam.zoom * 0.6 * 100) / 100), h: 210 };
         return cam;
     },
