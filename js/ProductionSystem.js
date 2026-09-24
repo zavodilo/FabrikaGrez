@@ -540,6 +540,7 @@ const ProductionSystem = {
             h += '<div class="card" style="cursor:default"><div class="row tight">' +
                 '<span class="hint" style="width:26px">' + (i + 1) + '</span><b>' + UIx.esc(String(sc.label || '').replace(/^Сцена \d+\. /, '')) + '</b>' +
                 '<span class="tag">' + UIx.esc(setInfo.ru || sc.set) + (setInfo.indoor ? '' : ' · улица') + '</span>' +
+                (!shot && !(s.ownedSets || {})[sc.set] ? '<span class="tag red" title="Сцена снята без своей декорации: бонус декорации 0, пока студия не построит её">нет своей</span>' : '') +
                 (shot ? '<span class="tag ' + (shot.quality >= 7 ? 'green' : shot.quality >= 5 ? '' : 'red') + '">дубль ' + shot.quality.toFixed(1) + '</span>' +
                     '<span class="sp"></span><span class="btn small" data-act="prod:dailies:' + proj.id + ':' + i + '">🎞 смотреть</span>'
                     : i === proj.nextScene && proj.state === 'shooting' ? '<span class="tag blue">следующая</span><span class="sp"></span>'

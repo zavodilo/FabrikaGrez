@@ -296,3 +296,23 @@ test('детерминизм: один seed и одни решения дают 
     };
     assert.equal(run(), run());
 });
+
+test('чужая декорация: дубль идёт с нулевым бонусом и пометкой, своя — с бонусом уровня', () => {
+    const s = StudioManager.newGame('Т');
+    s.ownedSets = { western: { level: 2 } };
+    const mk = (set) => ({ set: set, label: 'Сцена', timeOfDay: 'day', shots: [], enter: [], props: [], roles: [] });
+    const proj = { id: 'p1', scriptId: 's1', pace: 'std', budget: 400000, spent: 0, scenesShot: [], nextScene: 0, state: 'shooting' };
+    const script = { id: 's1', genre: 'western', timeline: { scenes: [mk('western'), mk('nightclub')], cast: [] }, roles: [], cast: {} };
+    s.scripts = [script];
+    s.staff = [{ id: 'd1', role: 'director', skills: { western: 8 }, mood: 60 }];
+    const own = ProductionSystem.rollSceneQuality(s, proj, script, script.timeline.scenes[0], Rng.create('t-own'));
+    const foreign = ProductionSystem.rollSceneQuality(s, proj, script, script.timeline.scenes[1], Rng.create('t-foreign'));
+    assert.ok(own.parts.set > 0, 'своя декорация даёт бонус: ' + own.parts.set);
+    assert.equal(own.hadSet, true);
+    assert.equal(foreign.parts.set, 0, 'чужая декорация: бонус 0');
+    assert.equal(foreign.hadSet, false, 'чужая декорация помечена');
+    // Level scales the bonus: level 2 beats level 1 on the same rng seed.
+    s.ownedSets.western.level = 1;
+    const lvl1 = ProductionSystem.rollSceneQuality(s, proj, script, script.timeline.scenes[0], Rng.create('t-own'));
+    assert.ok(own.parts.set > lvl1.parts.set, 'уровень декорации усиливает бонус: ' + lvl1.parts.set + ' < ' + own.parts.set);
+});
