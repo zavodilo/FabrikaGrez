@@ -25,6 +25,25 @@ const SCHEMA_NO_YES = [
     { value: 0, label: { en: 'no', ru: 'нет' } },
     { value: 1, label: { en: 'yes', ru: 'да' } },
 ];
+// Graphics presets (CinePost3D): low kills the post frame entirely.
+const SCHEMA_GFX_QUALITY = [
+    { value: 0, label: { en: 'low', ru: 'низкое' } },
+    { value: 1, label: { en: 'medium', ru: 'среднее' } },
+    { value: 2, label: { en: 'high', ru: 'высокое' } },
+    { value: 3, label: { en: 'ultra', ru: 'ультра' } },
+];
+// Tone-mapping curves (pc.TONEMAP_*): filmic ACES by default.
+const SCHEMA_TONEMAP = [
+    { value: 0, label: { en: 'linear', ru: 'линейный' } },
+    { value: 3, label: { en: 'ACES', ru: 'ACES' } },
+    { value: 4, label: { en: 'ACES2', ru: 'ACES2' } },
+    { value: 5, label: { en: 'neutral', ru: 'нейтральный' } },
+];
+const SCHEMA_SSAO_TYPE = [
+    { value: 0, label: { en: 'off', ru: 'выкл' } },
+    { value: 1, label: { en: 'lighting', ru: 'в свете' } },
+    { value: 2, label: { en: 'combine', ru: 'пост-умножение' } },
+];
 
 const KIT_SCHEMA = [
     {
@@ -457,6 +476,59 @@ const KIT_SCHEMA = [
             { name: 'WORLD3D_CINEMA_FILL_COLOR', kind: 'color',
               label: { en: 'Fill light color', ru: 'Цвет заполняющего света' },
               hint: { en: 'The color of the fill light', ru: 'Цвет заполняющего света' } },
+        ],
+    },
+    // Post-processing (CinePost3D.js): the CameraFrame stack — tone mapping, bloom, SSAO,
+    // vignette, fringing, the procedural genre/era LUT and volumetric fog.
+    {
+        id: 'postfx',
+        label: { en: 'Post-processing', ru: 'Постобработка' },
+        fields: [
+            { name: 'GFX_QUALITY_DEFAULT', kind: 'select', options: SCHEMA_GFX_QUALITY,
+              label: { en: 'Default quality preset', ru: 'Пресет качества по умолчанию' },
+              hint: { en: 'The preset before the player chooses on the «More» screen; mobile starts one step lower', ru: 'Пресет до выбора игрока на экране «Ещё»; мобильные стартуют на ступень ниже' } },
+            { name: 'POSTFX_TONEMAP', kind: 'select', options: SCHEMA_TONEMAP,
+              label: { en: 'Tone mapping', ru: 'Тонмаппинг' },
+              hint: { en: 'The curve from HDR to screen; ACES2 is the filmic default', ru: 'Кривая из HDR на экран; ACES2 — киношный по умолчанию' } },
+            { name: 'POSTFX_BLOOM_DAY', min: 0, max: 0.1, step: 0.005,
+              label: { en: 'Bloom by day', ru: 'Свечение днём' },
+              hint: { en: 'Glow of bright surfaces in a day scene (engine range 0..0.1)', ru: 'Свечение ярких поверхностей в дневной сцене (диапазон 0..0.1)' } },
+            { name: 'POSTFX_BLOOM_NIGHT', min: 0, max: 0.1, step: 0.005,
+              label: { en: 'Bloom by night', ru: 'Свечение ночью' },
+              hint: { en: 'Night practicals glow: neon, headlights, lamps', ru: 'Ночью светят практические источники: неон, фары, лампы' } },
+            { name: 'POSTFX_VIGNETTE', min: 0, max: 1, step: 0.02,
+              label: { en: 'Vignette', ru: 'Виньетка' },
+              hint: { en: 'Edge darkness in the cinema (the lot gets a softer one)', ru: 'Затемнение краёв в кино (на лоте мягче)' } },
+            { name: 'POSTFX_FRINGING', min: 0, max: 100, step: 1,
+              label: { en: 'Chromatic aberration', ru: 'Хроматические аберрации' },
+              hint: { en: 'Color fringing at the frame edges; silver stock adds more', ru: 'Цветная кайма по краям кадра; серебряная плёнка добавляет ещё' } },
+            { name: 'POSTFX_SSAO_TYPE', kind: 'select', options: SCHEMA_SSAO_TYPE,
+              label: { en: 'SSAO mode', ru: 'Режим SSAO' },
+              hint: { en: 'Contact shadows in crevices; combine is a post multiply (toon-safe)', ru: 'Контактные тени в углах; combine — пост-умножение (безопасно для туна)' } },
+            { name: 'POSTFX_SSAO_INTENSITY', min: 0, max: 1, step: 0.05,
+              label: { en: 'SSAO strength', ru: 'Сила SSAO' },
+              hint: { en: 'How dark the contact shadows are', ru: 'Насколько тёмны контактные тени' } },
+            { name: 'POSTFX_SSAO_RADIUS', min: 1, max: 100, step: 1,
+              label: { en: 'SSAO radius', ru: 'Радиус SSAO' },
+              hint: { en: 'How far the occlusion reaches', ru: 'Как далеко дотягивается затенение' } },
+            { name: 'POSTFX_LUT_INTENSITY', min: 0, max: 1, step: 0.05,
+              label: { en: 'LUT strength', ru: 'Сила LUT' },
+              hint: { en: 'Blend of the genre/era grade against the clean picture; 0 — no grade', ru: 'Смешение жанрового/эпохального грейда с чистой картинкой; 0 — без грейда' } },
+            { name: 'POSTFX_EXPOSURE_NIGHT', min: 0.5, max: 1.5, step: 0.01,
+              label: { en: 'Night brightness', ru: 'Яркость ночи' },
+              hint: { en: 'Grading brightness of a night frame', ru: 'Яркость грейда ночного кадра' } },
+            { name: 'POSTFX_FOG_NIGHT', min: 0, max: 0.05, step: 0.001,
+              label: { en: 'Night volumetric haze', ru: 'Ночной волюметрический туман' },
+              hint: { en: 'Density of the ground haze on night scenes (ultra only; 0 — off)', ru: 'Плотность наземной дымки в ночных сценах (только ультра; 0 — выкл)' } },
+            { name: 'POSTFX_FOG_WAR', min: 0, max: 0.05, step: 0.001,
+              label: { en: 'War/horror haze', ru: 'Туман войны/ужасов' },
+              hint: { en: 'Gunsmoke and dread hanging over war and horror scenes (ultra only)', ru: 'Пороховой дым и марево над военными сценами и ужасами (только ультра)' } },
+            { name: 'POSTFX_SHARPNESS', min: 0, max: 1, step: 0.05,
+              label: { en: 'Sharpening (ultra)', ru: 'Резкость (ультра)' },
+              hint: { en: 'Counteracts the TAA blur on the ultra preset', ru: 'Компенсирует размытие TAA на ультра-пресете' } },
+            { name: 'POSTFX_ADAPTIVE', kind: 'select', options: SCHEMA_NO_YES,
+              label: { en: 'Adaptive resolution', ru: 'Адаптивное разрешение' },
+              hint: { en: 'Drop the render scale while fps sags, creep back when it recovers', ru: 'Снижать разрешение при просадке fps и возвращать, когда кадр отдышался' } },
         ],
     },
     {

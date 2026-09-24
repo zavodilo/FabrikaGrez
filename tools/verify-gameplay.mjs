@@ -128,14 +128,35 @@ try {
     check('главное меню отрисовано', await st(() => !!document.querySelector('[data-act="new"]')));
     check('на меню нет ошибок консоли', errors.length === 0, errors.slice(0, 3).join(' | '));
 
+    // The graphics frame (CinePost3D, pc.CameraFrame) hangs on the lot camera from the boot.
+    const boot = await st(() => {
+        const f = CinePost3D.frame;
+        return { q: CinePost3D.quality, up: !!f, enabled: f ? !!f.enabled : false, tm: f && f.enabled ? f.rendering.toneMapping : -1, ssao: f && f.enabled ? String(f.ssao.type) : 'none' };
+    });
+    check('кадр постобработки прикреплён к камере', boot.up && boot.enabled && boot.q >= 1,
+        'пресет ' + boot.q + ', тонмаппинг ' + boot.tm + ', SSAO ' + boot.ssao);
+
     // --- 2. a demo film plays from the menu (Phase А regression) ---------------------------
     await click('demo');
     await sleep(1200);
     check('демо-фильм запустился из меню', await st(() => MovieSequencer.playing));
+    const demoPost = await st(() => {
+        const f = CinePost3D.frame;
+        if (!f || !f.enabled) return { ok: false, why: 'кадр выключен' };
+        return {
+            ok: !!f.colorLUT.texture && !!f.grading.enabled && f.bloom.intensity > 0 && f.vignette.intensity > 0,
+            why: 'LUT=' + (!!f.colorLUT.texture) + ' grading=' + f.grading.enabled + ' bloom=' + f.bloom.intensity.toFixed(3),
+        };
+    });
+    check('кино играется через постобработку с жанровым LUT', demoPost.ok, demoPost.why || '');
     await shot('02-demo-film');
     await st(() => { MovieSequencer.stop(false); });
     await sleep(600);
     check('демо-фильм остановлен и вернул камеру', await st(() => !MovieSequencer.playing));
+    check('после кино двор вернулся к нейтральному грейду', await st(() => {
+        const f = CinePost3D.frame;
+        return !f || !f.enabled || (!f.colorLUT.texture && f.colorLUT.intensity === 0);
+    }));
 
     // --- 3. new game: the scenario picker decides what winning means -------------------------
     await click('new');
@@ -538,6 +559,27 @@ try {
     check('сценарий игры записан в состояние', await st(() => StudioManager.state.scenario === 'sandbox'));
     await page.evaluate(() => app.game.showScreen('more'));
     await sleep(250);
+    // The graphics presets live on this screen: low..ultra, the choice is stored (fg.gfx).
+    check('кнопки качества графики на экране «Ещё»', await st(() =>
+        [0, 1, 2, 3].every((i) => !!document.querySelector('.arc-ui [data-act="set:gfx:' + i + '"]'))));
+    await click('set:gfx:3');
+    await sleep(400);
+    const ultra = await st(() => ({
+        q: CinePost3D.quality, stored: Store.get('fg.gfx'),
+        taa: CinePost3D.frame ? !!CinePost3D.frame.taa.enabled : null,
+        sharp: CinePost3D.frame ? CinePost3D.frame.rendering.sharpness : -1,
+    }));
+    check('«Ультра» включает TAA с шарпенингом и пишет пресет в хранилище',
+        ultra.q === 3 && ultra.stored === '3' && (ultra.taa === null || ultra.taa === true) && (ultra.sharp < 0 || ultra.sharp > 0),
+        'пресет ' + ultra.q + ', Store ' + ultra.stored + ', TAA ' + ultra.taa);
+    await click('set:gfx:2');
+    await sleep(400);
+    check('«Высокое» выключает TAA и остаётся с SSAO', await st(() => {
+        if (CinePost3D.quality !== 2 || Store.get('fg.gfx') !== '2') return false;
+        const f = CinePost3D.frame;
+        return !f || !f.enabled || (!f.taa.enabled && String(f.ssao.type) !== 'none');
+    }));
+    await shot('16b-gfx-presets');
     await click('meta:stats');
     await sleep(300);
     const statsHtml = await st(() => (document.querySelector('.arc-ui') || {}).innerHTML || '');

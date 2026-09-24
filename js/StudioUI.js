@@ -28,6 +28,16 @@ const StudioUI = {
         return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     },
 
+    /** The active graphics preset (0..3) — from CinePost3D when it is up, else the default. */
+    gfxQuality() {
+        if (typeof CinePost3D !== 'undefined' && CinePost3D.quality >= 0) return CinePost3D.quality;
+        return typeof GFX_QUALITY_DEFAULT !== 'undefined' ? Math.max(0, Math.min(3, GFX_QUALITY_DEFAULT)) : 2;
+    },
+
+    gfxName() {
+        return ['Низкое', 'Среднее', 'Высокое', 'Ультра'][this.gfxQuality()] || 'Среднее';
+    },
+
     /**
      * A poster is the film's own palette: the leads' costumes and hair light the card, so no two
      * pictures in the filmography share a face. Pure inline CSS — the card stays a card.
@@ -344,7 +354,12 @@ const StudioUI = {
             '<input type="range" min="0" max="12" step="2" value="' + ((s.settings || {}).autoWeek || 0) + '" data-act="autoweek" style="width:100%">' +
             '<div class="row tight" style="margin-top:8px">' +
             '<span class="btn small' + ((s.settings || {}).hints !== false ? ' gold' : '') + '" data-act="set:hints">💡 Подсказки ' + ((s.settings || {}).hints !== false ? 'включены' : 'выключены') + '</span>' +
-            '</div></div>' +
+            '</div>' +
+            '<label class="fld" style="margin-top:10px">🎨 Качество графики: <b>' + this.gfxName() + '</b></label>' +
+            '<div class="row tight">' + ['Низкое', 'Среднее', 'Высокое', 'Ультра'].map((nm, i) =>
+                '<span class="btn small' + (this.gfxQuality() === i ? ' gold' : '') + '" data-act="set:gfx:' + i + '">' + nm + '</span>').join('') + '</div>' +
+            '<p class="hint" style="margin-top:4px">Ультра — TAA и волюметрический туман; высокое — мягкие тени SSAO; низкое — без постобработки.</p>' +
+            '</div>' +
             '<div class="col panel"><div class="h3">💾 Сохранения</div>' +
             '<div class="row tight"><span class="btn" data-act="save:1">Слот 1</span><span class="btn" data-act="save:2">Слот 2</span><span class="btn" data-act="save:3">Слот 3</span></div>' +
             '<div class="row tight" style="margin-top:8px"><span class="btn" data-act="load:1">Загрузить 1</span><span class="btn" data-act="load:2">Загрузить 2</span><span class="btn" data-act="load:3">Загрузить 3</span></div>' +
@@ -545,6 +560,11 @@ const StudioUI = {
         }
         if (parts[0] === 'set' && parts[1] === 'hints') {
             if (s && s.settings) s.settings.hints = s.settings.hints === false;
+            rerender();
+            return;
+        }
+        if (parts[0] === 'set' && parts[1] === 'gfx') {
+            if (typeof CinePost3D !== 'undefined') CinePost3D.setQuality(Number(parts[2]));
             rerender();
             return;
         }

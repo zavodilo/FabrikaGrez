@@ -37,6 +37,9 @@ function startGame() {
     camera.attach(canvas);
     UI.init(canvas);
     window.app = { location, camera, game: null };
+    // The post-processing frame (ACES, bloom, SSAO, vignette, genre LUTs) hangs on the view's
+    // camera; the stored preset is restored inside attach.
+    if (typeof CinePost3D !== 'undefined') CinePost3D.attach(location.view);
     const game = window.app.game = new Game(window.app);
     console.log('ArcEngine: локация запущена, объектов ' + location.objects.length + '.');
     updateLoadingProgress(70);
@@ -52,6 +55,7 @@ function startGame() {
         location.update(dt);
         camera.update(dt);
         if (typeof CineCam3D !== 'undefined' && CineCam3D.isActive()) CineCam3D.capture();
+        if (typeof CinePost3D !== 'undefined') CinePost3D.tick(Math.min(0.1, dt));
         Sound3D.update(camera);
         World3D.renderFrame();
         requestAnimationFrame(loop);

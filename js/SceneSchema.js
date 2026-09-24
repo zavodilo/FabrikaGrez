@@ -1292,6 +1292,227 @@ const SCENE_SCHEMA = {
             "value": 16771535
         },
         {
+            "group": "postfx",
+            "name": "GFX_QUALITY_DEFAULT",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "low"
+                },
+                {
+                    "value": 1,
+                    "label": "medium"
+                },
+                {
+                    "value": 2,
+                    "label": "high"
+                },
+                {
+                    "value": 3,
+                    "label": "ultra"
+                }
+            ],
+            "label": "Default quality preset",
+            "value": 2
+        },
+        {
+            "group": "postfx",
+            "name": "POSTFX_TONEMAP",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "linear"
+                },
+                {
+                    "value": 3,
+                    "label": "ACES"
+                },
+                {
+                    "value": 4,
+                    "label": "ACES2"
+                },
+                {
+                    "value": 5,
+                    "label": "neutral"
+                }
+            ],
+            "label": "Tone mapping",
+            "value": 4
+        },
+        {
+            "group": "postfx",
+            "name": "POSTFX_BLOOM_DAY",
+            "min": 0,
+            "max": 0.1,
+            "step": 0.005,
+            "kind": "number",
+            "options": null,
+            "label": "Bloom by day",
+            "value": 0.01
+        },
+        {
+            "group": "postfx",
+            "name": "POSTFX_BLOOM_NIGHT",
+            "min": 0,
+            "max": 0.1,
+            "step": 0.005,
+            "kind": "number",
+            "options": null,
+            "label": "Bloom by night",
+            "value": 0.035
+        },
+        {
+            "group": "postfx",
+            "name": "POSTFX_VIGNETTE",
+            "min": 0,
+            "max": 1,
+            "step": 0.02,
+            "kind": "number",
+            "options": null,
+            "label": "Vignette",
+            "value": 0.32
+        },
+        {
+            "group": "postfx",
+            "name": "POSTFX_FRINGING",
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "Chromatic aberration",
+            "value": 6
+        },
+        {
+            "group": "postfx",
+            "name": "POSTFX_SSAO_TYPE",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "off"
+                },
+                {
+                    "value": 1,
+                    "label": "lighting"
+                },
+                {
+                    "value": 2,
+                    "label": "combine"
+                }
+            ],
+            "label": "SSAO mode",
+            "value": 2
+        },
+        {
+            "group": "postfx",
+            "name": "POSTFX_SSAO_INTENSITY",
+            "min": 0,
+            "max": 1,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "SSAO strength",
+            "value": 0.5
+        },
+        {
+            "group": "postfx",
+            "name": "POSTFX_SSAO_RADIUS",
+            "min": 1,
+            "max": 100,
+            "step": 1,
+            "kind": "number",
+            "options": null,
+            "label": "SSAO radius",
+            "value": 24
+        },
+        {
+            "group": "postfx",
+            "name": "POSTFX_LUT_INTENSITY",
+            "min": 0,
+            "max": 1,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "LUT strength",
+            "value": 1
+        },
+        {
+            "group": "postfx",
+            "name": "POSTFX_EXPOSURE_NIGHT",
+            "min": 0.5,
+            "max": 1.5,
+            "step": 0.01,
+            "kind": "number",
+            "options": null,
+            "label": "Night brightness",
+            "value": 0.92
+        },
+        {
+            "group": "postfx",
+            "name": "POSTFX_FOG_NIGHT",
+            "min": 0,
+            "max": 0.05,
+            "step": 0.001,
+            "kind": "number",
+            "options": null,
+            "label": "Night volumetric haze",
+            "value": 0.005
+        },
+        {
+            "group": "postfx",
+            "name": "POSTFX_FOG_WAR",
+            "min": 0,
+            "max": 0.05,
+            "step": 0.001,
+            "kind": "number",
+            "options": null,
+            "label": "War/horror haze",
+            "value": 0.004
+        },
+        {
+            "group": "postfx",
+            "name": "POSTFX_SHARPNESS",
+            "min": 0,
+            "max": 1,
+            "step": 0.05,
+            "kind": "number",
+            "options": null,
+            "label": "Sharpening (ultra)",
+            "value": 0.55
+        },
+        {
+            "group": "postfx",
+            "name": "POSTFX_ADAPTIVE",
+            "min": null,
+            "max": null,
+            "step": null,
+            "kind": "select",
+            "options": [
+                {
+                    "value": 0,
+                    "label": "no"
+                },
+                {
+                    "value": 1,
+                    "label": "yes"
+                }
+            ],
+            "label": "Adaptive resolution",
+            "value": 1
+        },
+        {
             "group": "audio-mixer",
             "name": "AUDIO_MASTER_VOLUME",
             "min": 0,

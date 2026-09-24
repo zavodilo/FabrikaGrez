@@ -93,6 +93,10 @@ const MovieSequencer = {
         this._proj = Sound3D.play(MovieData.SFX.projector, { loop: true, volume: 0.16, x: this.base.x, y: this.base.y });
         const genre = MovieData.GENRES[tl.genre] || MovieData.GENRES.drama;
         Sound3D.music(MovieData.MUSIC[tl.music || genre.music] || MovieData.MUSIC.studio);
+        // The post frame switches to the picture's look: genre LUT × era stock × the hour.
+        if (typeof CinePost3D !== 'undefined') {
+            CinePost3D.setCinema(tl.genre, this.eraClass(tl.year), 'day');
+        }
 
         if (dailies) {
             this.state = 'intro';
@@ -135,6 +139,7 @@ const MovieSequencer = {
         this._killBirds();
         const v = this._app && this._app.location && this._app.location.view;
         if (v && v.applyLighting && typeof World3D !== 'undefined') v.applyLighting(World3D.cfg());
+        if (typeof CinePost3D !== 'undefined') CinePost3D.setStudio();
         Sound3D.music(null);
         if (this._proj) { this._proj.stop(); this._proj = null; }
         for (const id of Object.keys(this.props)) SetPieces3D.dispose(this.props[id]);
@@ -303,6 +308,9 @@ const MovieSequencer = {
         const view0 = this._app.location.view;
         if (view0 && view0.applyLighting && typeof World3D !== 'undefined') {
             view0.applyLighting(Object.assign({}, World3D.cfg(), grade));
+        }
+        if (typeof CinePost3D !== 'undefined') {
+            CinePost3D.setCinema(this.tl.genre, this.eraClass(this.tl.year), sc.timeOfDay);
         }
         this._spawnBirds(sc);
         const genre = MovieData.GENRES[this.tl.genre] || {};

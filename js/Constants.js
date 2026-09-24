@@ -242,6 +242,26 @@ const CINEMA_SKY_NIGHT = 0x0a1030;      // night sky
 const CINEMA_HANDHELD = 0.12;           // degrees of handheld sway on the cinematic camera
 const CINEMA_BIRDS = 3;                 // birds circling outdoor day scenes (0 — none)
 
+// --- POST-PROCESSING (CinePost3D.js): the CameraFrame stack of PlayCanvas 2 — ACES tone
+// mapping, bloom, SSAO, vignette, fringing, a procedural color LUT (genre × era × hour) and
+// volumetric fog. Presets: 0 low (post off), 1 medium, 2 high, 3 ultra; the player's choice
+// lives in the store (fg.gfx) and is set on the «Ещё» screen. ---
+const GFX_QUALITY_DEFAULT = 2;          // preset before the player chooses (mobile — one step lower)
+const POSTFX_TONEMAP = 4;               // pc.TONEMAP_*: 0 linear, 3 ACES, 4 ACES2, 5 neutral
+const POSTFX_BLOOM_DAY = 0.01;          // bloom by day (engine range 0..0.1)
+const POSTFX_BLOOM_NIGHT = 0.035;       // by night practicals glow: neon, headlights, lamps
+const POSTFX_VIGNETTE = 0.32;           // cinema edge darkness 0..1 (the lot gets a softer one)
+const POSTFX_FRINGING = 6;              // chromatic aberration at the frame edges 0..100
+const POSTFX_SSAO_TYPE = 2;             // 0 off, 1 lighting, 2 combine (post-multiply — toon-safe)
+const POSTFX_SSAO_INTENSITY = 0.5;      // contact-shadow strength 0..1
+const POSTFX_SSAO_RADIUS = 24;          // contact-shadow radius 0..100
+const POSTFX_LUT_INTENSITY = 1;         // LUT strength 0..1 (0 — the picture without the grade)
+const POSTFX_EXPOSURE_NIGHT = 0.92;     // night frame brightness (grading.brightness)
+const POSTFX_FOG_NIGHT = 0.005;         // volumetric haze on night scenes (0 — off; ultra only)
+const POSTFX_FOG_WAR = 0.004;           // gunsmoke hanging over battlefields
+const POSTFX_SHARPNESS = 0.55;          // sharpen against the TAA blur 0..1 (ultra)
+const POSTFX_ADAPTIVE = 1;              // 1 — drop the render scale while fps sags below ~42
+
 // --- CAMERA (CameraControl.js): target on the map, azimuth, pitch and zoom. Zoom is
 // screen px per world px at the look-at point; distance is derived from it. Flight
 // (WASD, Q/E) lifts the look-at point off the ground. ---
