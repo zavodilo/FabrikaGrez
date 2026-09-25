@@ -13,7 +13,7 @@ import { test } from 'node:test';
 import { loadScripts, ROOT } from './browser-scripts.mjs';
 
 const page = loadScripts([
-    'js/Constants.js', 'js/Rng.js', 'js/MovieData.js',
+    'js/Constants.js', 'js/Rng.js', 'js/MovieData.js', 'js/ActorModels.js',
     'js/ActorRig3D.js', 'js/SetPieces3D.js',
     'js/PeopleSystem.js', 'js/StudioManager.js',
     'js/ScriptGenerator.js', 'js/CastingSystem.js',

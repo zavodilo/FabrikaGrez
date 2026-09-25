@@ -61,12 +61,19 @@ const StudioUI = {
     avatar(p, size) {
         const L = p.look || {};
         const s = size || 46;
+        // Модельные актёры каталога ActorModels показываются своей палитрой
+        // (цвета их GLB) и бейджем типажа — аватар совпадает с тем, что в кадре.
+        const rec = (L.model && typeof ActorModels !== 'undefined') ? ActorModels.get(L.model) : null;
+        const skin = (rec && rec.palette.skin) || L.skin || '#d9996b';
+        const hairC = (rec && rec.palette.hair) || L.hair || '#3a2a1a';
+        const shirt = (rec && rec.palette.shirt) || L.shirt || '#3d639b';
         const hairH = L.hairStyle === 3 ? 0 : Math.round(s * 0.22);
         return '<span style="position:relative;display:inline-block;width:' + s + 'px;height:' + s + 'px;border-radius:10px;overflow:hidden;background:#0e1320;flex:none;border:1px solid #2a3446">' +
             (L.hat ? '<span style="position:absolute;left:8%;top:6%;width:84%;height:16%;background:' + L.hat + ';border-radius:3px"></span>' : '') +
-            '<span style="position:absolute;left:22%;top:' + (L.hat ? 16 : 12) + '%;width:56%;height:40%;border-radius:40%;background:' + (L.skin || '#d9996b') + '"></span>' +
-            (hairH ? '<span style="position:absolute;left:20%;top:' + (L.hat ? 14 : 9) + '%;width:60%;height:' + (hairH + 8) + '%;border-radius:40% 40% 0 0;background:' + (L.hair || '#3a2a1a') + '"></span>' : '') +
-            '<span style="position:absolute;left:14%;top:56%;width:72%;height:52%;border-radius:34% 34% 0 0;background:' + (L.shirt || '#3d639b') + '"></span>' +
+            '<span style="position:absolute;left:22%;top:' + (L.hat ? 16 : 12) + '%;width:56%;height:40%;border-radius:40%;background:' + skin + '"></span>' +
+            (hairH ? '<span style="position:absolute;left:20%;top:' + (L.hat ? 14 : 9) + '%;width:60%;height:' + (hairH + 8) + '%;border-radius:40% 40% 0 0;background:' + hairC + '"></span>' : '') +
+            '<span style="position:absolute;left:14%;top:56%;width:72%;height:52%;border-radius:34% 34% 0 0;background:' + shirt + '"></span>' +
+            (rec && rec.badge ? '<span style="position:absolute;right:1px;bottom:0;font-size:' + Math.round(s * 0.4) + 'px;line-height:1.1">' + rec.badge + '</span>' : '') +
             '</span>';
     },
 
@@ -256,8 +263,18 @@ const StudioUI = {
                 S.cfg().grace + ' нед. — значит потерять человека и немного репутации.</div>' +
                 '</div></div>';
         } else {
-            h += '<p class="hint">Обновление через ' + Math.max(0, s.marketIn) + ' нед. Кандидат подписывает контракт на свою запрашиваемую зарплату.</p>';
-            for (const p of s.market) h += this.personCard(p, 'market');
+            h += '<p class="hint">Обновление через ' + Math.max(0, s.marketIn) + ' нед. Кандидат подписывает контракт на свою запрашиваемую зарплату. На бирже ' + s.market.length + ' претендентов.</p>';
+            // Биржа большая (PEOPLE_MARKET_SIZE): первая страница + экспандер,
+            // иначе 90 карточек — стена текста.
+            const page = typeof PEOPLE_MARKET_PAGE !== 'undefined' ? PEOPLE_MARKET_PAGE : 24;
+            const full = !!(ui && ui.marketMore);
+            const shown = full ? s.market : s.market.slice(0, page);
+            for (const p of shown) h += this.personCard(p, 'market');
+            if (s.market.length > page) {
+                h += '<div class="row" style="margin-top:8px"><span class="btn" data-act="p:more">' +
+                    (full ? '▲ Свернуть список' : '▼ Показать ещё ' + (s.market.length - shown.length) + ', всего ' + s.market.length) +
+                    '</span></div>';
+            }
         }
         h += '<div class="row" style="margin-top:12px"><span class="btn" data-act="close">← Закрыть</span></div></div>';
         return h;
@@ -464,6 +481,11 @@ const StudioUI = {
         if (parts[0] === 'set' && parts[1] === 'buy') {
             if (S.buySet(parts[2])) { Sound3D.play(MovieData.SFX.cash, { volume: 0.6 }); game.toast('🏗 Декорация построена!'); }
             else game.toast('Недостаточно денег.');
+            rerender();
+            return;
+        }
+        if (parts[0] === 'p' && parts[1] === 'more') {
+            game.uiState.marketMore = !game.uiState.marketMore;
             rerender();
             return;
         }

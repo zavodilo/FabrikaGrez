@@ -23,9 +23,10 @@ const PeopleSystem = {
             hairStyle: gender === 'f' ? r.range(1, 2) : r.range(0, 3),
             scale: r.float(0.92, 1.1),
             hat: '',
-            // A quarter of the troupe are the studio's CC0 robot actors (RobotExpressive):
-            // the same roles, a different body — clips instead of the procedural pose library.
-            model: r.chance(0.25) ? 'robot' : '',
+            // У каждого — своя CC0-модель из каталога ActorModels (люди, роботы,
+            // зомби, скелеты, рыцари, монстры, динозавры, звери): выбор детерминирован
+            // на seeded-Rng. Массовка и статисты (lod low) остаются процедурными.
+            model: (typeof ActorModels !== 'undefined') ? ActorModels.pick(r, gender) : (r.chance(0.25) ? 'robot' : ''),
         };
         if (gender === 'm') {
             look.shirt = r.pick(M.SHIRTS_M);

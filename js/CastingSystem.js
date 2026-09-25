@@ -383,10 +383,13 @@ const CastingSystem = {
                 '</div></div>';
         }
 
-        // The audition list for the selected role.
+        // The audition list for the selected role: a shortlist (CAST_AUDITIONS)
+        // with an expander to the full pool — the studio's market is big now.
         let aud = '';
         if (role) {
-            const list = this.candidates(s, script, role).slice(0, this.cfg().auditions);
+            const all = this.candidates(s, script, role);
+            const expanded = game.uiState.castMore === role.key;
+            const list = expanded ? all : all.slice(0, this.cfg().auditions);
             if (!list.length) aud = '<p class="hint bad">Нет ни одного актёра. Наймите кого-нибудь на бирже талантов.</p>';
             for (const cand of list) {
                 const p = cand.person;
@@ -424,6 +427,11 @@ const CastingSystem = {
                     '<div class="hint" style="margin-top:4px">' + UIx.money(p.salary) + '/нед</div>' +
                     '</div>' +
                     '</div></div>';
+            }
+            if (all.length > this.cfg().auditions) {
+                aud += '<div class="row" style="margin-top:8px"><span class="btn" data-act="cast:more:' + role.key + '">' +
+                    (expanded ? '▲ Свернуть список' : '▼ Показать всех: ещё ' + (all.length - list.length) + ', всего ' + all.length) +
+                    '</span></div>';
             }
         }
 
@@ -494,7 +502,12 @@ const CastingSystem = {
             return true;
         }
         if (!script) return true;
-        if (parts[1] === 'role') { game.uiState.castRole = parts[2]; game.showScreen('casting'); return true; }
+        if (parts[1] === 'role') { game.uiState.castRole = parts[2]; game.uiState.castMore = ''; game.showScreen('casting'); return true; }
+        if (parts[1] === 'more') {
+            game.uiState.castMore = game.uiState.castMore === parts[2] ? '' : parts[2];
+            game.showScreen('casting');
+            return true;
+        }
         if (parts[1] === 'clear') { this.pick(s, script, parts[2], null); game.showScreen('casting'); return true; }
         if (parts[1] === 'pick' || parts[1] === 'hire') {
             const roleKey = parts[2], personId = parts[3];

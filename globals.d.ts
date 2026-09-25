@@ -135,6 +135,29 @@ interface ActorLook {
     hairStyle?: number;
     /** 0.6..1.4 */
     scale?: number;
+    /** id модели из каталога ActorModels ('' — процедурный риг). */
+    model?: string;
+}
+
+/** Запись каталога CC0-моделей актёров (js/ActorModels.js). */
+interface ActorModelRec {
+    id: string;
+    /** Сценическое имя для UI. */
+    ru: string;
+    /** Литерал ассета (.glb). */
+    url: string;
+    /** Типаж: human | zombie | cyborg | robot | skeleton | fantasy | mannequin | creature | monster | bug | dino | animal. */
+    kind: string;
+    /** Иконка аватара ('' — нет). */
+    badge: string;
+    /** 'm' | 'f' | 'any' — ампуа для кастинга. */
+    gender: string;
+    /** Целевой рост в px для ActorRig3D._normalizeGlb. */
+    height: number;
+    /** Действие (ActorRig3D.ACTIONS) -> имя клипа файла. */
+    clips: Record<string, string>;
+    /** Цвета CSS-аватара StudioUI.avatar. */
+    palette: { skin: string; hair: string; shirt: string };
 }
 
 /** One animation frame of a rig: joint euler angles (deg) + root offsets. */

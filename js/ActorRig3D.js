@@ -103,8 +103,9 @@ const ActorRig3D = {
      * @param {{ x?: number, y?: number, h?: number, heading?: number, lod?: 'low' }} [opts]
      * @returns {ActorHandle}
      */
-    // A downloaded CC0 actor (RobotExpressive, see NOTICE) answers our action verbs with its
-    // own animation clips; anything unmapped rests in Idle while the subtitles do the talking.
+    // Fallback-карта клипов (RobotExpressive, первая CC0-модель студии): свои клипы
+    // каждой модели каталога лежат в ActorModels (js/ActorModels.js); эта карта спасает,
+    // если запись каталога не найдена, — немapped действия отдыхают в Idle.
     CLIP_MAP: {
         idle: 'Idle', walk: 'Walking', run: 'Running', talk: 'Idle', gesture: 'Yes', wave: 'Wave',
         punch: 'Punch', kick: 'Punch', kiss: 'ThumbsUp', dance: 'Dance', sit: 'Sitting',
@@ -138,7 +139,9 @@ const ActorRig3D = {
         h.setLook = (lk) => { h.look = ActorRig3D._normLook(lk); return h; };
         this.handles.push(h);
         World3D.addObject(view, root, 'actor');
-        const url = 'assets/models/RobotExpressive.glb';
+        const entry = (typeof ActorModels !== 'undefined' && ActorModels.get(L.model)) || null;
+        const url = entry ? entry.url : 'assets/models/RobotExpressive.glb';
+        if (entry) { h._clipMap = entry.clips; h._modelH = entry.height || 170; }
         Model3D.load(url, view).then((model) => {
             if (h._dead) { try { Model3D.dispose(model, view); } catch (e) { /* noop */ } return; }
             const built = Model3D.build(model, view, { name: 'actor' + id });
@@ -152,13 +155,19 @@ const ActorRig3D = {
 
     _playClip(h, action) {
         if (!h.clips) return;
-        const clip = this.CLIP_MAP[action] || 'Idle';
+        const map = h._clipMap || this.CLIP_MAP;
+        const clip = map[action] || map.idle || 'Idle';
         try { h.clips.play(clip); } catch (e) { /* a clip missing in the file: rest pose */ }
     },
 
     spawn(view, look, opts) {
-        if (look && look.model === 'robot') return this.spawnGlb(view, look, opts);
         const low = !!(opts && opts.lod === 'low');
+        // Труппа из каталога ActorModels играет glTF-клипами своей модели;
+        // массовка и статисты (lod low) остаются процедурными — дёшево и без загрузок.
+        if (!low && look && look.model
+            && ((typeof ActorModels !== 'undefined' && ActorModels.get(look.model)) || look.model === 'robot')) {
+            return this.spawnGlb(view, look, opts);
+        }
         const o = opts || {};
         const L = ActorRig3D._normLook(look);
         const root = new pc.Entity('actor' + this._nextId);
@@ -284,7 +293,9 @@ const ActorRig3D = {
             gender: l.gender === 'f' ? 'f' : 'm',
             hairStyle: Math.max(0, Math.min(3, Math.round(Number(l.hairStyle) || 0))),
             scale: Math.max(0.6, Math.min(1.4, Number(l.scale) || 1)),
-            model: l.model === 'robot' ? 'robot' : '',
+            model: (typeof ActorModels !== 'undefined' && l.model && ActorModels.get(l.model))
+                ? String(l.model)
+                : (l.model === 'robot' ? 'robot' : ''),
         };
     },
 
@@ -399,7 +410,8 @@ const ActorRig3D = {
             }
             const height = mx - mn;
             if (!(height > 1)) return;
-            const target = 170 * (h.look.scale || 1);
+            // Целевой рост — из каталога (человек 170, ти-рекса 320), × масштаб персоны.
+            const target = (h._modelH || 170) * (h.look.scale || 1);
             const f = target / height;
             h._passes = (h._passes || 0) + 1;
             if (Math.abs(f - 1) > 0.05 && h._passes <= 3) {

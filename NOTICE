@@ -53,3 +53,22 @@ Set decor (assets/models/nature/*)
     Used unmodified as GLB (trees, cacti, rocks, tents, campfires, logs, canoe,
     undergrowth) for the western/forest/camp/jungle/beach sets and the cactus prop;
     material colors remapped to the game palette (SetPieces3D.DECOR_RECOLOR).
+Actor models (assets/models/actors/*)
+    Converted at dev time with Blender 3.4 (tools/convert-actors.mjs):
+    height normalized to meters, feet at y=0, animation clips baked as NLA
+    tracks; no other changes. Catalog: js/ActorModels.js.
+
+    12 characterMedium skins (ken_*) from "Animated Characters",
+    "Animated Characters 2" and "Animated Characters 3" by Kenney Vleugels
+    (kenney.nl), CC0 1.0 (public domain) — the shared characterMedium mesh
+    with the idle/jump/run clips and each pack's skin atlas.
+
+    12 characters (kay_*) from "KayKit : Adventurers Character Pack 2.0",
+    "KayKit : Skeletons Character Pack 1.1" and "KayKit : Character
+    Animations 1.1" by Kay Lousberg (kaylousberg.itch.io), CC0 1.0
+    (public domain) — Rig_Medium/Rig_Large clips baked onto each character.
+
+    25 creatures, heroes, dinosaurs and farm animals (q_*) from the
+    "Easy Animated Enemy Pack", "Monster Pack Animated", "Knight Character
+    Animated", "Animated Robot", "Dinosaur Animated Pack" and "Farm Animals
+    Animated" packs by Quaternius (quaternius.com), CC0 1.0 (public domain).

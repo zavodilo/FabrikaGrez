@@ -79,7 +79,8 @@ const STUDIO_START_FANS = 5;            // 0..100: starting fan base
 const STUDIO_START_YEAR = 1950;         // the year the studio opens
 const STUDIO_LOT_UPKEEP = 2500;         // $: weekly lot upkeep
 // People: the talent market, training, salaries.
-const PEOPLE_MARKET_SIZE = 10;          // candidates on the talent market
+const PEOPLE_MARKET_SIZE = 90;          // candidates on the talent market (~52 of them actors)
+const PEOPLE_MARKET_PAGE = 24;          // market cards shown before the «показать ещё» expander
 const PEOPLE_MARKET_REFRESH = 3;        // weeks: how often the market refreshes
 const PEOPLE_SKILL_CAP = 10;            // max skill points (drama/comedy/action/romance)
 const PEOPLE_TRAIN_COST = 4000;         // $: one training course
@@ -129,7 +130,7 @@ const CAST_CHEM_REL = 0.6;              // chemistry from the relationship value
 const CAST_CHEM_FILM = 0.08;            // chemistry per film the pair already made together
 const CAST_CHEM_QUALITY = 0.9;          // quality points the film gains per +1 of cast chemistry
 const CAST_FEE_PER_LEAD = 2500;         // $: casting session, per lead role
-const CAST_AUDITIONS = 8;               // candidates shown per role on the audition list
+const CAST_AUDITIONS = 8;               // shortlist per role; «показать ещё» expands to the full pool
 const SHOOT_SCENES_PER_WEEK = 2;        // scenes shot per week at a normal pace
 // Production paces (ProductionSystem): scenes per week, the weekly cost as a fraction of an
 // even spread of the budget, and the quality delta of shooting the picture that way.

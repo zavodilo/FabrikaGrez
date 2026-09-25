@@ -39,6 +39,10 @@ const browser = await puppeteer.launch({
 });
 const page = await browser.newPage();
 await page.setViewport({ width: 1280, height: 720 });
+// Reloading a page with a LIVE lot (GLB-actors crowd) under swiftshader takes up to ~90 s:
+// the renderer's main thread is busy painting while the reload waits to commit. Not hung — slow.
+page.setDefaultNavigationTimeout(180000);
+page.setDefaultTimeout(120000);
 page.on('pageerror', (e) => console.log('PAGEERROR', String(e.message).slice(0, 160)));
 await page.goto('http://127.0.0.1:8131/index.html', { waitUntil: 'domcontentloaded' });
 await page.waitForFunction('window.app && app.game');

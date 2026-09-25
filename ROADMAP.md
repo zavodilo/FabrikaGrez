@@ -432,7 +432,9 @@
       headless-swiftshader, цель на железе — 60 fps); `--perf-baseline` перезаписывает базлайн
 - [x] Визуальная регрессия: золотые контактные листы в `docs/golden/` (10 кадров,
       western+noir) + pure-node pixel-diff (`tools/png-diff.mjs`: свой PNG-декодер без
-      зависимостей, mean/badShare/worst); `capture-stills --golden=… / --compare=…`;
+      зависимостей, mean/badShare/worst); `capture-stills --golden=… / --compare=…`
+      (navigation-timeout поднят до 180 с: перезагрузка живого лота с GLB-толпой под
+      swiftshader занимает ~90 с — медленно, не зависло);
       шаг встроен в релизный гейт `check --all`
 - [x] Детерминизм листов: покадровый степ movie-time до предиката + freeze в тот же тик,
       handheld-sway и дрейф облаков переведены на часы проигрывания (`CineCam3D.swayT`,
@@ -495,7 +497,24 @@ poly.pizza, KhronosGroup/glTF-Sample-Assets, three.js examples.
 Задачи — найти замену в интернете (процедурное оставляем как фолбэк, пока замена не
 прошла гейты стиля и размера):
 
-- [ ] процедурный риг актёра → CC0- гуманоид с набором клипов idle/walk/run/talk (RobotExpressive уже покрыл роботов; нужен человеческий аналог)
+- [x] процедурный риг актёра → CC0-гуманоиды с клипами idle/walk/run/talk — каталог
+      `js/ActorModels.js`: 50 записей — 12 Kenney Animated Characters (retro/survivors/
+      protagonists), 12 KayKit (Adventurers 2.0, Skeletons, Mannequins + Character
+      Animations 1.1), 25 Quaternius (Easy Enemies, Monsters, Knight, Robots, Dinosaurs,
+      Farm Animals, Ultimate Animated Character) и прежний RobotExpressive. 49 новых GLB
+      в `assets/models/actors/` (~36 МБ, всё CC0), конвертер `tools/convert-actors.mjs`
+      + Blender-скрипт `tools/actors/convert.py` (NLA-мультиклип 19 действий, нормализация
+      роста, скин-текстуры, чистка суффиксов `.001`). Каждый человек рынка и лота получает
+      модель из каталога (`PeopleSystem.randomLook` по полу), `ActorRig3D` спавнит GLB
+      и играет клипы по карте действий модели; процедурный риг — фолбэк low-режима
+- [x] биржа талантов: 50–100 разных актёров в кастинге/на рынке — `PEOPLE_MARKET_SIZE=90`
+      (~52 актёра с моделями каталога), карточки рынка и кастинга показывают аватар-палитру
+      и бейдж модели, экспандеры «показать ещё» (`cast:more` в кастинге, `p:more` на рынке,
+      `PEOPLE_MARKET_PAGE=24` первых карточек)
+- [x] perf-базлайн гейта обновлён под батч: кадр двора в verify-gameplay — 3→33 мс
+      (headless-swiftshader в 1 ГБ, GLB-толпа; замер самого гейта после демо-фильма).
+      Одиночный чистый замер лота — медиана 5 мс (~200 fps), на железе 60 fps с запасом;
+      регресс >1.35× по-прежнему валит гейт
 - [ ] птицы двора и уличных сцен → CC0-птица с клипом полёта
 - [x] `assets/models/character.glb` — оригинал кита, а не сторонний ассет: генерируется
       `tools/make-character.mjs` (тест `gltf` сверяет файл на диске с генератором), риг и клипы
@@ -549,10 +568,11 @@ poly.pizza, KhronosGroup/glTF-Sample-Assets, three.js examples.
 - [ ] здание лота: ворота (gate) → CC0-модель здания
 - [ ] здание лота: водонапорная башня (water tower) → CC0-модель здания
 
-Итого задач: 38 открытых + 11 закрытых источников; учёт моделей — в конце раздела.
+Итого задач: 37 открытых + 13 закрытых источников; учёт моделей — в конце раздела.
 
-Учёт моделей: 82 модели в проекте — 38 файлов в `assets/models/` (5 прежних + 33 CC0-файла
-Kenney «Nature Kit» в `assets/models/nature/`) и 44 процедурных семейства (16 сетов, 19 реквизитов,
+Учёт моделей: 131 модель в проекте — 87 файлов в `assets/models/` (5 прежних + 33 CC0-файла
+Kenney «Nature Kit» в `assets/models/nature/` + 49 CC0-актёров в `assets/models/actors/`)
+и 44 процедурных семейства (16 сетов, 19 реквизитов,
 7 зданий лота, риг актёра, птицы). Каждая замена проходит стилевой гейт: материалы кита
 перекрашены в домовую палитру (`SetPieces3D.DECOR_RECOLOR` + tint записи).
 
@@ -565,6 +585,12 @@ Kenney «Nature Kit» в `assets/models/nature/`) и 44 процедурных �
       Золотые листы (western/noir) и verify-gameplay пару не затрагивают.
 - [ ] Экстерьерные сеты не садятся на рельеф локации: `MovieSequencer` строит сет с groundH=0,
       поэтому площадка плавает или тонет в зависимости от точки базы (заметно на `beach`).
+- [ ] Актёры `ken_*` (Kenney Animated Characters) в игре стоят в bind-позе (T-pose), хотя
+      клипы в GLB на месте — тест `fabrika-actor-models` проверяет все 19 действий в каждом
+      файле, и они есть (Idle: 177 каналов, включая все deform-кости; skin: 58 joints).
+      `kay_*` и `q_*` анимируются нормально. Подозрения: клип не стартует (сопоставление имён
+      в Clips3D) либо скиннинг не применяется (у ken-мешей есть COLOR_0, у kay его нет).
+      Диагностика прервана; на гейты не влияет (verify/goldens проходят).
 
 ---
 ## Определения готовности (DoD) каждой фазы

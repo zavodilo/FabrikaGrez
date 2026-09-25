@@ -2301,12 +2301,23 @@ const SCENE_SCHEMA = {
             "group": "advanced",
             "name": "PEOPLE_MARKET_SIZE",
             "min": 0,
-            "max": 30,
-            "step": 0.3,
+            "max": 120,
+            "step": 1.2,
             "kind": "number",
             "options": null,
             "label": "people market size",
-            "value": 10
+            "value": 90
+        },
+        {
+            "group": "advanced",
+            "name": "PEOPLE_MARKET_PAGE",
+            "min": 4,
+            "max": 60,
+            "step": 0.6,
+            "kind": "number",
+            "options": null,
+            "label": "people market page",
+            "value": 24
         },
         {
             "group": "advanced",

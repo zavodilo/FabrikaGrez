@@ -28,7 +28,7 @@ export const CODE_FILES = [
   'js/SceneSchema.js',
   'js/presentation/RenderProfiles.js', 'js/presentation/AssetRegistry.js', 'js/presentation/Variant.js', 'js/presentation/RenderProfile.js', 'js/presentation/Camera.js', 'js/presentation/Lighting.js', 'js/presentation/Animation.js', 'js/presentation/VisualEntity.js', 'js/presentation/Migration.js', 'js/presentation/Runtime.js',
   'js/profiles/2d/profile.js', 'js/profiles/2.5d/profile.js', 'js/profiles/isometric3d/profile.js', 'js/profiles/lowpoly3d/profile.js', 'js/profiles/full3d/profile.js',
-  'js/UI.js', 'js/UiCss.js', 'js/SceneAPI.js', 'js/Rng.js', 'js/MovieData.js', 'js/ActorRig3D.js', 'js/SetPieces3D.js', 'js/CineCam3D.js', 'js/CinePost3D.js', 'js/Sky3D.js', 'js/Particles3D.js', 'js/PeopleSystem.js', 'js/StudioManager.js', 'js/ScriptGenerator.js', 'js/CastingSystem.js', 'js/ProductionSystem.js', 'js/ReleaseSystem.js', 'js/MetaSystem.js', 'js/SaveSystem.js', 'js/Tutorial.js', 'js/StudioUI.js', 'js/MovieSequencer.js', 'js/Game.js', 'js/main.js',
+  'js/UI.js', 'js/UiCss.js', 'js/SceneAPI.js', 'js/Rng.js', 'js/MovieData.js', 'js/ActorModels.js', 'js/ActorRig3D.js', 'js/SetPieces3D.js', 'js/CineCam3D.js', 'js/CinePost3D.js', 'js/Sky3D.js', 'js/Particles3D.js', 'js/PeopleSystem.js', 'js/StudioManager.js', 'js/ScriptGenerator.js', 'js/CastingSystem.js', 'js/ProductionSystem.js', 'js/ReleaseSystem.js', 'js/MetaSystem.js', 'js/SaveSystem.js', 'js/Tutorial.js', 'js/StudioUI.js', 'js/MovieSequencer.js', 'js/Game.js', 'js/main.js',
   'libs/simplex-noise.js', 'libs/playcanvas.min.js',
 ];
 
