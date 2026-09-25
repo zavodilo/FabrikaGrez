@@ -188,6 +188,24 @@ interface SetAnchor {
     h: number;
 }
 
+/** A CC0 GLB decor record (SetPieces3D.GLB_DECOR / PROP_GLB). */
+interface GlbDecorRec {
+    /** Model path — a string literal under assets/ (the asset scanner archives those). */
+    url: string;
+    /** Set-local map px (like a part's lx). */
+    x: number;
+    /** Set-local map depth px (like a part's ly). */
+    y: number;
+    /** Height above the set floor, px (default 0 — on the floor). */
+    h?: number;
+    /** Scale factor over glTF meters ×100 (Gltf3D.UNITS); default 1. */
+    s?: number;
+    /** Heading, deg (default 0). */
+    yaw?: number;
+    /** Style-gate overrides: recolor the model's materials whose name contains `from`. */
+    tint?: { from: string, to: string }[];
+}
+
 /** A built set/prop/lot handle (SetPieces3D). */
 interface SetHandle {
     root: pc.Entity;
@@ -196,6 +214,10 @@ interface SetHandle {
     groundH: number;
     id: string;
     waypoints?: { x: number, y: number }[];
+    /** Built CC0 GLB decor entities (async, via Model3D) — disposed with the handle. */
+    decor?: pc.Entity[] | null;
+    /** Set by dispose(): a late GLB load must not attach to a dead handle. */
+    _dead?: boolean;
 }
 
 /** A cinematic camera pose in map space (CineCam3D). */

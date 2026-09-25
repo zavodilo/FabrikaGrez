@@ -76,9 +76,11 @@ test('каждая декорация связана со строительст
         // the set must be claimed by at least one genre, or it is dead content
         assert.ok((M.SET_INFO[setId].genres || []).length >= 1, setId + ': ничейная декорация');
         for (const g of M.SET_INFO[setId].genres) assert.ok(M.GENRES[g], setId + ': неизвестный жанр ' + g);
-        // a built set yields parts and the anchors the slots point at
+        // a built set yields parts and the anchors the slots point at; CC0 GLB-декор
+        // (GLB_DECOR) считается наполнением наравне с процедурными частями
         const { parts, anchors } = SP.partsOf(setId);
-        assert.ok(parts.length >= 8, setId + ': декорация слишком бедная');
+        const decor = (SP.GLB_DECOR[setId] || []).length;
+        assert.ok(parts.length + decor >= 8, setId + ': декорация слишком бедная');
         for (const k of ['wide', 'a', 'b']) assert.ok(anchors[slots[k]], setId + ': якорь ' + slots[k] + ' не объявлен');
     }
 });

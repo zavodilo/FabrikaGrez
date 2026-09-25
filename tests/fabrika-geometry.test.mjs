@@ -68,7 +68,10 @@ test('декорации: ни дубликатов трансформов, ни
     const report = [];
     for (const setId of Object.keys(SetPieces3D.SETS)) {
         const { parts } = collect(setId);
-        assert.ok(parts.length > 3, setId + ': декорация пустая');
+        // CC0 GLB-декор (GLB_DECOR) — тоже наполнение сета: природные сеты стоят на
+        // интернет-моделях поверх лёгкой процедурной базы, «пустыми» их считать нельзя.
+        const decor = (SetPieces3D.GLB_DECOR[setId] || []).length;
+        assert.ok(parts.length + decor > 3, setId + ': декорация пустая');
         const bad = coplanarPairs(parts);
         for (const b of bad) {
             report.push(setId + ' ' + b.kind + ': #' + b.i + ' (' + parts[b.i].m + ' ' + parts[b.i].lx + ',' + parts[b.i].ly + ',' + parts[b.i].cz + ') и #' + b.j + ' (' + parts[b.j].m + ' ' + parts[b.j].lx + ',' + parts[b.j].ly + ',' + parts[b.j].cz + ')');

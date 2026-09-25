@@ -29,6 +29,12 @@ const SetPieces3D = {
     SETS: {},
     /** Prop builders by id (filled below). @type {Record<string, (S: any) => void>} */
     PROPS: {},
+    /** CC0 GLB decor by set id (filled below the SETS table). @type {Record<string, GlbDecorRec[]>} */
+    GLB_DECOR: {},
+    /** House palette for kit material names (filled below the SETS table). @type {Record<string, string>} */
+    DECOR_RECOLOR: {},
+    /** CC0 GLB prop replacements by prop id (filled below the PROPS table). @type {Record<string, GlbDecorRec>} */
+    PROP_GLB: {},
     /** The studio lot builder (assigned below). @type {((view: View3D, cx: number, cy: number) => SetHandle) | null} */
     buildLot: null,
 
@@ -890,7 +896,17 @@ const SetPieces3D = {
     },
 
     dispose(handle) {
-        if (handle && handle.root) World3D.removeObject(handle.view, handle.root);
+        if (!handle) return;
+        handle._dead = true;
+        // CC0 GLB decor: built models carry their own materials — dispose them explicitly
+        // (World3D.removeObject leaves materials to the owner, Model3D.dispose destroys them).
+        if (handle.decor) {
+            for (const built of handle.decor) {
+                try { Model3D.dispose(handle.view, built); } catch (e) { /* already gone */ }
+            }
+            handle.decor = null;
+        }
+        if (handle.root) World3D.removeObject(handle.view, handle.root);
     },
 
     /** Build a set by id at a base point (its anchors come back in absolute map coords).
@@ -906,6 +922,7 @@ const SetPieces3D = {
         const h = SetPieces3D.finish(view, baseX, baseY, groundH);
         h.id = id;
         SetPieces3D._addBackdrop(view, h, id);
+        SetPieces3D._glbDecor(view, h, SetPieces3D.GLB_DECOR[id]);
         return h;
     },
 
@@ -917,7 +934,73 @@ const SetPieces3D = {
         const h = SetPieces3D.finish(view, x, y, groundH);
         h.id = id;
         SetPieces3D.moveTo(h, x, y, headingDeg || 0);
+        const g = SetPieces3D.PROP_GLB[id];
+        if (g) SetPieces3D._glbDecor(view, h, [g]);
         return h;
+    },
+
+    /**
+     * CC0 GLB decor of a set/prop: internet models (Kenney "Nature Kit", CC0 — attribution
+     * in NOTICE) standing on top of the procedural base. Records are set-local like parts:
+     * x/y — map px, h — px above the set floor, s — scale factor over glTF meters×100
+     * (Gltf3D.UNITS), yaw — heading deg. Loading is async through the Model3D per-view
+     * cache; a missing file leaves the procedural base intact (catch is silent), and a
+     * handle disposed before the load lands keeps the model in the cache for the next one.
+     * @param {any} view @param {any} h @param {GlbDecorRec[] | undefined} recs
+     */
+    _glbDecor(view, h, recs) {
+        if (!recs || !recs.length) return;
+        for (const rec of recs) {
+            const e = new pc.Entity('glb-decor');
+            h.root.addChild(e);
+            e.setLocalPosition(-rec.x, rec.h || 0, rec.y);
+            if (rec.yaw) e.setRotation(World3D.rotQuat(0, -rec.yaw * this.DEG, 0));
+            const s = rec.s || 1;
+            e.setLocalScale(s, s, s);
+            Model3D.load(rec.url, view).then((model) => {
+                if (h._dead) return;   // the set is gone: the container stays cached per view
+                const built = Model3D.build(model, view, { name: 'decor' });
+                this._recolorDecor(built, rec.tint);
+                e.addChild(built);
+                World3D.addObject(view, built, 'prop');   // toon group, ink, outline, shadows
+                (h.decor || (h.decor = [])).push(built);
+            }).catch(() => { /* file missing: the procedural base stays */ });
+        }
+    },
+
+    /**
+     * The style gate for internet models: the kit's own palette (teal "leafsGreen", pink
+     * "colorRed"…) reads alien next to the house colors, so material names coming from the
+     * file are remapped to the procedural palette of the sets (sRGB hex -> linear diffuse,
+     * the same conversion ActorRig3D.mat does). `tint` of a record overrides the global map
+     * (the canvas tents go olive while flowers keep their red).
+     * @param {pc.Entity} built @param {{ from: string, to: string }[] | undefined} tint
+     */
+    _recolorDecor(built, tint) {
+        const map = SetPieces3D.DECOR_RECOLOR;
+        const keys = Object.keys(map);
+        const lin = (/** @type {number} */ c) => {
+            const s = c / 255;
+            return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+        };
+        const hexTo = (/** @type {string} */ hex) => {
+            const v = parseInt(hex.slice(1), 16);
+            return new pc.Color(lin((v >> 16) & 255), lin((v >> 8) & 255), lin(v & 255));
+        };
+        const rcs = /** @type {any[]} */ (built.findComponents('render'));
+        for (const rc of rcs) {
+            for (const mi of rc.meshInstances) {
+                const mat = mi.material;
+                if (!mat || !(mat instanceof pc.StandardMaterial)) continue;
+                const name = mat.name || '';
+                let hex = null;
+                for (const t of (tint || [])) if (!hex && name.indexOf(t.from) >= 0) hex = t.to;
+                for (const k of keys) if (!hex && name.indexOf(k) >= 0) hex = map[k];
+                if (!hex) continue;
+                mat.diffuse = hexTo(hex);
+                mat.update();
+            }
+        }
     },
 };
 
@@ -948,13 +1031,10 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
         S.C(310, -190, 0, 4, 150, '#5a4a3a', { rt: 4 }).C(334, -166, 0, 4, 150, '#5a4a3a', { rt: 4 });
         S.C(286, -166, 0, 4, 150, '#5a4a3a', { rt: 4 }).C(310, -214, 0, 4, 150, '#5a4a3a', { rt: 4 });
         S.C(310, -190, 150, 46, 64, '#6a6a72', { rt: 46 }).C(310, -190, 214, 48, 34, '#5a4028');
-        // Details: cacti, barrels, trough, hitching rail, tumbleweed rocks
-        S.B(-320, 120, 0, 14, 14, 84, '#3a6a30').B(-338, 120, 40, 22, 12, 12, '#3a6a30').B(-346, 120, 52, 12, 12, 30, '#3a6a30');
-        S.B(-290, 180, 0, 12, 12, 60, '#3a6a30').B(-276, 180, 30, 18, 10, 10, '#3a6a30');
+        // Details: barrels, trough (cacti, rocks, the dead tree and the hitching fence are
+        // CC0 GLB decor — see GLB_DECOR.western)
         S.C(-40, -60, 0, 16, 28, '#5a4028', { rt: 14 }).C(-6, -64, 0, 16, 28, '#5a4028', { rt: 14 });
         S.B(240, 60, 0, 76, 32, 24, '#5a4a3a').B(240, 60, 22, 68, 26, 3, '#3a5a7a');
-        S.B(-20, 108, 52, 130, 6, 6, '#5a3a20').C(-70, 108, 0, 5, 52, '#4a3018', { rt: 5 }).C(30, 108, 0, 5, 52, '#4a3018', { rt: 5 });
-        S.G(330, 140, 12, 16, 12, 16, '#8a7a5a');
         // Anchors
         S.A('duel_a', -95, 34, 0).A('duel_b', 95, 34, 180).A('porch', -140, -74, 90);
         S.A('saloon_door', -140, -90, 90).A('store', 150, -70, 90).A('street_w', -250, 34, 0);
@@ -1087,23 +1167,10 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
 
     forest(S) {
         S.B(0, 0, 0, 920, 720, 2, '#4a7a3a');                                   // grass patch
-        const trees = [[-330, -220], [-250, 180], [300, -250], [360, 120], [-380, 30], [180, 280], [-120, -290], [390, -60]];
-        for (let i = 0; i < trees.length; i++) {
-            const t = trees[i], r = 40 + (i % 3) * 14;
-            S.C(t[0], t[1], 2, 11, 84, '#5a3a20', { rt: 9 });
-            S.C(t[0], t[1], 70, r, 66, i % 2 ? '#2a5a24' : '#2e6a2a');
-            S.C(t[0], t[1], 118, r * 0.72, 54, i % 2 ? '#2e6a2a' : '#336a2e');
-        }
-        for (const r of [[-160, -140], [220, 60], [-60, 240], [300, -140]]) {
-            S.G(r[0], r[1], 16, 26, 17, 22, '#6a6a66');
-        }
-        // Campfire + logs
-        S.C(0, 0, 2, 30, 5, '#5a4a3a', { rt: 34 });
-        S.B(-16, 6, 4, 44, 10, 10, '#4a3220', { yaw: 24 }).B(16, -6, 4, 44, 10, 10, '#4a3220', { yaw: -24 });
+        // Trees, rocks, the fire pit stones/logs and the bench log are CC0 GLB decor
+        // (GLB_DECOR.forest); the procedural base keeps the clearing, the fire glow and light.
         S.G(0, 0, 22, 15, 17, 15, '#ff8a30', { glow: true }).G(0, 0, 40, 8, 12, 8, '#ffb050', { glow: true });
         S.L(0, 0, 26, { color: '#ff8a30', range: 320, intensity: 2.2, flicker: 'fire', mode: 'always' });
-        S.B(0, 96, 0, 130, 26, 22, '#5a3a20').C(-52, 96, 0, 9, 22, '#4a3018', { rt: 9 }).C(52, 96, 0, 9, 22, '#4a3018', { rt: 9 });
-        S.B(-300, 240, 0, 90, 90, 8, '#3a6a30');                                // mossy patch
         S.A('fire_a', -70, 26, 0).A('fire_b', 70, 26, 180).A('fire_c', 0, -60, 90);
         S.A('log', 0, 130, -90).A('path_w', -300, 160, 0).A('deep_e', 300, -60, 180).A('center', 0, 40, 90);
     },
@@ -1120,9 +1187,7 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
         S.G(-90, 60, 118, 52, 12, 52, '#c84a4a');
         S.B(-220, 90, 1, 66, 110, 2, '#e8a04a');                                // towel
         S.B(-300, 20, 0, 22, 7, 96, '#e8e0d0', { yaw: 12 }).G(-300, 20, 100, 9, 9, 14, '#e85a8a');
-        S.G(280, -60, 14, 22, 15, 20, '#8a8a80');                               // rock
-        S.G(320, -30, 10, 15, 10, 14, '#7a7a72');
-        S.B(60, 160, 0, 130, 26, 26, '#8a6a4a').B(60, 160, 26, 120, 22, 6, '#e0cf9f'); // driftwood deck?
+        // Rocks, the beach canoe, driftwood and dune grass are CC0 GLB decor (GLB_DECOR.beach).
         S.A('shore', -40, -120, -90).A('sand_a', -160, 40, 90).A('sand_b', 100, 80, -90);
         S.A('water', 40, -220, -90).A('palm', 220, 60, 180).A('umbrella', -40, 70, 90).A('center', 0, 40, 0);
     },
@@ -1314,23 +1379,18 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
         S.A('kiosk', 220, -40, 180).A('door_w', -280, 0, 0).A('tracks', 0, 120, -90).A('center', 0, -20, 90);
     },
     camp(S) {
-        // A frontline camp: two tents, sandbag line, flagpole, radio table, crate stack, fire pit.
+        // A frontline camp: two tents, sandbag line, flagpole, radio table, supply stacks, fire pit.
+        // Tents, fire stones/logs and supply stacks are CC0 GLB decor (GLB_DECOR.camp);
+        // the procedural base keeps the ground, sandbags, flagpole, radio and fire glow.
         S.B(0, 0, 0, 620, 420, 4, '#6a6a52');                                  // trampled ground
-        S.B(-160, -120, 4, 150, 110, 70, '#5a5a42').B(-160, -120, 74, 160, 120, 10, '#4a4a36');
-        S.B(140, -130, 4, 130, 100, 64, '#5a5a42').B(140, -130, 68, 140, 110, 10, '#4a4a36');
-        S.B(-160, -64, 4, 60, 6, 44, '#3a3a2a');                              // tent doors
-        S.B(140, -78, 4, 54, 6, 40, '#3a3a2a');
         // Sandbag line along the south with a gap (the gate).
         for (let i = 0; i < 6; i++) S.B(-260 + i * 60, 150, 4, 56, 26, 22, '#6a6a4a');
         for (let i = 0; i < 5; i++) S.B(-230 + i * 60, 150, 26, 56, 24, 20, '#5a5a3e');
         for (let i = 0; i < 4; i++) S.B(80 + i * 60, 150, 4, 56, 26, 22, '#6a6a4a');
-        // Flagpole, radio table with a set, crate stack, fire pit with logs.
+        // Flagpole, radio table with a set, fire glow + practical light.
         S.C(-20, -20, 4, 4, 130, '#4a4a4a', { rt: 4 }).B(-20, -20, 120, 40, 6, 24, '#8a2a2a');
         S.B(60, 40, 4, 80, 50, 30, '#5a4630').B(60, 40, 34, 40, 30, 22, '#3a4a3a');
         S.C(60, 40, 56, 2, 30, '#3a3a3a', { rt: 2 });
-        S.B(-90, 60, 4, 50, 40, 34, '#6a5a3a').B(-90, 60, 38, 44, 36, 30, '#5a4a2e').B(-90, 60, 68, 38, 32, 26, '#6a5a3a');
-        S.C(220, 60, 4, 26, 10, '#3a3a3a', { rt: 26 });
-        S.B(200, 80, 10, 60, 12, 12, '#5a4630', { yaw: 20 }).B(240, 44, 10, 60, 12, 12, '#5a4630', { yaw: -25 });
         S.G(220, 60, 26, 12, 14, 12, '#ff8a30', { glow: true });
         S.L(220, 60, 30, { color: '#ff8a30', range: 340, intensity: 2.4, flicker: 'fire', mode: 'always' });
         S.A('tent_l', -160, -40, 90).A('tent_r', 140, -50, -90).A('flag', -20, 0, 0);
@@ -1348,19 +1408,129 @@ SetPieces3D.SETS = /** @type {Record<string, (S: any) => void>} */ ({
         S.B(-200, -140, 104, 150, 100, 30, '#6a6a5a');
         S.B(-200, -70, 4, 60, 8, 70, '#2a2a22');                                // doorway
         S.B(-200, -70, 74, 90, 12, 16, '#7a7a62');                             // lintel
-        // Palms with leaning trunks, rocks, a vine curtain, fallen log bridge.
+        // Palms with leaning trunks stay procedural (the kit has no palm); rocks, vines,
+        // the log bridge and the jungle undergrowth are CC0 GLB decor (GLB_DECOR.jungle).
         S.C(180, -120, 4, 10, 140, '#6a5a30', { rt: 7 }).B(180, -120, 140, 120, 14, 10, '#2e6a2e', { yaw: 12 });
         S.C(240, -40, 4, 9, 120, '#6a5a30', { rt: 6 }).B(240, -40, 118, 110, 12, 9, '#2e7a2e', { yaw: -18 });
         S.C(-40, 120, 4, 9, 110, '#6a5a30', { rt: 6 }).B(-40, 120, 108, 100, 12, 9, '#2e6a2e', { yaw: 30 });
-        S.G(80, -60, 20, 40, 26, 34, '#5a5a4a').G(120, -20, 14, 26, 18, 22, '#4a4a3e');
-        S.G(-120, 60, 16, 30, 20, 26, '#5a5a4a');
-        S.B(-260, -40, 60, 10, 10, 120, '#3a5a2a').B(-252, -20, 50, 8, 8, 100, '#3a6a2a');
-        S.B(0, 168, 6, 180, 26, 10, '#5a4630', { yaw: 4 });                   // log bridge
         S.A('path', 40, 60, -90).A('clearing', -20, 0, 90).A('rock', 100, -40, 180);
         S.A('river', 0, 140, -90).A('temple', -200, -50, 90).A('vine', -250, -20, 0);
         S.A('center', 20, 20, 90);
     },
 });
+
+// --- CC0 GLB decor of the sets ----------------------------------------------------------------
+// Internet models on top of the procedural base (see _glbDecor): Kenney «Nature Kit»
+// (kenney.nl/assets/nature-kit, CC0 — attribution in NOTICE), glTF meters, Y-up, origin at
+// the ground. Record: { url, x, y, h?, s?, yaw? } — x/y are set-local map px like parts,
+// h — px above the set floor (0), s — scale factor over Gltf3D.UNITS (meters→px ×100),
+// yaw — heading deg. URLs stay string literals: the asset scanner archives what is named here.
+/** @type {Record<string, GlbDecorRec[]>} */
+// House palette for the kit's material names (the style gate of _recolorDecor): the internet
+// models keep their geometry, the colors come from the same shelf as the procedural sets.
+/** @type {Record<string, string>} */
+SetPieces3D.DECOR_RECOLOR = {
+    leafsGreen: '#2e6a2a', leafsDark: '#2a5a24', leafsFall: '#8a5a32', grass: '#3a6a30',
+    wood: '#6a4626', woodDark: '#5a3a20', woodBark: '#5a3a20', woodBarkDark: '#4a3018',
+    woodInner: '#7a5230', stone: '#6a6a66', dirt: '#8a7a5a',
+};
+
+/** @type {Record<string, GlbDecorRec[]>} */
+SetPieces3D.GLB_DECOR = {
+    // Wild West street: cacti replace the procedural green boxes, the dead fall tree stands
+    // in the north-west corner, plank fences take over the hitching rail, rocks — the gems.
+    western: [
+        { url: 'assets/models/nature/cactus_tall.glb', x: -320, y: 120, s: 1.3, yaw: 15 },
+        { url: 'assets/models/nature/cactus_short.glb', x: -292, y: 176, s: 1.25, yaw: -25 },
+        { url: 'assets/models/nature/cactus_short.glb', x: -330, y: -20, s: 1.15, yaw: 40 },
+        { url: 'assets/models/nature/tree_blocks_fall.glb', x: -288, y: -244, s: 1.6, yaw: 10 },
+        { url: 'assets/models/nature/stone_smallD.glb', x: 330, y: 140, s: 1.2, yaw: -15 },
+        { url: 'assets/models/nature/rock_smallA.glb', x: 302, y: 196, s: 1.2, yaw: 25 },
+        { url: 'assets/models/nature/stump_old.glb', x: 254, y: 150, s: 1.3 },
+        { url: 'assets/models/nature/grass_leafs.glb', x: -298, y: 88, s: 1.2, yaw: -10 },
+        { url: 'assets/models/nature/plant_bush.glb', x: 10, y: -160, s: 1.1, yaw: 20 },
+        { url: 'assets/models/nature/fence_planks.glb', x: -45, y: 108, s: 0.9 },
+        { url: 'assets/models/nature/fence_planks.glb', x: 45, y: 108, s: 0.9 },
+    ],
+
+    // Forest clearing: eight kit trees around the glade, rocks instead of gems, a stone
+    // fire pit with logs under the procedural flame, a fallen log as the bench, undergrowth.
+    forest: [
+        { url: 'assets/models/nature/tree_cone.glb', x: -330, y: -220, s: 2.2 },
+        { url: 'assets/models/nature/tree_cone_dark.glb', x: -250, y: 180, s: 2.0, yaw: 30 },
+        { url: 'assets/models/nature/tree_detailed.glb', x: 300, y: -250, s: 2.2, yaw: -20 },
+        { url: 'assets/models/nature/tree_cone.glb', x: 360, y: 120, s: 1.9, yaw: 15 },
+        { url: 'assets/models/nature/tree_detailed.glb', x: -380, y: 30, s: 2.1, yaw: 45 },
+        { url: 'assets/models/nature/tree_cone_dark.glb', x: 180, y: 280, s: 2.0, yaw: -35 },
+        { url: 'assets/models/nature/tree_blocks_fall.glb', x: -120, y: -290, s: 1.8, yaw: 10 },
+        { url: 'assets/models/nature/tree_fat.glb', x: 390, y: -60, s: 2.2, yaw: -10 },
+        { url: 'assets/models/nature/rock_largeA.glb', x: -160, y: -140, s: 1.15, yaw: 20 },
+        { url: 'assets/models/nature/rock_smallB.glb', x: 220, y: 60, s: 1.25, yaw: -30 },
+        { url: 'assets/models/nature/stone_smallD.glb', x: -60, y: 240, s: 1.3, yaw: 15 },
+        { url: 'assets/models/nature/rock_smallA.glb', x: 300, y: -140, s: 1.15, yaw: 50 },
+        { url: 'assets/models/nature/campfire_stones.glb', x: 0, y: 0, s: 1.5 },
+        { url: 'assets/models/nature/campfire_logs.glb', x: 0, y: 0, s: 1.5, yaw: 30 },
+        { url: 'assets/models/nature/log_large.glb', x: 0, y: 96, s: 1.4 },
+        { url: 'assets/models/nature/plant_bush.glb', x: -300, y: 240, s: 1.35, yaw: -20 },
+        { url: 'assets/models/nature/plant_bushDetailed.glb', x: 120, y: -180, s: 1.25, yaw: 25 },
+        { url: 'assets/models/nature/flower_redA.glb', x: -150, y: -230, s: 1.2 },
+        { url: 'assets/models/nature/flower_yellowA.glb', x: -96, y: -252, s: 1.1, yaw: 40 },
+        { url: 'assets/models/nature/mushroom_redGroup.glb', x: 240, y: 214, s: 1.3 },
+        { url: 'assets/models/nature/grass_large.glb', x: -220, y: 120, s: 1.25, yaw: -15 },
+        { url: 'assets/models/nature/grass_leafs.glb', x: 60, y: -214, s: 1.2 },
+    ],
+
+    // Frontline camp: detailed canvas tents replace the box tents, a stone fire pit with
+    // logs burns under the procedural flame, log stacks stand in for the crate stack.
+    camp: [
+        { url: 'assets/models/nature/tent_detailedClosed.glb', x: -160, y: -120, s: 2.4 , tint: [{ from: 'colorRed', to: '#5a5a42' }, { from: 'colorRedDark', to: '#4a4a36' }] },
+        { url: 'assets/models/nature/tent_detailedOpen.glb', x: 140, y: -130, s: 2.4, yaw: 90 , tint: [{ from: 'colorRed', to: '#5a5a42' }, { from: 'colorRedDark', to: '#4a4a36' }] },
+        { url: 'assets/models/nature/tent_detailedClosed.glb', x: -30, y: -176, s: 1.7, yaw: 200 , tint: [{ from: 'colorRed', to: '#5a5a42' }, { from: 'colorRedDark', to: '#4a4a36' }] },
+        { url: 'assets/models/nature/campfire_stones.glb', x: 220, y: 60, s: 1.5 },
+        { url: 'assets/models/nature/campfire_logs.glb', x: 220, y: 60, s: 1.5, yaw: -20 },
+        { url: 'assets/models/nature/log_stack.glb', x: -90, y: 60, s: 1.5, yaw: 15 },
+        { url: 'assets/models/nature/log_stack.glb', x: -52, y: 86, s: 1.3, yaw: -25 },
+        { url: 'assets/models/nature/stump_round.glb', x: 252, y: 96, s: 1.4 },
+        { url: 'assets/models/nature/rock_smallB.glb', x: -262, y: -150, s: 1.2, yaw: 35 },
+        { url: 'assets/models/nature/grass_leafs.glb', x: 64, y: -160, s: 1.2 },
+        { url: 'assets/models/nature/plant_bush.glb', x: 280, y: -120, s: 1.2, yaw: -15 },
+    ],
+
+    // Jungle: kit hardwoods back the procedural palms, moss strips hang as the vine curtain,
+    // a big log bridges the river, rocks and undergrowth fill the clearing.
+    jungle: [
+        { url: 'assets/models/nature/rock_largeB.glb', x: 80, y: -60, s: 1.25, yaw: 15 },
+        { url: 'assets/models/nature/rock_smallA.glb', x: 126, y: -16, s: 1.2, yaw: -40 },
+        { url: 'assets/models/nature/stone_smallD.glb', x: -120, y: 60, s: 1.3, yaw: 25 },
+        { url: 'assets/models/nature/hanging_moss.glb', x: -256, y: -64, h: 64, s: 1.7, yaw: 90 },
+        { url: 'assets/models/nature/hanging_moss.glb', x: -254, y: -16, h: 56, s: 1.5, yaw: 90 },
+        { url: 'assets/models/nature/hanging_moss.glb', x: -248, y: 26, h: 70, s: 1.6, yaw: 85 },
+        { url: 'assets/models/nature/log_large.glb', x: 0, y: 168, h: 4, s: 1.8 },
+        { url: 'assets/models/nature/tree_fat.glb', x: 240, y: -200, s: 2.3, yaw: -15 },
+        { url: 'assets/models/nature/tree_detailed.glb', x: -80, y: -220, s: 2.1, yaw: 30 },
+        { url: 'assets/models/nature/tree_cone_dark.glb', x: 292, y: 44, s: 1.9, yaw: -25 },
+        { url: 'assets/models/nature/plant_bushLarge.glb', x: 150, y: 110, s: 1.4, yaw: 20 },
+        { url: 'assets/models/nature/plant_bush.glb', x: -150, y: -100, s: 1.4, yaw: -30 },
+        { url: 'assets/models/nature/plant_flatTall.glb', x: 40, y: -160, s: 1.3 },
+        { url: 'assets/models/nature/grass_large.glb', x: -20, y: 100, s: 1.3, yaw: -25 },
+        { url: 'assets/models/nature/mushroom_redGroup.glb', x: 210, y: -110, s: 1.3 },
+        { url: 'assets/models/nature/flower_redA.glb', x: -190, y: 110, s: 1.2 },
+    ],
+
+    // Beach: rocks instead of gems, a canoe pulled up where the driftwood deck stood,
+    // a driftwood log at the waterline, dune grass and a flower near the towel.
+    beach: [
+        { url: 'assets/models/nature/rock_largeA.glb', x: 282, y: -64, s: 1.3, yaw: 15 },
+        { url: 'assets/models/nature/rock_smallFlatA.glb', x: 326, y: -26, s: 1.4, yaw: -30 },
+        { url: 'assets/models/nature/canoe.glb', x: 60, y: 150, s: 1.6, yaw: 12 },
+        { url: 'assets/models/nature/log_large.glb', x: -250, y: -146, h: 2, s: 1.3, yaw: -8 },
+        { url: 'assets/models/nature/grass_large.glb', x: 300, y: 70, s: 1.3, yaw: 20 },
+        { url: 'assets/models/nature/grass_leafs.glb', x: -150, y: 150, s: 1.2 },
+        { url: 'assets/models/nature/flower_yellowA.glb', x: -110, y: 164, s: 1.1 },
+        { url: 'assets/models/nature/rock_smallB.glb', x: 344, y: 128, s: 1.2, yaw: 45 },
+        { url: 'assets/models/nature/plant_bush.glb', x: -330, y: 140, s: 1.15, yaw: 30 },
+    ],
+};
 
 // --- props (placed and moved individually) -------------------------------------------------
 SetPieces3D.PROPS = /** @type {Record<string, (S: any) => void>} */ ({
@@ -1466,9 +1636,8 @@ SetPieces3D.PROPS = /** @type {Record<string, (S: any) => void>} */ ({
     },
 
     cactus(S) {
-        S.B(0, 0, 0, 15, 15, 86, '#3a6a30');
-        S.B(-18, 0, 42, 24, 12, 12, '#3a6a30').B(-26, 0, 54, 12, 12, 32, '#3a6a30');
-        S.B(16, 0, 26, 20, 11, 11, '#356a2c').B(24, 0, 37, 11, 11, 26, '#356a2c');
+        // A dust mound at the base: the cactus itself is CC0 GLB decor (PROP_GLB.cactus).
+        S.C(0, 0, 0, 15, 5, '#8a7a5a', { rt: 15 });
     },
 
     tomb(S) {
@@ -1507,6 +1676,14 @@ SetPieces3D.PROPS = /** @type {Record<string, (S: any) => void>} */ ({
         S.B(0, 24, 60, 34, 4, 8, '#e8e0d0');
     },
 });
+
+// --- CC0 GLB props ----------------------------------------------------------------------------
+// Props whose visual is an internet model (see GLB_DECOR for the record format and licensing);
+// the procedural builder above stays as the base/fallback (a mound, a shadow-catcher).
+/** @type {Record<string, GlbDecorRec>} */
+SetPieces3D.PROP_GLB = {
+    cactus: { url: 'assets/models/nature/cactus_tall.glb', x: 0, y: 0, s: 1.4 },
+};
 
 // --- the studio lot -------------------------------------------------------------------------
 // One static build around (cx, cy): buildings, plaza, gate, fences, trees + patrol waypoints

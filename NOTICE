@@ -46,3 +46,10 @@ Bush (assets/models/Bush_3.fbx)
     "plant_bushLarge" from the "Nature Kit" by Kenney Vleugels (kenney.nl),
     CC0 1.0 (public domain) — https://kenney.nl/assets/nature-kit
     Used unmodified (FBX). Replaces the unattributed legacy kit file content.
+
+Set decor (assets/models/nature/*)
+    33 models from the "Nature Kit" by Kenney Vleugels (kenney.nl),
+    CC0 1.0 (public domain) — https://kenney.nl/assets/nature-kit
+    Used unmodified as GLB (trees, cacti, rocks, tents, campfires, logs, canoe,
+    undergrowth) for the western/forest/camp/jungle/beach sets and the cactus prop;
+    material colors remapped to the game palette (SetPieces3D.DECOR_RECOLOR).
