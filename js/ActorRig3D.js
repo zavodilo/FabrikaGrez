@@ -61,6 +61,10 @@ const ActorRig3D = {
         mesh.setNormals(normals);
         mesh.setIndices(indices);
         mesh.update(pc.PRIMITIVE_TRIANGLES);
+        // Shared singleton: MeshInstance.destroy releases its ref and the engine destroys
+        // the mesh when the last instance dies — the cache must hold its own ref or the
+        // next build gets a dead mesh (see Particles3D._quadMesh).
+        mesh.incRefCount();
         this._box = mesh;
         return mesh;
     },
@@ -144,6 +148,7 @@ const ActorRig3D = {
         if (entry) { h._clipMap = entry.clips; h._modelH = entry.height || 170; }
         Model3D.load(url, view).then((model) => {
             if (h._dead) { try { Model3D.dispose(model, view); } catch (e) { /* noop */ } return; }
+            if (!model || !model.container || (model.asset && !model.asset.resource)) { h._glbMissing = true; return; }
             const built = Model3D.build(model, view, { name: 'actor' + id });
             root.addChild(built);
             h.clips = Model3D.clips(built);

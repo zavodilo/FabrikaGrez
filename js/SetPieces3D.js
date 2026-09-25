@@ -65,6 +65,10 @@ const SetPieces3D = {
         mesh.setNormals(normals);
         mesh.setIndices(indices);
         mesh.update(pc.PRIMITIVE_TRIANGLES);
+        // Every _guarded mesh is a cached singleton (cone/cyl/gem): the cache holds its own
+        // ref so destroying the last instance of one set cannot kill the mesh the next set
+        // is built from (MeshInstance.destroy releases refs — see Particles3D._quadMesh).
+        mesh.incRefCount();
         return mesh;
     },
 
@@ -959,6 +963,7 @@ const SetPieces3D = {
             e.setLocalScale(s, s, s);
             Model3D.load(rec.url, view).then((model) => {
                 if (h._dead) return;   // the set is gone: the container stays cached per view
+                if (!model || !model.container || (model.asset && !model.asset.resource)) return;  // unloaded mid-flight
                 const built = Model3D.build(model, view, { name: 'decor' });
                 this._recolorDecor(built, rec.tint);
                 e.addChild(built);

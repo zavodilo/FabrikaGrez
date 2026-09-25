@@ -139,6 +139,12 @@ const Particles3D = {
         m.setUvs(0, uv);
         m.setIndices(idx);
         m.update(pc.PRIMITIVE_TRIANGLES);
+        // The quad is SHARED by every emitter, but a MeshInstance holds a ref on its mesh
+        // and MeshInstance.destroy releases it: when stopAll() kills the last emitter of a
+        // scene, the engine destroys the cached quad and the next scene builds its particles
+        // on a dead mesh (the western→forest 'impl' render crash). The cache keeps its own
+        // permanent ref; dispose() destroys the mesh explicitly.
+        m.incRefCount();
         this._quad = m;
         return m;
     },
@@ -260,6 +266,9 @@ const Particles3D = {
         for (const k of Object.keys(this._tex)) { try { this._tex[k].destroy(); } catch (e) { /* gone */ } }
         this._mat = {};
         this._tex = {};
+        // The cache holds the quad's permanent ref (see _quadMesh): destroy it here.
+        try { if (this._quad) this._quad.destroy(); } catch (e) { /* gone */ }
         this._quad = null;
+        this._dev = null;
     },
 };
