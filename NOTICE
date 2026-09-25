@@ -35,3 +35,14 @@ RobotExpressive.glb (assets/models/RobotExpressive.glb)
     Model by Tomas Laulhe, CC0-1.0 (public domain); modifications by Don McCurdy.
     Obtained from the three.js example assets (examples/models/gltf/RobotExpressive).
     Used unmodified as the studio's robot actors.
+
+Windmill (assets/models/mill.fbx)
+    "Windmill" by luke1985, via OpenGameArt — https://opengameart.org/content/windmill-4
+    Dual-licensed CC0 1.0 / CC-BY 4.0; used under CC0 1.0 (public domain).
+    Converted from the original .blend to FBX with Blender 3.4 (baked blade animation);
+    no other changes. Replaces the unattributed legacy kit file content.
+
+Bush (assets/models/Bush_3.fbx)
+    "plant_bushLarge" from the "Nature Kit" by Kenney Vleugels (kenney.nl),
+    CC0 1.0 (public domain) — https://kenney.nl/assets/nature-kit
+    Used unmodified (FBX). Replaces the unattributed legacy kit file content.
