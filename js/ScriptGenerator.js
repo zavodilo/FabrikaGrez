@@ -1018,8 +1018,10 @@ const ScriptGenerator = {
             // glass to hold the face — exactly what a real unit does in a tight interior.
             const lens = MovieData.fovFor(type);
             const back = Math.min(620, Math.round(this.rigK(lens) / 4.6));
-            const spot = this._toward(sxy, openXY, indoor ? 105 : back, 152);
-            return this._rig([sxy[0], sxy[1], H], spot, { fov: lens, zoom: indoor ? 9 : 4.6, roll: type === 'dutch' ? 9 : 0, thirds: subj === 'b' ? 1 : -1 });
+            // Coverage v2: an interior close-up keeps head-and-shoulders (zoom 6.5 at 130 px),
+            // not the old eyes-only zoom 9 at 105 px — the room allows it, the face reads better.
+            const spot = this._toward(sxy, openXY, indoor ? 130 : back, 152);
+            return this._rig([sxy[0], sxy[1], H], spot, { fov: lens, zoom: indoor ? 6.5 : 4.6, roll: type === 'dutch' ? 9 : 0, thirds: subj === 'b' ? 1 : -1 });
         }
         if (type === 'medium' || type === 'low') {
             const low = type === 'low';
