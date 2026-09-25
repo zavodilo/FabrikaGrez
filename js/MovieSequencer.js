@@ -77,7 +77,7 @@ const MovieSequencer = {
         this.t = 0; this.introT = 0; this.cardT = 0; this.creditsT = 0;
         this.si = 0; this.shot = 0; this.shotT = 0;
         this.subUntil = -1; this.flashUntil = -1;
-        this.speed = 1; this.paused = false;
+        this.speed = 1; this.paused = false; this.gh = 0;
         this.propMoves = []; this.pending = []; this.riding = {}; this.props = {};
 
         const dailies = this.opts.dailies != null;
@@ -290,20 +290,26 @@ const MovieSequencer = {
         this.cardT = 0;
         this.propMoves = [];
         this.riding = {};
-        // The set.
+        // The set. Exterior sets stand on the backlot ring, whose drawn height is the terrain
+        // noise beyond the grid — heightAt() gives exactly that surface, so the set (and with
+        // it the anchors, props and actors through this.gh) sits ON the ground instead of
+        // floating or sinking at groundH=0 (the beach visibly drowned before).
         if (this.set) { SetPieces3D.dispose(this.set); this.set = null; }
         for (const id of Object.keys(this.props)) SetPieces3D.dispose(this.props[id]);
         this.props = {};
         const view = this._app.location.view;
-        this.set = SetPieces3D.buildSet(view, sc.set || 'western', this.base.x, this.base.y, 0);
-        if (!this.set) this.set = SetPieces3D.buildSet(view, 'western', this.base.x, this.base.y, 0);
+        const terr = this._app.location && this._app.location.terrain;
+        const gh = (terr && terr.heightAt) ? (terr.heightAt(this.base.x, this.base.y) || 0) : 0;
+        this.gh = gh;
+        this.set = SetPieces3D.buildSet(view, sc.set || 'western', this.base.x, this.base.y, gh);
+        if (!this.set) this.set = SetPieces3D.buildSet(view, 'western', this.base.x, this.base.y, gh);
         // Interiors are shot as a dollhouse: the ceiling/fourth wall comes off for the take.
         if (this.set && this.set.shell) for (const e of this.set.shell) e.enabled = false;
         // Scene props.
         for (const p of sc.props || []) {
             const at = this._resolvePoint(p.anchor != null ? p.anchor : { x: p.x || 0, y: p.y || 0 });
             const hd = p.heading != null ? p.heading : at.heading;
-            const h = SetPieces3D.buildProp(view, p.id, at.x, at.y, hd, 0);
+            const h = SetPieces3D.buildProp(view, p.id, at.x, at.y, hd, this.gh || 0);
             if (h) { h._px = at.x; h._py = at.y; h._ph = hd; this.props[p.id] = h; }
         }
         // Park the cast out of frame, then apply the enter list.
@@ -313,7 +319,7 @@ const MovieSequencer = {
         for (const id of Object.keys(this.actors)) {
             const a = this.actors[id];
             a.moveTarget = null; a.faceTarget = null; a.lookYaw = null;
-            a.h = 0;
+            a.h = this.gh || 0;
             if (!placed[id]) {
                 a.x = this.base.x + 1400 + (park % 4) * 60;
                 a.y = this.base.y + 900 + Math.floor(park / 4) * 60;
@@ -556,17 +562,17 @@ const MovieSequencer = {
         const tod = sc.timeOfDay || 'day';
         const roll = (typeof Rng !== 'undefined' && Rng.create) ? Rng.create('wx-' + seed).float(0, 1) : 0.5;
         if (sc.tint === 'rain' || (this.tl.genre === 'noir' && tod === 'night' && roll < 0.7)) {
-            Particles3D.start(view, 'rain', { x: cx, y: cy, h: 40, r: 420, seed: seed });
+            Particles3D.start(view, 'rain', { x: cx, y: cy, h: 40 + (this.gh || 0), r: 420, seed: seed });
         } else if (sc.snow || (this.tl.genre === 'war' && tod === 'night' && roll < 0.25)) {
-            Particles3D.start(view, 'snow', { x: cx, y: cy, h: 60, r: 380, seed: seed });
+            Particles3D.start(view, 'snow', { x: cx, y: cy, h: 60 + (this.gh || 0), r: 380, seed: seed });
         } else if (!info.indoor && tod !== 'night' && roll < 0.6 &&
             (this.tl.genre === 'western' || this.tl.genre === 'adventure' || this.tl.genre === 'war')) {
-            Particles3D.start(view, 'dust', { x: cx, y: cy, h: 4, r: 300, seed: seed });
+            Particles3D.start(view, 'dust', { x: cx, y: cy, h: 4 + (this.gh || 0), r: 300, seed: seed });
         }
         if (sc.set === 'camp' || sc.set === 'forest') {
             const fx = cx + (sc.set === 'camp' ? 220 : 0), fy = cy + (sc.set === 'camp' ? 60 : 0);
-            Particles3D.start(view, 'fire', { x: fx, y: fy, h: 30, r: 16, seed: seed });
-            Particles3D.start(view, 'smoke', { x: fx, y: fy, h: 60, r: 14, seed: seed + 1 });
+            Particles3D.start(view, 'fire', { x: fx, y: fy, h: 30 + (this.gh || 0), r: 16, seed: seed });
+            Particles3D.start(view, 'smoke', { x: fx, y: fy, h: 60 + (this.gh || 0), r: 14, seed: seed + 1 });
         }
     },
 
@@ -831,18 +837,21 @@ const MovieSequencer = {
     },
 
     _resolvePoint(to) {
+        // Anchor heights are set-local (the set floor); this.gh lifts them onto the terrain
+        // the set was planted on, so actors and cameras share the set's ground.
+        const gh = this.gh || 0;
         if (typeof to === 'string') {
             const an = this.set && this.set.anchors ? this.set.anchors[to] : null;
-            return an ? { x: an.x, y: an.y, h: an.h, heading: an.heading } : { x: this.base.x, y: this.base.y, h: 0, heading: 0 };
+            return an ? { x: an.x, y: an.y, h: (an.h || 0) + gh, heading: an.heading } : { x: this.base.x, y: this.base.y, h: gh, heading: 0 };
         }
         if (to && to.anchor != null) {
             const an = this.set && this.set.anchors ? this.set.anchors[to.anchor] : null;
-            const p = an ? { x: an.x, y: an.y, h: an.h, heading: an.heading } : { x: this.base.x, y: this.base.y, h: 0, heading: 0 };
+            const p = an ? { x: an.x, y: an.y, h: (an.h || 0) + gh, heading: an.heading } : { x: this.base.x, y: this.base.y, h: gh, heading: 0 };
             return { x: p.x + (to.dx || 0), y: p.y + (to.dy || 0), h: p.h + (to.dh || 0), heading: to.heading != null ? to.heading : p.heading };
         }
         const x = (to && to.x != null) ? this.base.x + to.x : this.base.x;
         const y = (to && to.y != null) ? this.base.y + to.y : this.base.y;
-        return { x: x, y: y, h: (to && to.h) || 0, heading: (to && to.heading) || 0 };
+        return { x: x, y: y, h: ((to && to.h) || 0) + gh, heading: (to && to.heading) || 0 };
     },
 
     _stage(who, e) {
